@@ -1,6 +1,4 @@
-##########################################
-### NOT gitted yet (private or public?)###
-##########################################
+#########################################
 ### Translation of code from Stuart Baird
 ## http://onlinelibrary.wiley.com/doi/10.1111/j.1558-5646.2012.01633.x/pdf
 ## WHERE ARE THE WORMY MICE? A REEXAMINATION OF HYBRID PARASITISM IN THE
@@ -9,19 +7,6 @@
 rm(list=ls()) 
 library(ggplot2)
 library(reshape)
-
-#############################
-## How to format your data?##
-#############################
-
-############# Toy data
-males <- list(HIS=c(0.5, 0.2),LOADS=c(31,35),INDS =c("A","B"), SEX=rep("male",2))
-females <- list(HIS=c(0.3,0.5,0.4),LOADS=c(20,10,80),INDS =c("C","D","E"), SEX=rep("female",3)) 
-keys <- unique(c(names(males), names(females)))
-data <- data.frame(setNames(mapply(c, males[keys], females[keys]), keys))
-data$HIS <- as.numeric(as.character(data$HIS))
-data$LOADS <- as.numeric(as.character(data$LOADS))
-#############
 
 #####################
 ### MeanLoad model### How does the mean load vary depending on the parameters?
@@ -71,8 +56,8 @@ ggplot(m, aes(x=HI, y=load, group=alpha, color=alpha))+
 ## has "the right" mean, being the input MeanLoad
 myvec <- vector()
 for (k in 1:3){
-    for (MeanLoad in seq(from=20, to=40, by=10)){
-        myvec <- c(myvec,(mean(rnbinom(10000, size=k, mu= MeanLoad))))
+    for (meanload in seq(from=20, to=40, by=10)){
+        myvec <- c(myvec,(mean(rnbinom(10000, size=k, mu= meanload))))
         ## (n=10000 number of observation)
     }
 }
@@ -86,9 +71,9 @@ myvec <- vector()
 mynames <- vector()
 for (x in 0:200){
     for (k in 1:3){
-        for (MeanLoad in seq(from=20, to=40, by=10)){
-            myvec <- c(myvec,dnbinom(x, size=k, mu=MeanLoad)) #alternative:prob=c/k+MeanLoad
-            mynames <- c(mynames,paste(k, MeanLoad, sep=", "))
+        for (meanload in seq(from=20, to=40, by=10)){
+            myvec <- c(myvec,dnbinom(x, size=k, mu=meanload)) #alternative:prob=c/k+MeanLoad
+            mynames <- c(mynames,paste(k, meanload, sep=", "))
         }
     }
 }
@@ -106,34 +91,56 @@ ggplot(mydf, aes(x=x, y=myvec, group=mynames, color=mynames))+
     scale_y_continuous(name="Probability")
 ## When k increases, A=1/k decreases, less aggregation, tends towards Poisson
 
+######################
+### Simulated data ###
+######################
+SimulatedData <- function(Ninds, m1, Dm, alpha, k){
+    IndHIs <- runif(Ninds)
+    TheMeanLoadModel <- function(HI){
+        MeanLoad(m1, Dm, alpha, HI)
+    }
+    TheMeanLoads <- sapply(IndHIs, TheMeanLoadModel)
+    IndLoads  <- rnbinom(Ninds, size=k, mu= TheMeanLoads)
+    data.frame(IndHIs, IndLoads)}
+
+TestData <- list(males = SimulatedData(20, 20, 10, 1, 2), 
+                 females = SimulatedData(20, 10, 30, 1, 2))
+TestData[[1]][1,] <- c(0.5, 31) ## Stick to Stuart example
+
 ###########################################################
 ### PrNegativeBinomialLoad: Probability an Ind has some ###
 ### observed Load, given its HI (and the model)         ###
 ###########################################################
 
-## As we stated before (need to reput it there) :
-MeanLoad <- function(m1,Dm,alpha,HI){
-    (m1 + Dm*HI)*(1 - alpha*2*HI*(1 - HI))
-}
 ## Function to calculate the density of probability for 1 ind,
 ## given his ID (and his HI and Load associated)
-PrNegativeBinomialLoad <- function(ind, k, m1, Dm, alpha){
-    HI <- data$HIS[ind]
-    Load <- data$LOADS[ind]
+PrNegativeBinomialLoad <- function(data, sex, ind, k, m1, Dm, alpha){
+    if (sex=="male"){
+        HI <- data[[1]][ind,1]
+        Load <- data[[1]][ind,2]
+    } else {
+        HI <- data[[2]][ind,1]
+        Load <- data[[2]][ind,2]
+    }
     dnbinom(Load, size=k, mu=MeanLoad(m1, Dm, alpha, HI))
 }
 
 ## Let's calculate an example natural Log
-log(PrNegativeBinomialLoad(1, 2, 0.4, 0.2, 0.0))
+log(PrNegativeBinomialLoad(TestData, "male", 5, 2, 0.4, 0.2, 0.0))
 ## Knowing that the mean load of musculus is 0.4, the mean load of domesticus
 ## is 0.6 (0.4+0.2), k is 2 (aggregation), alpha is 0 (hybrid effect), the load of our
 ## toy sample is 31 for a HI of 0.5, then the probability of getting this load is
 ## reaaally low.
 
 ## Generalised ... ie the MeanLoad model is passed as an argument (PDF4cMeanLoad)
-PrLoad <- function(ind, k, m1, Dm, alpha, PDF4cMeanLoad){
-    HI <- data$HIS[ind]
-    Load <- data$LOADS[ind]
+PrLoad <- function(data, sex, ind, k, m1, Dm, alpha, PDF4cMeanLoad){
+    if (sex=="male"){
+        HI <- data[[1]][ind,1]
+        Load <- data[[1]][ind,2]
+    } else {
+        HI <- data[[2]][ind,1]
+        Load <- data[[2]][ind,2]
+    }
     PDF4cMeanLoad(k, MeanLoad(m1, Dm, alpha, HI), Load)
 }
 
@@ -147,44 +154,121 @@ PDFNegBin <- function(k, meanLoad, Load){
 ## This previous function will be our MeanLoad model function, to be tested for arguments
 ## k and alpha through maximum likelihood. 
 
+## Test: 
+PrLoad(TestData, "male", 1, 2, 40, 20, 0.2, PDFNegBin)
+
 ##################################################
 ### The likelihood function over a set of inds ###
 ##################################################
-MeanLoad <- function(m1,Dm,alpha,HI){
-    (m1 + Dm*HI)*(1 - alpha*2*HI*(1 - HI))
-}
 
-## 'data' is two sets/lists of inds (eg male and female, hence m1M vs m1F)
-## PDF4cMeanLoad will be a chosen MeanLoad model function (e.g PDFNegBin)
-LikelihoodFunction <- function(PDF4cMeanLoad, k, m1M, m1F, DmM, DmF, alpha, data) {
+## 'data' is two sets/lists of inds (e.g. male and female, hence m1M vs m1F)
+## PDF4cMeanLoad will be a chosen MeanLoad model function (e.g. PDFNegBin)
+## the first argument will be optimised with "optim" later (k, alpha)
+LikelihoodFunction <- function(param, PDF4cMeanLoad, data) {
+    k <- param[1]; alpha <- param[2]
+    m1M <- param[3]; m1F <- param[4]
+    DmM <- param[5]; DmF <- param[6]
     Sm <- 0 ; Sf <- 0 ## initialisation
-    for (ind in 1:nrow(data)) {
-        if (data$SEX[ind] == "male") {
-            Sm <- Sm + log(PrLoad(ind,k, m1M,DmM, alpha,PDF4cMeanLoad))
-        } else if ( data$SEX[ind] == "female") {
-            Sf <- Sf + log(PrLoad(ind,k, m1F,DmF, alpha,PDF4cMeanLoad))        
-            print(data$INDS[ind])
-        } else
-            print("error")
+    ## males
+    for (ind in (1:nrow(data[[1]]))){
+        Sm <- Sm + log(PrLoad(data, "male", ind, k, m1M, DmM, alpha, PDF4cMeanLoad))
     }
+    ## females
+    for (ind in (1:nrow(data[[2]]))){
+        Sf <- Sf + log(PrLoad(data, "female", ind, k, m1F, DmF, alpha, PDF4cMeanLoad))
+    }  
+    ## all
     S <- Sm + Sf #sum of the logs (same as product of the row values) of males and females
     return(S)
 }
-
+   
 ## Test
-LikelihoodFunction(PDFNegBin, 2, 10, 12, 5, 10, 3, data)
-data
-############## Turns so far :)
+LikelihoodFunction(c(2, 0.3, 10, 12, 5, 10), PDFNegBin, TestData)
+
+############### --> turns until there perfectly
+
 
 #############################
 ###The likelihood analysis###
 #############################
 ## CDF = cumulative distribution function
 
+###############################
+
+## Let's focus first on the core function and spread from there
+
+## We want to get between 3 (Ho) and 6 (H3) estimates
+## Parameters are as follow :
+   # k, alpha, m1M, m1F, DmM, DmF
+
+## H3: all param
+LikelihoodAnalysis <- function(PDF4cMeanLoad, Data, start,
+                               kmin, kMax, AlphaLB, AlphaUB, mMax){
+
+    ## The function I want to optimise:
+    mylikelihood <- function(param){
+        LikelihoodFunction(param, PDF4cMeanLoad, Data)
+    }
+
+    ## Constraints:
+    lower <- c(kmin, AlphaLB, 0, 0, -mMax, -mMax)
+    upper <- c(kmax, AlphaUB, mMax, mMax, mMax, mMax)
+   
+    ## Optimisation of the parameters:
+    optim(start, ## initial values for the parameters
+          mylikelihood, ## function to be maximized  it will maximize if control$fnscale is negative
+          )
+}
+
+## Test:
+kmin <- 0; kmax <- 10; AlphaLB <- -5 ; AlphaUB <- 5; mMax <- 200
+                                       
+start <- c(2, 0, 10, 12, 5, 10)
+LikelihoodAnalysis(PDFNegBin, TestData, start,
+                   kmin, kMax, AlphaLB, AlphaUB, mMax)
+
+##Method "L-BFGS-B" is that of Byrd et. al. (1995) which allows box constraints, that is each variable can be given a lower and/or upper bound. The initial value must satisfy the constraints. This uses a limited-memory modification of the BFGS quasi-Newton method. If non-trivial bounds are supplied, this method will be selected, with a warning
+
+
+######################################################################
+
 ## Test if the difference between 2 likelihood is significant
 Gtest <- function(dLL, dDF){
     1 - CDF[ChiSquareDistribution[dDF], 2*dLL]
 }
+    
+    ## Compare j to 1,2,3,4 and return the matching outputs 
+    starter <- function(prevMLEest, j){
+        if (j==1) {
+            output <- start
+        } else if (j==2) {
+            ## Add 0 after 2nd element of prevMLEest[[2]]
+            output <- append(prevMLEest[[2]], list(0), 2] 
+        } else if (j==3) {
+             ## Add ?? after 2nd element of prevMLEest[[2]]
+            output <- append(prevMLEest[[2]], prevMLEest[[2,2]], 2)
+        } else
+            append(prevMLEest[[2]], prevMLEest[[2,2]], 2] ## Add ?? after 2nd element of prevMLEest[[2]]
+
+
+    ## Calculate MLEestimate given a set of constraints
+    pars <- list(H0 = c("k", "mB", "alpha"),
+                     H1 = c("k", "mB", "DmB", "alpha"))
+    pars[[i]]
+    starter(MLEest, i)
+
+
+        FindMaximum(
+        (apply(LikelihoodFunction, Join((PDF4cMeanLoad), psFl[[i]], (Data, HIpos, LOADpos))),
+            cons[[i]]), Transpose((pars[[i]], starter[MLEest, i])));
+
+    FindMaximum[{f,cons},{x,y,…}]
+    starts from a point within the region defined by the constraints.
+
+    [FindMaximum[{
+        Apply[LikelihoodFunction,Join[{PDF4cMeanLoad}, psFl[[i]], {Data, HIpos, LOADpos}]],## f
+        cons[[i]]}, ## cons
+        Transpose[{pars[[i]], starter[MLEest, i]}]]] ## starter
 
 ## A wrapper to clean optima search format:
 MLEformat <- function(l){
@@ -202,225 +286,6 @@ GtestOnNestedMLEs <- function(MLEformat1, MLEformat2){
     print(paste("dLL = ", dLL, " dDF = ", dDF, " Gtest p = ", p))
 }
 
-
-## Let's go go go!
-LikelihoodAnalysis <- function(PDF4cMeanLoad, Data, HIpos, LOADpos, start, ## HIpos LOADpos not used
-                               AlphaLB , AlphaUB , ALconstrainedToStart , ALstarts ,
-                               verboseLikelihoodAnalysis){
-    kMax <- 10 ## init maximum aggregation parameter (higher would be a Poisson)
-    mMax <- 200 ## init maximum parasite load m (to check??or increase of load??) 
-
-    ## vPrint will print stuff if we decided to be verbose
-    vPrint <- function(s){
-        if verboseLikelihoodAnalysis==TRUE
-        print(s)
-    }
-
-    ## Core function :
-    MLEest = MLEformat[
-        FindMaximum[{Apply[LikelihoodFunction,
-                           Join[{PDF4cMeanLoad}, psFl[[i]], {Data, HIpos, LOADpos}]],
-                                cons[[i]]}, Transpose[{pars[[i]], starter[MLEest, i]}]]]
-
-    LikelihoodFunction(PDF4cMeanLoad, k, m1M, m1F, DmM, DmF, alpha, data) {
-}
-
-######################
-### Simulated data ###
-######################
-    SimulatedData <- function(Ninds, m1, Dm, alpha, k){
-        IndHIs <- runif(Ninds)
-        TheMeanLoadModel <- function(HI){
-            MeanLoad(m1, Dm, alpha, HI)
-        }
-        TheMeanLoads <- sapply(IndHIs, TheMeanLoadModel)
-        IndLoads  <- rnbinom(Ninds, size=k, mu= TheMeanLoads[i])
-        data.frame(IndHIs, IndLoads)}
-
-    TestData <- rbind(SimulatedData(500, 20, 10, 1, 2), ## males
-        SimulatedData(500, 10, 30, 1, 2)) ## females
-
-    ## NB, in Mathematica TestData[[1, 1]] is in R :
-    TestData[1,]
-
-    
-    
-
         
-    ## Creation of pars and psFL
-
-## 
-    
-    ## pars is a list of  --------- 
-    pars <- list(c(k, mB, alpha),
-                 c(k, mB, DmB, alpha),
-                 c(k, m1M, m1F, alpha),
-                 c(k, m1M, m1F, DmM, DmF, alpha))
-    
-k <- numeric()
-
-    ## psFL is a dataframe of -------
-    psFl <- data.frame((k, mB, mB,0,0,alpha),(k, mB, mB,DmB, DmB, alpha),
-    (k, m1M, m1F, 0, 0, alpha),(k, m1M, m1F, DmM, DmF, alpha))
-    
-
-    if(ALconstrainedToStart==TRUE){## to cheeeck what is alconstrainedToStart
-        for (i in 1:4) ## for the 4 values in the list pars
-            ## in original code, delete the last element of the list each step (???)
-#            "TRpsFl = Transpose[psFl];
-#       TRpsFl[[6]] = ALstarts;
-#      psFl = Transpose[TRpsFl];" ## Ca n'a aucun sens
-        ## Set up the list of contraints
-        cons <- list(c(
-           (0 < k < kMax, 0 < mB < mMax),
-           (0 < k < kMax, 0 < mB < mMax, 0 < mB + DmB < mMax),
-           (0 < k < kMax, 0 < m1M < mMax, 0 < m1F < mMax),
-           (0 < k < kMax, 0 < m1M < mMax, 0 < m1M + DmM < mMax,
-               0 < m1F < mMax, 0 < m1F + DmF < mMax)
-        ))
-        } else{  ## If we constrain the hybridization effect alpha          
-       cons <- list(c(
-           (0 < k < kMax, 0 < mB < mMax, AlphaLB < alpha < AlphaUB),
-           (0 < k < kMax, 0 < mB < mMax, 0 < mB + DmB < mMax,
-               AlphaLB < alpha < AlphaUB),
-           (0 < k < kMax, 0 < m1M < mMax, 0 < m1F < mMax,
-               AlphaLB < alpha < AlphaUB),
-           (0 < k < kMax, 0 < m1M < mMax, 0 < m1M + DmM < mMax,
-               0 < m1F < mMax, 0 < m1F + DmF < mMax, AlphaLB < alpha < AlphaUB)
-       ))
-        }
-
-"
-pars = {
-   {c, mB, alpha},
-   {c, mB, DmB, alpha},
-   {c, m1M, m1F, alpha},
-   {c, m1M, m1F, DmM, DmF, alpha}
-   };
-psFl = {
-   {c, mB, mB,    0,     0,    alpha},
-   {c, mB, mB,    DmB, DmB, alpha},
-   {c, m1M, m1F, 0,     0,    alpha},
-   {c, m1M, m1F, DmM, DmF, alpha}
-   };
-
-If[ALconstrainedToStart,
-  For[k = 1, k <= 4, pars[[k]] = Delete[pars[[k]], Length[pars[[k]]]];
-    k++];
-  TRpsFl = Transpose[psFl];
-  TRpsFl[[6]] = ALstarts;
-  psFl = Transpose[TRpsFl];
-  cons = {
-    {0 < c < cMax, 0 < mB < mMax},
-    {0 < c < cMax, 0 < mB < mMax, 0 < mB + DmB < mMax},
-    {0 < c < cMax, 0 < m1M < mMax, 0 < m1F < mMax},
-    {0 < c < cMax, 0 < m1M < mMax, 0 < m1M + DmM < mMax,
-     0 < m1F < mMax, 0 < m1F + DmF < mMax}
-    },(* otherwise *)
-  cons = {
-    {0 < c < cMax, 0 < mB < mMax, AlphaLB < alpha < AlphaUB},
-    {0 < c < cMax, 0 < mB < mMax, 0 < mB + DmB < mMax,
-     AlphaLB < alpha < AlphaUB},
-    {0 < c < cMax, 0 < m1M < mMax, 0 < m1F < mMax,
-     AlphaLB < alpha < AlphaUB},
-    {0 < c < cMax, 0 < m1M < mMax, 0 < m1M + DmM < mMax,
-     0 < m1F < mMax, 0 < m1F + DmF < mMax, AlphaLB < alpha < AlphaUB}
-    }
-  ];"
-    
-testList <- split(1:10,1:10)
-append(testList, list(x=42),3)    
-
-    ## Compare j to 1,2,3,4 and return the matching outputs 
-    starter <- function(prevMLEest, j){
-        if (j==1) {
-            output <- start
-        } else if (j==2) {
-            ## Add 0 after 2nd element of prevMLEest[[2]]
-            output <- append(prevMLEest[[2]], list(0), 2] 
-        } else if (j==3) {
-             ## Add ?? after 2nd element of prevMLEest[[2]]
-            output <- append(prevMLEest[[2]], prevMLEest[[2,2]], 2)
-        } else
-            append(prevMLEest[[2]], prevMLEest[[2,2]], 2] ## Add ?? after 2nd element of prevMLEest[[2]]
-            
-"   1, start,
-   2, Insert[prevMLEest[[2]], 0, 3],   
-   3, Insert[Delete[prevMLEest[[2]], 3], prevMLEest[[2, 2]], 3],
-   4, Insert[Insert[prevMLEest[[2]], prevMLEest[[2, 2]], 3],
-    prevMLEest[[2, 3]], 5]
-   ];
-"
-        ## What is MLEest??? preMLEest???
-
-#### (*Print[Apply[LikelihoodFunction,Join[{PDF4cMeanLoad},psFl[[1]],{Data, HIpos,LOADpos}]]];*)
-      
-    MLEest, MLEbounds, FindExtremum, Extremum,
-            TRpsFl,
-            starter, starterCons, Temp, Hierarchy,
-    vPrint, Mu, StdDev, k, Ans
-
-## If verboselikeanalysis, Hierarchy takes H0, H1, H2 or H3
-        Hierarchy <- vPrint(paste0("H", (i - 1))) 
-
-        ## Define MLEest (enfin!)
-     MLEest <- MLEformat[
-      FindMaximum[{Apply[LikelihoodFunction,
-         Join[{PDF4cMeanLoad}, psFl[[i]], {Data, HIpos, LOADpos}]],
-         cons[[i]]}, Transpose[{pars[[i]], starter[MLEest, i]}]]];
-
-
-
-
-
-
-        
-    vPrint[MLEest[[1]]];
-    vPrint[MatrixForm[{pars[[i]], MLEest[[2]]}]];
-    MLEbounds = Table[
-      FindExtremum = If[Extremum == -1, FindMinimum, FindMaximum];
-      vPrint[
-       StringJoin["...Finding ", If[Extremum > 0, "+", "-"],
-        ToString[pars[[i, parID]]], " bound..."]];
-      Ans =
-       MLEformat[
-        FindExtremum[{pars[[i, parID]],
-          Apply[LikelihoodFunction,
-            Join[{PDF4cMeanLoad},
-             psFl[[i]], {Data, HIpos, LOADpos}]] >= MLEest[[1]] - 2,
-          cons[[i]]}, Transpose[{pars[[i]], MLEest[[2]]}]]];
-      vPrint[MatrixForm[{pars[[i]], Ans[[2]]}]];
-      Ans,
-      {parID, 1, Length[pars[[i]]]}, {Extremum, -1, 1, 2}];
-    {MLEest, MLEbounds},
-    {i, 1, Length[pars]}];
- Flatten[Join[
-   Hierarchy, {Table[
-     GtestOnNestedMLEs[Hierarchy[[i, 1]], Hierarchy[[1, 1]]], {i, 2,
-      Length[Hierarchy]}]}], 1]
- ]
-
-        "
-LikelihoodAnalysis[PDF4cMeanLoad_, Data_, HIpos_, LOADpos_, start_,
-  AlphaLB_, AlphaUB_, verboseLikelihoodAnalysis_] :=
- LikelihoodAnalysis[PDF4cMeanLoad, Data, HIpos, LOADpos, start,
-  AlphaLB, AlphaUB, False, {}, verboseLikelihoodAnalysis]
-LikelihoodAnalysis[PDF4cMeanLoad_, Data_, HIpos_, LOADpos_, start_,
-  verboseLikelihoodAnalysis_] :=
- LikelihoodAnalysis[PDF4cMeanLoad, Data, HIpos, LOADpos, start, 2, 5,
-  verboseLikelihoodAnalysis]
-"
-
- ##????
-LikelihoodAnalysis <- function(PDF4cMeanLoad, Data, HIpos, LOADpos, start,
-                               AlphaLB, AlphaUB, verboseLikelihoodAnalysis){
-    LikelihoodAnalysis(PDF4cMeanLoad, Data, HIpos, LOADpos, start,
-  AlphaLB, AlphaUB, False, {}, verboseLikelihoodAnalysis]
-LikelihoodAnalysis[PDF4cMeanLoad_, Data_, HIpos_, LOADpos_, start_,
-  verboseLikelihoodAnalysis_] :=
- LikelihoodAnalysis[PDF4cMeanLoad, Data, HIpos, LOADpos, start, 2, 5,
-  verboseLikelihoodAnalysis]
-
-
 ### Equivalent of FindOptim fucntion in R is optim
 ## http://stat.ethz.ch/R-manual/R-devel/library/stats/html/optim.html
