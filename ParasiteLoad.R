@@ -164,64 +164,31 @@ PrLoad(TestData, "male", 1, 2, 40, 20, 0.2, PDFNegBin)
 ## 'data' is two sets/lists of inds (e.g. male and female, hence m1M vs m1F)
 ## PDF4cMeanLoad will be a chosen MeanLoad model function (e.g. PDFNegBin)
 ## the first argument will be optimised with "optim" later (k, alpha)
+
+## All hypotheses:
+## H0: k, alpha, mB
+## H1: k, alpha, mB, DmB
+## H2: k, alpha, m1M, m1F
+## H3: k, alpha, m1M, m1F, DmM, DmF
+
 LikelihoodFunction <- function(param, PDF4cMeanLoad, data) {
-    k <- param[1]; alpha <- param[2]
-    m1M <- param[3]; m1F <- param[4]
-    DmM <- param[5]; DmF <- param[6]
-    Sm <- 0 ; Sf <- 0 ## initialisation
-    ## males
-    PDF4cMeanLoad(k, MeanLoad(m1, Dm, alpha, HI), Load)
-}
-
-SimplePDFNegBin <- function(k, meanLoad, Load){
-    dnbinom(Load, size=k, mu=meanLoad)
-}
-## Always a good idea to make contributions to the likelihood function Bombproof, and never return zero.
-PDFNegBin <- function(k, meanLoad, Load){
-    max(10^-20, SimplePDFNegBin(abs(k), abs(meanLoad), Load))
-}
-## This previous function will be our MeanLoad model function, to be tested for arguments
-## k and alpha through maximum likelihood.
-
-## Test:
-PrLoad(TestData, "male", 1, 2, 40, 20, 0.2, PDFNegBin)
-
-##################################################
-### The likelihood function over a set of inds ###
-##################################################
-
-## 'data' is two sets/lists of inds (e.g. male and female, hence m1M vs m1F)
-## PDF4cMeanLoad will be a chosen MeanLoad model function (e.g. PDFNegBin)
-## the first argument will be optimised with "optim" later (k, alpha)
-LikelihoodFunction <- function(param, PDF4cMeanLoad, data) {
-    k <- param[1]; alpha <- param[2]
-    m1M <- param[3]; m1F <- param[4]
-    DmM <- param[5]; DmF <- param[6]
-    Sm <- 0 ; Sf <- 0 ## initialisation
-        ## males                       for (ind in (1:nrow(data[[1]]))){
-        Sm <- Sm + log(PrLoad(data, "male", ind, k, m1M, DmM, alpha, PDF4cMeanLoad))
+    if (hyp== "H0"){
+        k <- param[1]; alpha <- param[2]
+        m1M <- param[3]; m1F <- param[3]
+        DmM <- 0; DmF <- 0
+    } else if (hyp== "H1"){
+        k <- param[1]; alpha <- param[2]
+        m1M <- param[3]; m1F <- param[3]
+        DmM <- param[4]; DmF <- param[4]
+    } else if (hyp== "H2"){
+        k <- param[1]; alpha <- param[2]
+        m1M <- param[3]; m1F <- param[4]
+        DmM <- 0; DmF <- 0
+    } else if (hyp== "H3"){
+        k <- param[1]; alpha <- param[2]
+        m1M <- param[3]; m1F <- param[4]
+        DmM <- param[5]; DmF <- param[6]
     }
-    ## females
-    for (ind in (1:nrow(data[[2]]))){
-        Sf <- Sf + log(PrLoad(data, "female", ind, k, m1F, DmF, alpha, PDF4cMeanLoad))
-    }  
-    ## all
-    S <- Sm + Sf #sum of the logs (same as product of the row values) of males and females
-    return(S)
-}
-   
-## Test
-LikelihoodFunction(c(2, 0.3, 10, 12, 5, 10), PDFNegBin, TestData)
-
-############### --> turns until there perfectly
-
-## Divide the 4 hypotheses :
-
-## H3 Full model (reduce later on):
-LikelihoodFunction <- function(param, PDF4cMeanLoad, data) {
-    k <- param[1]; alpha <- param[2]
-    m1M <- param[3]; m1F <- param[4]
-    DmM <- param[5]; DmF <- param[6]
     Sm <- 0 ; Sf <- 0 ## initialisation
     ## males
     for (ind in (1:nrow(data[[1]]))){
@@ -236,113 +203,282 @@ LikelihoodFunction <- function(param, PDF4cMeanLoad, data) {
     return(S)
 }
 
+## Test
+LikelihoodFunction(c(2, 0.3, 10, 12, 5, 10), PDFNegBin, TestData, "H3")
+
+###############################################
+### MLE : optim function with box constraints##
+###############################################
+## Create the dataframes where I will store the results
+summaryDF_H0 <- data.frame(k = numeric(),
+                           alpha = numeric(),
+                           mB = numeric())
+summaryDF_H1 <- data.frame(k = numeric(),
+                           alpha = numeric(),
+                           mB = numeric(),
+                           DmB = numeric())
+summaryDF_H2 <- data.frame(k = numeric(),
+                           alpha = numeric(),
+                           m1M = numeric(),
+                           m1F = numeric())
+summaryDF_H3 <- data.frame(k = numeric(),
+                           alpha = numeric(),
+                           m1M = numeric(),
+                           m1F = numeric(),
+                           DmM = numeric(),
+                           DmF = numeric())
+
 ## Define the function for which we will optimize the parameters:
 OptimLikelihood <- function(param){
     return(LikelihoodFunction(param, PDFNegBin, TestData))}
 
+## H0
 ## Constraints:
-lower <- c(kmin=0, AlphaLB=-5, min_m1M=0, min_m1F=0, min_DmM=0, min_DmF=0)
-upper <- c(kmax=8, AlphaUB=5, max_m1M=50, max_m1F=50, max_DmM=50, max_DmF=50)
+lower <- c(kmin=0, AlphaLB=-5, min_mB=10)
+upper <- c(kmax=8, AlphaUB=5, max_mB=50)
+## Starter (likely values) :
+start <- c(k=2, Alpha=0, mB=10)
 
+## H1
+## Constraints:
+lower <- c(kmin=0, AlphaLB=-5, min_mB=10, min_DmB=10)
+upper <- c(kmax=8, AlphaUB=5, max_mB=50, max_DmB=50)
+## Starter (likely values) :
+start <- c(k=2, Alpha=0, mB=10, DmB=2)
+
+## H2
+## Constraints:
+lower <- c(kmin=0, AlphaLB=-5, min_m1M=10, min_m1F=10)
+upper <- c(kmax=8, AlphaUB=5, max_m1M=50, max_m1F=50)
+## Starter (likely values) :
+start <- c(k=2, Alpha=0, m1M=10, m1F=12)
+
+## H3
+## Constraints:
+lower <- c(kmin=0, AlphaLB=-5, min_m1M=10, min_m1F=10, min_DmM=0, min_DmF=0)
+upper <- c(kmax=8, AlphaUB=5, max_m1M=50, max_m1F=50, max_DmM=50, max_DmF=50)
 ## Starter (likely values) :
 start <- c(k=2, Alpha=0, m1M=10, m1F=12, DmM=2, DmF=3)
-   
+
+hyp <- "H0"
 ## Optimisation of the parameters:
-O <- optim(par = start, ## initial values for the parameters
-      fn = OptimLikelihood, ## function to be maximized
-      lower = lower, ## lower bounds for the parameters
-      upper = upper, ## upper bounds for the parameters
-      method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-      control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+MyMLE_H0 <- optim(par = start, ## initial values for the parameters
+                  fn = OptimLikelihood, ## function to be maximized
+                  lower = lower, ## lower bounds for the parameters
+                  upper = upper, ## upper bounds for the parameters
+                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+summaryDF_H0[2, ] <- MyMLE_H0$par
 
-O
+hyp <- "H1"
+## Optimisation of the parameters:
+MyMLE_H1 <- optim(par = start, ## initial values for the parameters
+                  fn = OptimLikelihood, ## function to be maximized
+                  lower = lower, ## lower bounds for the parameters
+                  upper = upper, ## upper bounds for the parameters
+                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+summaryDF_H1[2, ] <- MyMLE_H1$par
 
+hyp <- "H2"
+## Optimisation of the parameters:
+MyMLE_H2 <- optim(par = start, ## initial values for the parameters
+                  fn = OptimLikelihood, ## function to be maximized
+                  lower = lower, ## lower bounds for the parameters
+                  upper = upper, ## upper bounds for the parameters
+                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+summaryDF_H2[2, ] <- MyMLE_H2$par
+
+hyp <- "H3"
+## Optimisation of the parameters:
+MyMLE_H3 <- optim(par = start, ## initial values for the parameters
+                  fn = OptimLikelihood, ## function to be maximized
+                  lower = lower, ## lower bounds for the parameters
+                  upper = upper, ## upper bounds for the parameters
+                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+summaryDF_H3[2, ] <- MyMLE_H3$par
+
+##############################################################
+### MLEbounds : optim function with constraint on the search##
+##############################################################
+
+## H0: k, alpha, mB
+## H1: k, alpha, mB, DmB
+## H2: k, alpha, m1M, m1F
+## H3: k, alpha, m1M, m1F, DmM, DmF
+
+## H0
+max <- 3
 ## Optimisation of the errors :
-## For each parameters (here N=5) find max and min as MLE > O$value -2
-
-## Define the ranges of parameters
-k_range <- seq(0, 8, 0.1)
-alpha_range <- seq(-5, 5, 0.1)
-m1M_range <- seq(0, 50, 0.1)
-m1F_range <- seq(0, 50, 0.1)
-m2M_range <- seq(0, 50, 0.1)
-m2F_range <- seq(0, 50, 0.1)
-
-
-## Run the likelihood function accross all these values,
-## and find the minimum and maximum of k if MLE > MLE_O - 2
-LikelihoodFunction(c(2, 0.3, 10, 12, 5, 10), PDFNegBin, TestData)
-
-
-combn(letters[1:4], 2)
-
-## expand.grid(k_range, alpha_range, m1M_range, m1F_range, m2M_range, m2F_range)
-
-sapply(k_range, LikelihoodFunction, arg1=c(0.3, 10, 12, 5, 10, PDFNegBin, TestData))
-
-
-mapply(LikelihoodFunction, k_range, alpha_range, m1M_range, m1F_range, m2M_range, m2F_range, PDFNegBin, TestData)
-                                          
-
-a <- 1:5
-b <- 2:6
-combn(a,b,1)
-
-start[1]
-
-Minimum <- function(MLE){
-    myoptim <- optim(par = start, ## initial values for the parameters
-    fn = OptimLikelihood, ## function to be maximized
-    lower = lower, ## lower bounds for the parameters
-#   upper = upper, ## upper bounds for the parameters
-    method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-    control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-    return(myoptim$par[1])
-
-    
-
-    return(param)
-    
-
-optim(par = O$value - 2, ## initial values for the parameters
-      fn = , ## function to be maximized
-      lower = lower[1], ## lower bounds for the parameters
-#      upper = upper, ## upper bounds for the parameters
-      method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-      control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-
-
-
-## Define the function for which we will find the lower & upper bounds :
-OptimBounds <- function(param){
-    MLE <- LikelihoodFunction(param, PDFNegBin, TestData)
-    return(O$value))
+for (rankpar in 1:max){ ## run over the 6 parameters
+    ## Functional constraint on search (L > MLE-2) + max&min each param
+    OptimBounds <- function(param){
+        LK <- LikelihoodFunction(param, PDFNegBin, TestData)
+        if (LK <= (MyMLE$value - 2)){
+            if (which_side== "lower"){
+                param[rankpar] <-100
+            } else {
+                param[rankpar] <- -100
+            }
+        }
+        return(param[rankpar])
     }
+    ##  Upper bound
+    which_side <- "upper"
+    MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                         control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+    ##store upper parameter
+    summaryDF_H0[3, rankpar] <- MyBoundsMax$par[rankpar]
+    ##  Lower bound
+    which_side <- "lower"
+    MyBoundsMin <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B") ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+    ##store lower parameter
+    summaryDF_H0[1, rankpar] <- MyBoundsMin$par[rankpar]
+}
 
-## Lower bound:
-optim(par = start, ## initial values for the parameters
-      fn = OptimBounds, ## function to be maximized
-#      lower = lower, ## lower bounds for the parameters
-      upper = upper, ## upper bounds for the parameters
-      method = "L-BFGS-B") ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-
-## Upper bound:
-optim(par = start, ## initial values for the parameters
-      fn = OptimBounds, ## function to be maximized
-      lower = lower, ## lower bounds for the parameters
-#      upper = upper, ## upper bounds for the parameters
-      method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-      control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+## Results:
+print("My Maximum Likelihood is")
+MyMLE_H0$value
+summaryDF_H0
 
 
+## H1
+max <- 4
+## Optimisation of the errors :
+for (rankpar in 1:max){ ## run over the 6 parameters
+    ## Functional constraint on search (L > MLE-2) + max&min each param
+    OptimBounds <- function(param){
+        LK <- LikelihoodFunction(param, PDFNegBin, TestData)
+        if (LK <= (MyMLE$value - 2)){
+            if (which_side== "lower"){
+                param[rankpar] <-100
+            } else {
+                param[rankpar] <- -100
+            }
+        }
+        return(param[rankpar])
+    }
+    ##  Upper bound
+    which_side <- "upper"
+    MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                         control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+    ##store upper parameter
+    summaryDF_H1[3, rankpar] <- MyBoundsMax$par[rankpar]
+    ##  Lower bound
+    which_side <- "lower"
+    MyBoundsMin <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B") ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+    ##store lower parameter
+    summaryDF_H1[1, rankpar] <- MyBoundsMin$par[rankpar]
+}
 
+## Results:
+print("My Maximum Likelihood is")
+MyMLE_H1$value
+summaryDF_H1
 
+## H2
+max <- 4
+## Optimisation of the errors :
+for (rankpar in 1:max){ ## run over the 6 parameters
+    ## Functional constraint on search (L > MLE-2) + max&min each param
+    OptimBounds <- function(param){
+        LK <- LikelihoodFunction(param, PDFNegBin, TestData)
+        if (LK <= (MyMLE$value - 2)){
+            if (which_side== "lower"){
+                param[rankpar] <-100
+            } else {
+                param[rankpar] <- -100
+            }
+        }
+        return(param[rankpar])
+    }
+    ##  Upper bound
+    which_side <- "upper"
+    MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                         control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+    ##store upper parameter
+    summaryDF_H2[3, rankpar] <- MyBoundsMax$par[rankpar]
+    ##  Lower bound
+    which_side <- "lower"
+    MyBoundsMin <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B") ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+    ##store lower parameter
+    summaryDF_H2[1, rankpar] <- MyBoundsMin$par[rankpar]
+}
 
+## Results:
+print("My Maximum Likelihood is")
+MyMLE_H2$value
+summaryDF_H2
 
+## H3
+max <- 6
+## Optimisation of the errors :
+for (rankpar in 1:max){ ## run over the 6 parameters
+    ## Functional constraint on search (L > MLE-2) + max&min each param
+    OptimBounds <- function(param){
+        LK <- LikelihoodFunction(param, PDFNegBin, TestData)
+        if (LK <= (MyMLE$value - 2)){
+            if (which_side== "lower"){
+                param[rankpar] <-100
+            } else {
+                param[rankpar] <- -100
+            }
+        }
+        return(param[rankpar])
+    }
+    ##  Upper bound
+    which_side <- "upper"
+    MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+                         control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+    ##store upper parameter
+    summaryDF_H3[3, rankpar] <- MyBoundsMax$par[rankpar]
+    ##  Lower bound
+    which_side <- "lower"
+    MyBoundsMin <- optim(par = MyMLE$par, ## initial values for the parameters
+                         fn = OptimBounds, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B") ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
+    ##store lower parameter
+    summaryDF_H3[1, rankpar] <- MyBoundsMin$par[rankpar]
+}
 
+## Results:
+print("My Maximum Likelihood is")
+MyMLE_H3$value
+summaryDF_H3
 
-
-
+############### --> turns until there perfectly
 
 
 ######################################################################
@@ -360,6 +496,6 @@ GtestOnNestedMLEs <- function(MLEformat1, MLEformat2){
     print(paste("dLL = ", dLL, " dDF = ", dDF, " Gtest p = ", p))
 }
 
-        
+
 ### Equivalent of FindOptim fucntion in R is optim
 ## http://stat.ethz.ch/R-manual/R-devel/library/stats/html/optim.html
