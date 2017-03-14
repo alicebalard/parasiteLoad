@@ -457,21 +457,237 @@ print("My Maximum Likelihood is")
 MyMLE_H3$value
 summaryDF_H3
 
-######################################################################
-
+##############################################################
 ## Test if the difference between 2 likelihood is significant
 Gtest <- function(dLL, dDF){
-    1 - CDF[ChiSquareDistribution[dDF], 2*dLL]
+    1 - pchisq(2*dLL, df=dDF) 
 }
 
-##
-GtestOnNestedMLEs <- function(MLEformat1, MLEformat2){
-    dLL <- abs(MLEformat1[[1]] - MLEformat2[[1]]) ## format in R
-    dDF <- abs(length(MLEformat1[[2]]] - Length[MLEformat2[[2]]]) ## format in R
-    p <- Gtest(dLL, dDF)
+GtestOnNestedMLEs <- function(hyp1, hyp2){
+    MyMLE1 <- get(paste0("MyMLE_",hyp1))$value
+    MyMLE2 <- get(paste0("MyMLE_",hyp2))$value
+    summaryDF1 <- get(paste0("summaryDF_",hyp1))
+    summaryDF2 <- get(paste0("summaryDF_",hyp2))
+    dLL <- round(abs(MyMLE1 - MyMLE2),4)
+    dDF <- abs(length(summaryDF1) - length(summaryDF2))
+    p <- round(Gtest(dLL, dDF),4)
+    print(paste("Likelihood test between", hyp1, "and", hyp2, ":"))
     print(paste("dLL = ", dLL, " dDF = ", dDF, " Gtest p = ", p))
 }
 
+## Test the differences of likelihood between each hypotheses and the H0
+GtestOnNestedMLEs("H1", "H0")
+GtestOnNestedMLEs("H2", "H0")
+GtestOnNestedMLEs("H3", "H0")
 
-### Equivalent of FindOptim fucntion in R is optim
-## http://stat.ethz.ch/R-manual/R-devel/library/stats/html/optim.html
+################################################################
+## It's plotting time!!
+## Plot the mean load model along the hybrid zone, according to the hyp.
+
+## H0:
+HI <- seq(0,1,0.001)
+df <- data.frame(HI,
+                 LB=MeanLoad(m1=summaryDF_H0[1,3],
+                          Dm=0,
+                          alpha=summaryDF_H0[1,2],
+                          HI),
+                 est=MeanLoad(m1=summaryDF_H0[2,3],
+                          Dm=0,
+                          alpha=summaryDF_H0[2,2],
+                          HI),
+                 UB=MeanLoad(m1=summaryDF_H0[3,3],
+                          Dm=0,
+                          alpha=summaryDF_H0[3,2],
+                          HI))
+plot0 <- ggplot(df, aes(x=HI, y=est))+
+    geom_line()+
+    geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.5)+
+    ggtitle("H0")+
+    theme_bw()
+plot0
+
+## H1:
+df <- data.frame(HI,
+                 LB=MeanLoad(m1=summaryDF_H1[1,3],
+                          Dm=summaryDF_H1[1,4],
+                          alpha=summaryDF_H1[1,2],
+                          HI),
+                 est=MeanLoad(m1=summaryDF_H1[2,3],
+                          Dm=summaryDF_H1[2,4],                          
+                          alpha=summaryDF_H1[2,2],
+                          HI),
+                 UB=MeanLoad(m1=summaryDF_H1[3,3],
+                          Dm=summaryDF_H1[3,4],                         
+                          alpha=summaryDF_H1[3,2],
+                          HI))
+plot1 <- ggplot(df, aes(x=HI, y=est))+
+    geom_line()+
+    geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.5)+
+    ggtitle("H1")+
+    theme_bw()
+plot1
+
+## H2:
+df <- data.frame(HI=HI,
+                 LBF=MeanLoad(m1=summaryDF_H2[1,4],
+                          Dm=0,
+                          alpha=summaryDF_H2[1,2],
+                          HI),
+                 UBF=MeanLoad(m1=summaryDF_H2[3,4],
+                          Dm=0,                          
+                          alpha=summaryDF_H2[3,2],
+                          HI),
+                 estF=MeanLoad(m1=summaryDF_H2[2,4],
+                          Dm=0,                         
+                          alpha=summaryDF_H2[2,2],
+                          HI),                 
+                 LBM=MeanLoad(m1=summaryDF_H2[1,3],
+                          Dm=0,
+                          alpha=summaryDF_H2[1,2],
+                          HI),
+                 UBM=MeanLoad(m1=summaryDF_H2[3,3],
+                          Dm=0,                          
+                          alpha=summaryDF_H2[3,2],
+                          HI),
+                 estM=MeanLoad(m1=summaryDF_H2[2,3],
+                          Dm=0,                         
+                          alpha=summaryDF_H2[2,2],
+                          HI)
+                 )
+plot2 <-ggplot(df, aes(x=HI, y=estM))+
+    geom_line(color="darkblue")+
+    geom_line(aes(x=HI, y=estF), color="red")+
+    geom_ribbon(aes(x=HI, ymax=UBF, ymin=LBF), fill="pink", alpha=.5)+
+    geom_ribbon(aes(x=HI, ymax=UBM, ymin=LBM), fill="blue", alpha=.5)+
+    ggtitle("H2")+
+    theme_bw()
+plot2
+
+## H3:
+summaryDF_H3
+
+df <- data.frame(HI=HI,
+                 LBF=MeanLoad(m1=summaryDF_H3[1,4],
+                          Dm=summaryDF_H3[1,6],
+                          alpha=summaryDF_H3[1,2],
+                          HI),
+                 UBF=MeanLoad(m1=summaryDF_H3[3,4],
+                          Dm=summaryDF_H3[3,6],           
+                          alpha=summaryDF_H3[3,2],
+                          HI),
+                 estF=MeanLoad(m1=summaryDF_H3[2,4],
+                          Dm=summaryDF_H3[2,6],                         
+                          alpha=summaryDF_H3[2,2],
+                          HI),                 
+                 LBM=MeanLoad(m1=summaryDF_H3[1,3],
+                          Dm=summaryDF_H3[1,5],
+                          alpha=summaryDF_H3[1,2],
+                          HI),
+                 UBM=MeanLoad(m1=summaryDF_H3[3,3],
+                          Dm=summaryDF_H3[3,5],            
+                          alpha=summaryDF_H3[3,2],
+                          HI),
+                 estM=MeanLoad(m1=summaryDF_H3[2,3],
+                          Dm=summaryDF_H3[2,5],           
+                          alpha=summaryDF_H3[2,2],
+                          HI)
+                 )
+plot3 <-ggplot(df, aes(x=HI, y=estM))+
+    geom_line(color="darkblue")+
+    geom_line(aes(x=HI, y=estF), color="red")+
+    geom_ribbon(aes(x=HI, ymax=UBF, ymin=LBF), fill="pink", alpha=.5)+
+    geom_ribbon(aes(x=HI, ymax=UBM, ymin=LBM), fill="blue", alpha=.5)+
+    ggtitle("H3")+
+    theme_bw()
+plot3
+
+
+### Multiplot:
+                                        # Multiple plot function
+                                        #
+                                        # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+                                        # - cols:   Number of columns in layout
+                                        # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+                                        #
+                                        # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+                                        # then plot 1 will go in the upper left, 2 will go in the upper right, and
+                                        # 3 will go all the way across the bottom.
+                                        #
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+
+                                        # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+
+    numPlots = length(plots)
+
+                                        # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+                                        # Make the panel
+                                        # ncol: Number of columns of plots
+                                        # nrow: Number of rows needed, calculated from # of cols
+        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                         ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+
+    if (numPlots==1) {
+        print(plots[[1]])
+
+    } else {
+                                        # Set up the page
+        grid.newpage()
+        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+                                        # Make each plot, in the correct location
+        for (i in 1:numPlots) {
+                                        # Get the i,j matrix positions of the regions that contain this subplot
+            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+            print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                            layout.pos.col = matchidx$col))
+        }
+    }
+}
+
+
+###########################################
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+ if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }}
+
+
+multiplot(plot0,plot1,plot2,plot3, cols=2)
