@@ -548,8 +548,10 @@ plot0 <- ggplot(df, aes(x=HI, y=est))+
     geom_point(data = TestDataDF, aes(x=IndHIs, y=IndLoads), color= "green", size=0.3)+
     geom_line()+
     geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.5)+
-    theme_bw()
+    theme_bw()+
+    theme(legend.position="none")
 plot0
+ggsave("plotH0.pdf")
 
 #H1:
 df <- data.frame(HI,
@@ -570,8 +572,10 @@ plot1 <- ggplot(df, aes(x=HI, y=est))+
     geom_point(data = TestDataDF, aes(x=IndHIs, y=IndLoads), color="green", size=0.3)+
     geom_line()+
     geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.5)+
-    theme_bw()
+    theme_bw()+
+    theme(legend.position="none")
 plot1
+ggsave("plotH1.pdf")
 
 #H2:
 df <- data.frame(HI=HI,
@@ -608,8 +612,10 @@ plot2 <-ggplot(df, aes(x=HI, y=estM))+
     geom_line(aes(x=HI, y=estF), color="red")+
     geom_ribbon(aes(x=HI, ymax=UBF, ymin=LBF), fill="pink", alpha=.5)+
     geom_ribbon(aes(x=HI, ymax=UBM, ymin=LBM), fill="blue", alpha=.5)+
-    theme_bw()
+    theme_bw()+
+    theme(legend.position="none")
 plot2
+ggsave("plotH2.pdf")
 
 #H3:
 df <- data.frame(HI=HI,
@@ -646,8 +652,10 @@ plot3 <-ggplot(df, aes(x=HI, y=estM))+
     geom_line(aes(x=HI, y=estF), color="red")+
     geom_ribbon(aes(x=HI, ymax=UBF, ymin=LBF), fill="pink", alpha=.5)+
     geom_ribbon(aes(x=HI, ymax=UBM, ymin=LBM), fill="blue", alpha=.5)+
-    theme_bw()
+    theme_bw()+
+    theme(legend.position="none")
 plot3
+ggsave("plotH3.pdf")
 ```
 
 ```{r, echo=FALSE}
@@ -691,5 +699,6 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 ```
 
 ```{r}
-multiplot(plot0,plot1,plot2,plot3, cols=2)
+M <- multiplot(plot0,plot1,plot2,plot3, cols=2)
+M
 ```
