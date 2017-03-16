@@ -103,8 +103,8 @@ SimulatedData <- function(Ninds, m1, Dm, alpha, k){
     IndLoads  <- rnbinom(Ninds, size=k, mu= TheMeanLoads)
     data.frame(IndHIs, IndLoads)}
 
-TestData <- list(males = SimulatedData(20, 20, 10, 1, 2), 
-                 females = SimulatedData(20, 10, 30, 1, 2))
+TestData <- list(males = SimulatedData(500, 20, 10, 1, 2), 
+                 females = SimulatedData(500, 10, 30, 1, 2))
 TestData[[1]][1,] <- c(0.5, 31) ## Stick to Stuart example
 
 ###########################################################

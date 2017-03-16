@@ -1,0 +1,9 @@
+
+optim {stats}	R Documentation
+General-purpose Optimization
+
+General-purpose optimization based on Nelder–Mead, quasi-Newton and conjugate-gradient algorithms. It includes an option for box-constrained optimization and simulated annealing.
+
+Method "L-BFGS-B" is that of Byrd et. al. (1995) which allows box constraints, that is each variable can be given a lower and/or upper bound. The initial value must satisfy the constraints. This uses a limited-memory modification of the BFGS quasi-Newton method. If non-trivial bounds are supplied, this method will be selected, with a warning.
+
+Hessian matrix (square matrix of second-order partial derivatives) --> search through variable space. 
