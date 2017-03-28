@@ -95,6 +95,7 @@ ggplot(mydf, aes(x=x, y=myvec, group=mynames, color=mynames))+
 ### Simulated data ###
 ######################
 SimulatedData <- function(Ninds, m1, Dm, alpha, k){
+    set.seed(5)
     IndHIs <- runif(Ninds)
     TheMeanLoadModel <- function(HI){
         MeanLoad(m1, Dm, alpha, HI)
@@ -102,10 +103,11 @@ SimulatedData <- function(Ninds, m1, Dm, alpha, k){
     TheMeanLoads <- sapply(IndHIs, TheMeanLoadModel)
     IndLoads  <- rnbinom(Ninds, size=k, mu= TheMeanLoads)
     data.frame(IndHIs, IndLoads)}
-
-TestData <- list(males = SimulatedData(500, 20, 10, 1, 2), 
-                 females = SimulatedData(500, 10, 30, 1, 2))
+TestData <- list(males = SimulatedData(50, 20, 10, 1, 2), 
+                 females = SimulatedData(50, 10, 30, 1, 2))
 TestData[[1]][1,] <- c(0.5, 31) ## Stick to Stuart example
+testvec <- c(TestData$males$IndLoads, TestData$females$IndLoads)
+summary(testvec)
 
 ###########################################################
 ### PrNegativeBinomialLoad: Probability an Ind has some ###
@@ -226,259 +228,290 @@ LikelihoodFunction <- function(param, PDF4cMeanLoad, data, hyp) {
 
 ## Test
 LikelihoodFunction(c(2, 0.3, 10, 12, 5, 10), PDFNegBin, TestData, "H3")
-
+## -388.5384
 
 #######################################
 ### The Maximum likelihood analysis ###
 #######################################
 
-#################################################################
-## Define the function for which we will optimize the parameters:
-## MLE : optim function with box constraints
-OptimLikelihood <- function(param){
-    return(LikelihoodFunction(param, PDFNegBin, TestData, hyp))}
+## 1. Function to maximize the likelihood:
+mymle <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, method){
+    optim(par = start, ## initial values for the parameters
+          fn = LikelihoodFunction, ## function to be maximized
+          lower = lower, ## lower bounds for the parameters
+          upper = upper, ## upper bounds for the parameters
+          method = method, ## set the optimization method
+          control = list(fnscale=-1), ##turn the default minimizer into maximizer
+          PDF4cMeanLoad = PDF4cMeanLoad,
+          data = data,
+          hyp = hyp)
+}
 
-#####################################################
-## Define the functions to find the parameters bounds:
+## 2. Function to maximize the parameters in MLE+/- 2 :
+
 ## MLEbounds : optim function with constraint on the search
-UpperBoundsFunction <- function(hyp, MyMLE){
-    if (hyp == "H0"){
-        max <- 3
-    } else if (hyp =="H1") {
-        max <- 4
-    } else if (hyp =="H2") {
-        max <- 4
-    } else if (hyp =="H3") {
-        max <- 6
-    }
+UpperBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, method,
+                                MyMLE){
     ## empty dataframe to store the data
     summaryVec <- vector()
+    max <- length(MyMLE_H0$par)
     for (rankpar in 1:max){ ## run over the parameters
         ## Functional constraint on search (L > MLE-2) + max&min each param
         OptimBounds <- function(param){
-            LK <- LikelihoodFunction(param, PDFNegBin, TestData, hyp)
+            LK <- LikelihoodFunction(param, PDF4cMeanLoad, data, hyp)
             if (LK <= (MyMLE$value - 2)){
-                if (which_side== "lower"){
-                    param[rankpar] <-100
-                } else {
-                    param[rankpar] <- -100
-                }
+                param[rankpar] <- -100
             }
             return(param[rankpar])
         }
-        ##  Upper bound
-        which_side <- "upper"
         MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
                              fn = OptimBounds, ## function to be maximized
                              lower = lower, ## lower bounds for the parameters
                              upper = upper, ## upper bounds for the parameters
-                             method = "L-BFGS-B", ## set the method
+                             method = method, ## set the method
                              control = list(fnscale=-1)) ##turn the default minimizer into maximizer
         summaryVec[rankpar] <- MyBoundsMax$par[rankpar]
     }
     return(summaryVec)
 }
 
-LowerBoundsFunction <- function(hyp, MyMLE){
-    if (hyp == "H0"){
-        max <- 3
-    } else if (hyp =="H1") {
-        max <- 4
-    } else if (hyp =="H2") {
-        max <- 4
-    } else if (hyp =="H3") {
-        max <- 6
-    }
+## 3. Function to minimize the parameters in MLE+/- 2 :
+
+## MLEbounds : optim function with constraint on the search
+LowerBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, method,
+                                MyMLE){
     ## empty dataframe to store the data
     summaryVec <- vector()
+    max <- length(MyMLE_H0$par)
     for (rankpar in 1:max){ ## run over the parameters
         ## Functional constraint on search (L > MLE-2) + max&min each param
         OptimBounds <- function(param){
-            LK <- LikelihoodFunction(param, PDFNegBin, TestData, hyp)
+            LK <- LikelihoodFunction(param, PDF4cMeanLoad, data, hyp)
             if (LK <= (MyMLE$value - 2)){
-                if (which_side== "lower"){
-                    param[rankpar] <-100
-                } else {
-                    param[rankpar] <- -100
-                }
+                param[rankpar] <- 100
             }
             return(param[rankpar])
         }
-        ##  Lower bound
-        which_side <- "lower"
-        MyBoundsMin <- optim(par = MyMLE$par, ## initial values for the parameters
+        MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
                              fn = OptimBounds, ## function to be maximized
                              lower = lower, ## lower bounds for the parameters
                              upper = upper, ## upper bounds for the parameters
-                             method = "L-BFGS-B") ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-        summaryVec[rankpar] <- MyBoundsMin$par[rankpar]
+                             method = method) ## set the method
+        summaryVec[rankpar] <- MyBoundsMax$par[rankpar]
     }
     return(summaryVec)
 }
 
-###################### H0 ###################### 
-hyp <- "H0"
 
-## Constraints:
-lower <- c(kmin=0, AlphaLB=-5, min_mB=10)
-upper <- c(kmax=8, AlphaUB=5, max_mB=50)
-## Starter (likely values) :
-start <- c(k=2, Alpha=0, mB=10)
-
-## Optimisation of the parameters:
-MyMLE_H0 <- optim(par = start, ## initial values for the parameters
-                  fn = OptimLikelihood, ## function to be maximized
-                  lower = lower, ## lower bounds for the parameters
-                  upper = upper, ## upper bounds for the parameters
-                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-
-## Create the dataframe where I will store the results
-summaryDF_H0 <- data.frame(k = numeric(),
-                           alpha = numeric(),
-                           mB = numeric())
-summaryDF_H0[2, ] <- MyMLE_H0$par
-
-##store upper parameter
-summaryDF_H0[3, ] <- UpperBoundsFunction("H0", MyMLE_H0)
-
-##store lower parameter
-summaryDF_H0[1, ] <- LowerBoundsFunction("H0", MyMLE_H0)
-
-## Results:
-print("My Maximum Likelihood is")
-MyMLE_H0$value
-summaryDF_H0
-
-###################### H1 ###################### 
-hyp <- "H1"
-
-## Constraints:
-lower <- c(kmin=0, AlphaLB=-5, min_mB=10, min_DmB=10)
-upper <- c(kmax=8, AlphaUB=5, max_mB=50, max_DmB=50)
-## Starter (likely values) :
-start <- c(k=2, Alpha=0, mB=10, DmB=2)
-
-## Optimisation of the parameters:
-MyMLE_H1 <- optim(par = start, ## initial values for the parameters
-                  fn = OptimLikelihood, ## function to be maximized
-                  lower = lower, ## lower bounds for the parameters
-                  upper = upper, ## upper bounds for the parameters
-                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-
-## Create the dataframe where I will store the results
-summaryDF_H1 <- data.frame(k = numeric(),
-                           alpha = numeric(),
-                           mB = numeric(),
-                           DmB = numeric())
-summaryDF_H1[2, ] <- MyMLE_H1$par
-
-##store upper parameter
-summaryDF_H1[3, ] <- UpperBoundsFunction("H1", MyMLE_H1)
-
-##store lower parameter
-summaryDF_H1[1, ] <- LowerBoundsFunction("H1", MyMLE_H1)
-
-## Results:
-print("My Maximum Likelihood is")
-MyMLE_H1$value
-summaryDF_H1
-
-###################### H2 ###################### 
-hyp <- "H2"
-
-## Constraints:
-lower <- c(kmin=0, AlphaLB=-5, min_m1M=10, min_m1F=10)
-upper <- c(kmax=8, AlphaUB=5, max_m1M=50, max_m1F=50)
-## Starter (likely values) :
-start <- c(k=2, Alpha=0, m1M=10, m1F=12)
-
-## Optimisation of the parameters:
-MyMLE_H2 <- optim(par = start, ## initial values for the parameters
-                  fn = OptimLikelihood, ## function to be maximized
-                  lower = lower, ## lower bounds for the parameters
-                  upper = upper, ## upper bounds for the parameters
-                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-
-## Create the dataframe where I will store the results
-summaryDF_H2 <- data.frame(k = numeric(),
-                           alpha = numeric(),
-                           m1M = numeric(),
-                           m1F = numeric())
-summaryDF_H2[2, ] <- MyMLE_H2$par
-
-##store upper parameter
-summaryDF_H2[3, ] <- UpperBoundsFunction("H2", MyMLE_H2)
-
-##store lower parameter
-summaryDF_H2[1, ] <- LowerBoundsFunction("H2", MyMLE_H2)
-
-## Results:
-print("My Maximum Likelihood is")
-MyMLE_H2$value
-summaryDF_H2
-
-###################### H3 ###################### 
+## Test ## ******************
 hyp <- "H3"
-
 ## Constraints:
-lower <- c(kmin=0, AlphaLB=-5, min_m1M=10, min_m1F=10, min_DmM=0, min_DmF=0)
-upper <- c(kmax=8, AlphaUB=5, max_m1M=50, max_m1F=50, max_DmM=50, max_DmF=50)
+lowertest <- c(kmin = 0, Alphamin = -5, Meanloadmin = 0, Meanloadmin = 0, Dmmin = 0, Dmmin = 0)
+uppertest <- c(kmax = 8, Alphamax = 5, Meanloadmax = 50, Meanloadmax = 50, Dmmax = 10, Dmmax = 10)
 ## Starter (likely values) :
-start <- c(k=2, Alpha=0, m1M=10, m1F=12, DmM=2, DmF=3)
+starttest <- c(kstart = 2, Alphastart = 0, Meanloadstart = 10, Meanloadstart = 10, Dmstart = 2, Dmstart = 2)
+## 1
+MyMLE_test <- mymle(TestData, PDFNegBin, "H3", lowertest, uppertest, starttest, "L-BFGS-B")
+## 2
+UpperBoundsFunction(TestData, PDFNegBin, "H3", lowertest, uppertest, starttest, method =  "L-BFGS-B", MyMLE_test)
+## 3
+LowerBoundsFunction(TestData, PDFNegBin, "H3", lowertest, uppertest, starttest, method =  "L-BFGS-B", MyMLE_test)
 
-## Optimisation of the parameters:
-MyMLE_H3 <- optim(par = start, ## initial values for the parameters
-                  fn = OptimLikelihood, ## function to be maximized
-                  lower = lower, ## lower bounds for the parameters
-                  upper = upper, ## upper bounds for the parameters
-                  method = "L-BFGS-B", ## set the method (Method "L-BFGS-B" from Byrd et. al. (1995))
-                  control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+## Test ## ******************
 
-## Create the dataframe where I will store the results
-summaryDF_H3 <- data.frame(k = numeric(),
-                           alpha = numeric(),
-                           m1M = numeric(),
-                           m1F = numeric(),
-                           DmM = numeric(),
-                           DmF = numeric())
-summaryDF_H3[2, ] <- MyMLE_H3$par
+## 4. Function to run the optimisations over the 4 hypotheses :
+RunOptim <- function(data, PDF4cMeanLoad, method,
+                     kstart, kmin, kmax,
+                     Alphastart, Alphamin, Alphamax,
+                     Meanloadstart, Meanloadmin, Meanloadmax,
+                     Dmstart, Dmmin, Dmmax) {
+    ## Create a summary table for all hypotheses:
+    SumTab <- data.frame(hyp=c("H0", "H1", "H2", "H3"),
+                         LL = NA, deltaLL_H0 = NA, deltaDF_H0 = NA, p = NA,
+                         alpha.min = NA, alpha.MLE = NA, alpha.max = NA,
+                         M1m.min = NA, M1m.MLE = NA, M1m.max = NA,
+                         F1m.min = NA, F1m.MLE = NA, F1m.max = NA,
+                         DmM.min = NA, DmM.MLE = NA, DmM.max = NA,
+                         DmF.min = NA, DmF.MLE = NA, DmF.max = NA,
+                         k.min = NA, k.MLE = NA, k.max = NA)
+    ## Constraints:
+    lower <- c(kmin, Alphamin, Meanloadmin, Meanloadmin, Dmmin, Dmmin)
+    upper <- c(kmax, Alphamax, Meanloadmax, Meanloadmax, Dmmax, Dmmax)
+    ## Starter (likely values) :
+    start <- c(kstart, Alphastart, Meanloadstart, Meanloadstart, Dmstart, Dmstart)
+    ## H0:
+    lower_H0 <- lower[c(1,2,3)]; upper_H0 <- upper[c(1,2,3)]; start_H0 <- start[c(1,2,3)]
+    ## H1:
+    lower_H1 <- lower[c(1,2,3,5)]; upper_H1 <- upper[c(1,2,3,5)]; start_H1 <- start[c(1,2,3,5)]
+    ## H2:
+    lower_H2 <- lower[c(1,2,3,4)]; upper_H2 <- upper[c(1,2,3,4)]; start_H2 <- start[c(1,2,3,4)]
+    ## H3:
+    lower_H3 <- lower; upper_H3 <- upper; start_H3 <- start
 
-##store upper parameter
-summaryDF_H3[3, ] <- UpperBoundsFunction("H3", MyMLE_H3)
+    ## H0:
+    hyp <- "H0"    
+    ## Optimisation of the parameters:
+    MyMLE_H0 <- mymle(data, PDF4cMeanLoad, hyp, lower_H0, upper_H0, start_H0, method)
+    SumTab$k.MLE[1] <- MyMLE_H0$par[1]
+    SumTab$alpha.MLE[1] <- MyMLE_H0$par[2]
+    SumTab$M1m.MLE[1] = SumTab$F1m.MLE[1] = SumTab$DmM.MLE[1] = SumTab$DmF.MLE[1] = MyMLE_H0$par[3]
+    ##store upper parameters
+    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H0, upper_H0, start_H0, method, MyMLE_H0)
+    SumTab$k.max[1] <- up[1]
+    SumTab$alpha.max[1] <- up[2]
+    SumTab$M1m.max[1] = SumTab$F1m.max[1] = SumTab$DmM.max[1] = SumTab$DmF.max[1] = up[3]
+    ##store lower parameters
+    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H0, upper_H0, start_H0, method, MyMLE_H0)
+    SumTab$k.min[1] <- low[1]
+    SumTab$alpha.min[1] <- low[2]
+    SumTab$M1m.min[1] = SumTab$F1m.min[1] = SumTab$DmM.min[1] = SumTab$DmF.min[1] = low[3]
 
-##store lower parameter
-summaryDF_H3[1, ] <- LowerBoundsFunction("H3", MyMLE_H3)
+    ## H1:
+    hyp <- "H1"
+    ## Optimisation of the parameters:
+    MyMLE_H1 <- mymle(data, PDF4cMeanLoad, hyp, lower_H1, upper_H1, start_H1, method)
+    SumTab$k.MLE[2] <- MyMLE_H1$par[1]
+    SumTab$alpha.MLE[2] <- MyMLE_H1$par[2]
+    SumTab$M1m.MLE[2] = SumTab$F1m.MLE[2] <- MyMLE_H1$par[3]
+    SumTab$DmM.MLE[2] = SumTab$DmF.MLE[2] <- MyMLE_H1$par[4]
+    ##store upper parameters
+    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H1, upper_H1, start_H1, method, MyMLE_H1)
+    SumTab$k.max[2] <- up[1]
+    SumTab$alpha.max[2] <- up[2]
+    SumTab$M1m.max[2] = SumTab$F1m.max[2] = up[3]
+    SumTab$DmM.max[2] = SumTab$DmF.max[2] = up[4]
+    ##store lower parameters
+    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H1, upper_H1, start_H1, method, MyMLE_H1)
+    SumTab$k.min[2] <- low[1]
+    SumTab$alpha.min[2] <- low[2]
+    SumTab$M1m.min[2] = SumTab$F1m.min[2] = low[3]
+    SumTab$DmM.min[2] = SumTab$DmF.min[2] = low[4]
 
-## Results:
-print("My Maximum Likelihood is")
-MyMLE_H3$value
-summaryDF_H3
+    ## H2:
+    hyp <- "H2"
+    ## Optimisation of the parameters:
+    MyMLE_H2 <- mymle(data, PDF4cMeanLoad, hyp, lower_H2, upper_H2, start_H2, method)
+    SumTab$k.MLE[3] <- MyMLE_H2$par[1]
+    SumTab$alpha.MLE[3] <- MyMLE_H2$par[2]
+    SumTab$M1m.MLE[3] = SumTab$DmM.MLE[3] = MyMLE_H2$par[3]
+    SumTab$F1m.MLE[3] = SumTab$DmF.MLE[3] = MyMLE_H2$par[4]
+    ##store upper parameters
+    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H2, upper_H2, start_H2, method, MyMLE_H2)
+    SumTab$k.max[3] <- up[1]
+    SumTab$alpha.max[3] <- up[2]
+    SumTab$M1m.max[3] = SumTab$DmM.max[3] = up[3]
+    SumTab$F1m.max[3] = SumTab$DmF.max[3] = up[4]
+    ##store lower parameters
+    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H2, upper_H2, start_H2, method, MyMLE_H2)
+    SumTab$k.min[3] <- low[1]
+    SumTab$alpha.min[3] <- low[2]
+    SumTab$M1m.min[3] = SumTab$DmM.min[3] = low[3]
+    SumTab$F1m.min[3] = SumTab$DmF.min[3] = low[4]
 
-##############################################################
-## Test if the difference between 2 likelihood is significant
-Gtest <- function(dLL, dDF){
-    1 - pchisq(2*dLL, df=dDF) 
+    ## H3:
+    hyp <- "H3"
+    ## Optimisation of the parameters:
+    MyMLE_H3 <- mymle(data, PDF4cMeanLoad, hyp, lower_H3, upper_H3, start_H3, method)
+    SumTab$k.MLE[4] <- MyMLE_H3$par[1]
+    SumTab$alpha.MLE[4] <- MyMLE_H3$par[2]
+    SumTab$M1m.MLE[4] <- MyMLE_H3$par[3]
+    SumTab$F1m.MLE[4] <- MyMLE_H3$par[4]
+    SumTab$DmM.MLE[4] <- MyMLE_H3$par[5]
+    SumTab$DmF.MLE[4] <- MyMLE_H3$par[6]
+    ##store upper parameters
+    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H3, upper_H3, start_H3, method, MyMLE_H3)
+    SumTab$k.max[4] <- up[1]
+    SumTab$alpha.max[4] <- up[2]
+    SumTab$M1m.max[4] <- up[3]
+    SumTab$F1m.max[4] <- up[4]
+    SumTab$DmM.max[4] <- up[5]
+    SumTab$DmF.max[4] <- up[6]
+    ##store lower parameters
+    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H3, upper_H3, start_H3, method, MyMLE_H3)
+    SumTab$k.min[4] <- low[1]
+    SumTab$alpha.min[4] <- low[2]
+    SumTab$M1m.min[4] <- low[3]
+    SumTab$F1m.min[4] <- low[4]
+    SumTab$DmM.min[4] <- low[5]
+    SumTab$DmF.min[4] <- low[6]
+    ## Add the max likelihoods
+    SumTab$LL[1] <- MyMLE_H0$value
+    SumTab$LL[2] <- MyMLE_H1$value
+    SumTab$LL[3] <- MyMLE_H2$value
+    SumTab$LL[4] <- MyMLE_H3$value
+
+    ##############################################################
+    ## Test if the difference between 2 likelihood is significant
+    Gtest <- function(dLL, dDF){
+        1 - pchisq(2*dLL, df=dDF) 
+    }
+    GtestOnNestedMLEs <- function(hyp1, hyp2){
+        MyMLE1 <- get(paste0("MyMLE_",hyp1))
+        MyMLE2 <- get(paste0("MyMLE_",hyp2))
+        dLL <- round(abs(MyMLE1$value - MyMLE2$value),4)
+        dDF <- length(MyMLE1$par) - length(MyMLE2$par)
+        p <- round(Gtest(dLL, dDF),4)
+        Gresults <- c(dLL, dDF, p)
+        return(Gresults)
+    }
+    ## Test the differences of likelihood between each hypotheses and the H0
+    SumTab$deltaLL_H0[1] <- " "
+    SumTab$deltaLL_H0[2] <- MyMLE_H1$value - MyMLE_H0$value
+    SumTab$deltaLL_H0[3] <- MyMLE_H2$value - MyMLE_H0$value
+    SumTab$deltaLL_H0[4] <- MyMLE_H3$value - MyMLE_H0$value 
+    ##
+    SumTab$deltaDF_H0[1] <- " "
+    SumTab$deltaDF_H0[2] <- round(GtestOnNestedMLEs("H1", "H0")[2],4)
+    SumTab$deltaDF_H0[3] <- round(GtestOnNestedMLEs("H2", "H0")[2],4)
+    SumTab$deltaDF_H0[4] <- round(GtestOnNestedMLEs("H3", "H0")[2],4)
+    ##
+    SumTab$p[1] <- " "
+    SumTab$p[2] <- round(GtestOnNestedMLEs("H1", "H0")[3],4)
+    SumTab$p[3] <- round(GtestOnNestedMLEs("H2", "H0")[3],4)
+    SumTab$p[4] <- round(GtestOnNestedMLEs("H3", "H0")[3],4)
+    return(SumTab)
 }
 
-GtestOnNestedMLEs <- function(hyp1, hyp2){
-    MyMLE1 <- get(paste0("MyMLE_",hyp1))$value
-    MyMLE2 <- get(paste0("MyMLE_",hyp2))$value
-    summaryDF1 <- get(paste0("summaryDF_",hyp1))
-    summaryDF2 <- get(paste0("summaryDF_",hyp2))
-    dLL <- round(abs(MyMLE1 - MyMLE2),4)
-    dDF <- abs(length(summaryDF1) - length(summaryDF2))
-    p <- round(Gtest(dLL, dDF),4)
-    print(paste("Likelihood test between", hyp1, "and", hyp2, ":"))
-    print(paste("dLL = ", dLL, " dDF = ", dDF, " Gtest p = ", p))
-}
+## Test :
+RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
+         kstart=2, kmin=0, kmax=8,
+         Alphastart=0, Alphamin=-5, Alphamax=5,
+         Meanloadstart=10, Meanloadmin=1, Meanloadmax=50,
+         Dmstart=2, Dmmin=1, Dmmax=10) 
 
-## Test the differences of likelihood between each hypotheses and the H0
-GtestOnNestedMLEs("H1", "H0")
-GtestOnNestedMLEs("H2", "H0")
-GtestOnNestedMLEs("H3", "H0")
+## Crash. Ideas : small grid with movable steps OR no constraints...
+
+RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "BFGS",
+         kstart=2, kmin=NA, kmax=NA,
+         Alphastart=0, Alphamin=NA, Alphamax=NA,
+         Meanloadstart=10, Meanloadmin=NA, Meanloadmax=NA,
+         Dmstart=2, Dmmin=NA, Dmmax=NA) 
+
+RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
+         kstart=1, kmin=0, kmax=8,
+         Alphastart=0, Alphamin=-5, Alphamax=5,
+         Meanloadstart=15, Meanloadmin=0, Meanloadmax=85,
+         Dmstart=2, Dmmin=0, Dmmax=50) 
+
+## Grid for the start
+alpha <- c(-3, 0, 3)
+k <- c(1, 2, 3)
+MeanLoad <- c(1, 5, 10)
+Dm <- c(1, 5, 10)
+
+i <- 3
+RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
+         k[i], kmin=0, kmax=8,
+         alpha[i], Alphamin=-5, Alphamax=5,
+         MeanLoad[i], Meanloadmin=10, Meanloadmax=85,
+         Dm[i], Dmmin=10, Dmmax=50) 
+
+
+
+
+
+
+
 
 ################################################################
 ## It's plotting time!!
@@ -487,17 +520,17 @@ GtestOnNestedMLEs("H3", "H0")
 ## H0:
 HI <- seq(0,1,0.001)
 df <- data.frame(HI,
-                 LB=MeanLoad(m1=summaryDF_H0[1,3],
+                 LB=MeanLoad(m1=SumTab$M1m.min[1],
                           Dm=0,
-                          alpha=summaryDF_H0[1,2],
+                          alpha=SumTab$alpha.min[1],
                           HI),
-                 est=MeanLoad(m1=summaryDF_H0[2,3],
+                 est=MeanLoad(m1=SumTab$M1m.MLE[1],
                           Dm=0,
-                          alpha=summaryDF_H0[2,2],
+                          alpha=SumTab$alpha.MLE[1],
                           HI),
-                 UB=MeanLoad(m1=summaryDF_H0[3,3],
+                 UB=MeanLoad(m1=SumTab$M1m.max[1],
                           Dm=0,
-                          alpha=summaryDF_H0[3,2],
+                          alpha=SumTab$alpha.max[1],
                           HI))
 plot0 <- ggplot(df, aes(x=HI, y=est))+
     geom_line()+
@@ -600,55 +633,6 @@ plot3 <-ggplot(df, aes(x=HI, y=estM))+
     ggtitle("H3")+
     theme_bw()
 plot3
-
-
-### Multiplot:
-                                        # Multiple plot function
-                                        #
-                                        # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-                                        # - cols:   Number of columns in layout
-                                        # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-                                        #
-                                        # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-                                        # then plot 1 will go in the upper left, 2 will go in the upper right, and
-                                        # 3 will go all the way across the bottom.
-                                        #
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-    library(grid)
-
-                                        # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
-
-    numPlots = length(plots)
-
-                                        # If layout is NULL, then use 'cols' to determine layout
-    if (is.null(layout)) {
-                                        # Make the panel
-                                        # ncol: Number of columns of plots
-                                        # nrow: Number of rows needed, calculated from # of cols
-        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                         ncol = cols, nrow = ceiling(numPlots/cols))
-    }
-
-    if (numPlots==1) {
-        print(plots[[1]])
-
-    } else {
-                                        # Set up the page
-        grid.newpage()
-        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-
-                                        # Make each plot, in the correct location
-        for (i in 1:numPlots) {
-                                        # Get the i,j matrix positions of the regions that contain this subplot
-            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-
-            print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                            layout.pos.col = matchidx$col))
-        }
-    }
-}
-
 
 ###########################################
 # Multiple plot function
