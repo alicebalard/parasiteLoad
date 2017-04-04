@@ -236,7 +236,7 @@ LikelihoodFunction(c(2, 0.3, 10, 12, 5, 10), PDFNegBin, TestData, "H3")
 
 ## 1. Function to maximize the likelihood:
 mymle <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, method){
-    optim(par = start, ## initial values for the parameters
+    mymle <- optim(par = start, ## initial values for the parameters
           fn = LikelihoodFunction, ## function to be maximized
           lower = lower, ## lower bounds for the parameters
           upper = upper, ## upper bounds for the parameters
@@ -254,7 +254,7 @@ UpperBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, m
                                 MyMLE){
     ## empty dataframe to store the data
     summaryVec <- vector()
-    max <- length(MyMLE_H0$par)
+    max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
         ## Functional constraint on search (L > MLE-2) + max&min each param
         OptimBounds <- function(param){
@@ -270,7 +270,7 @@ UpperBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, m
                              upper = upper, ## upper bounds for the parameters
                              method = method, ## set the method
                              control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-        summaryVec[rankpar] <- MyBoundsMax$par[rankpar]
+        summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
     return(summaryVec)
 }
@@ -282,7 +282,7 @@ LowerBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, m
                                 MyMLE){
     ## empty dataframe to store the data
     summaryVec <- vector()
-    max <- length(MyMLE_H0$par)
+    max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
         ## Functional constraint on search (L > MLE-2) + max&min each param
         OptimBounds <- function(param){
@@ -297,34 +297,56 @@ LowerBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, m
                              lower = lower, ## lower bounds for the parameters
                              upper = upper, ## upper bounds for the parameters
                              method = method) ## set the method
-        summaryVec[rankpar] <- MyBoundsMax$par[rankpar]
+        summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
     return(summaryVec)
 }
 
-
 ## Test ## ******************
-hyp <- "H3"
-## Constraints:
-lowertest <- c(kmin = 0, Alphamin = -5, Meanloadmin = 0, Meanloadmin = 0, Dmmin = 0, Dmmin = 0)
-uppertest <- c(kmax = 8, Alphamax = 5, Meanloadmax = 50, Meanloadmax = 50, Dmmax = 10, Dmmax = 10)
-## Starter (likely values) :
-starttest <- c(kstart = 2, Alphastart = 0, Meanloadstart = 10, Meanloadstart = 10, Dmstart = 2, Dmstart = 2)
-## 1
-MyMLE_test <- mymle(TestData, PDFNegBin, "H3", lowertest, uppertest, starttest, "L-BFGS-B")
-## 2
-UpperBoundsFunction(TestData, PDFNegBin, "H3", lowertest, uppertest, starttest, method =  "L-BFGS-B", MyMLE_test)
-## 3
-LowerBoundsFunction(TestData, PDFNegBin, "H3", lowertest, uppertest, starttest, method =  "L-BFGS-B", MyMLE_test)
+
+## ## Constraints:
+## lower <- c(kmin = 0, Alphamin = -5, Meanloadmin1 = 0, Meanloadmin2 = 0, Dmmin1 = 0, Dmmin2 = 0)
+## upper <- c(kmax = 8, Alphamax = 5, Meanloadmax1 = 50, Meanloadmax2 = 50, Dmmax1 = 10, Dmmax2 = 10)
+## ## Starter (likely values) :
+## start <- c(k = 2, Alpha = 0, Meanload1 = 10, Meanload2 = 10, Dm1 = 2, Dm2 = 2)
+
+## ## H0:
+## lower_H0 <- lower[c(1,2,3)]; upper_H0 <- upper[c(1,2,3)]; start_H0 <- start[c(1,2,3)]
+## ## H1:
+## lower_H1 <- lower[c(1,2,3,5)]; upper_H1 <- upper[c(1,2,3,5)]; start_H1 <- start[c(1,2,3,5)]
+## ## H2:
+## lower_H2 <- lower[c(1,2,3,4)]; upper_H2 <- upper[c(1,2,3,4)]; start_H2 <- start[c(1,2,3,4)]
+## ## H3:
+## lower_H3 <- lower; upper_H3 <- upper; start_H3 <- start
+
+## testRun <- function(hyp){
+##     lower <- get(paste0("lower_",hyp))
+##     upper <- get(paste0("upper_",hyp))
+##     start <- get(paste0("start_",hyp))
+##     ## 1
+##     MyMLE <- mymle(TestData, PDFNegBin, hyp, lower, upper, start, "L-BFGS-B")
+##     MLEvalue <- MyMLE$value
+##     MyparamMLE <- MyMLE$par
+##     ## 2
+##     MyU <- UpperBoundsFunction(TestData, PDFNegBin, hyp, lower, upper, start, method =  "L-BFGS-B", MyMLE)
+##     ##3
+##     MyL <- LowerBoundsFunction(TestData, PDFNegBin, hyp, lower, upper, start, method =  "L-BFGS-B", MyMLE)
+##     return(list(MLEvalue, MyparamMLE, MyU, MyL))
+## }
+
+## testRun("H3") ## ok
+## testRun("H2") ## ok
+## testRun("H1") ## ok
+testRun("H0") ## ok
 
 ## Test ## ******************
 
 ## 4. Function to run the optimisations over the 4 hypotheses :
 RunOptim <- function(data, PDF4cMeanLoad, method,
-                     kstart, kmin, kmax,
-                     Alphastart, Alphamin, Alphamax,
-                     Meanloadstart, Meanloadmin, Meanloadmax,
-                     Dmstart, Dmmin, Dmmax) {
+                     k, kmin, kmax,
+                     Alpha, Alphamin, Alphamax,
+                     Meanload, Meanloadmin, Meanloadmax,
+                     Dm, Dmmin, Dmmax) {
     ## Create a summary table for all hypotheses:
     SumTab <- data.frame(hyp=c("H0", "H1", "H2", "H3"),
                          LL = NA, deltaLL_H0 = NA, deltaDF_H0 = NA, p = NA,
@@ -335,10 +357,14 @@ RunOptim <- function(data, PDF4cMeanLoad, method,
                          DmF.min = NA, DmF.MLE = NA, DmF.max = NA,
                          k.min = NA, k.MLE = NA, k.max = NA)
     ## Constraints:
-    lower <- c(kmin, Alphamin, Meanloadmin, Meanloadmin, Dmmin, Dmmin)
-    upper <- c(kmax, Alphamax, Meanloadmax, Meanloadmax, Dmmax, Dmmax)
+    lower <- c(kmin = kmin, Alphamin = Alphamin, MeanLoadmin1 = Meanloadmin,
+               MeanLoadmin2 = Meanloadmin, Dmmin = Dmmin, Dmmin = Dmmin)
+    upper <- c(kmax = kmax, Alphamax = Alphamax, MeanLoadmax1 = Meanloadmax,
+               MeanLoadmax2 = Meanloadmax, Dmmax1 = Dmmax, Dmmax2 = Dmmax)
     ## Starter (likely values) :
-    start <- c(kstart, Alphastart, Meanloadstart, Meanloadstart, Dmstart, Dmstart)
+    start <- c(k = k, Alpha = Alpha, MeanLoad1 = Meanload,
+               MeanLoad2 = Meanload, Dm1 = Dm, Dm2 = Dm)
+    ## For each hypotese:
     ## H0:
     lower_H0 <- lower[c(1,2,3)]; upper_H0 <- upper[c(1,2,3)]; start_H0 <- start[c(1,2,3)]
     ## H1:
@@ -347,6 +373,88 @@ RunOptim <- function(data, PDF4cMeanLoad, method,
     lower_H2 <- lower[c(1,2,3,4)]; upper_H2 <- upper[c(1,2,3,4)]; start_H2 <- start[c(1,2,3,4)]
     ## H3:
     lower_H3 <- lower; upper_H3 <- upper; start_H3 <- start
+    ## Run the function mymle over the 4 hypotheses:
+    for (i in 0:3){
+        assign(paste0("MyMLE_H",i), mymle(data, PDF4cMeanLoad, paste0("H",i),
+                                          get(paste0("lower_H",i)),
+                                          get(paste0("upper_H",i)),
+                                          get(paste0("start_H",i)), method))
+        assign(paste0("MLEvalue_H",i), get(paste0("MyMLE_H",i))$value)
+        assign(paste0("MyparamMLE_H",i), get(paste0("MyMLE_H",i))$par)
+    }
+    ## Run the upperbounds over the 4 hypotheses:
+    for (i in 0:3){
+        assign(paste0("MyUp_H", i), UpperBoundsFunction(data, PDF4cMeanLoad,
+                                                        paste0("H",i),
+                                                        get(paste0("lower_H",i)),
+                                                        get(paste0("upper_H",i)),
+                                                        get(paste0("start_H",i)),
+                                                        method,
+                                                        get(paste0("MyMLE_H",i))))
+    }
+    ## Run the lowerbounds over the 4 hypotheses:
+    for (i in 0:3){
+        assign(paste0("MyLow_H", i), LowerBoundsFunction(data, PDF4cMeanLoad,
+                                                        paste0("H",i),
+                                                        get(paste0("lower_H",i)),
+                                                        get(paste0("upper_H",i)),
+                                                        get(paste0("start_H",i)),
+                                                        method,
+                                                        get(paste0("MyMLE_H",i))))
+    }
+    ## Store in a list over the 4 hypotheses :
+    for (i in 0:3){
+        assign(paste0("Result_H",i), list(get(paste0("MLEvalue_H",i)),
+                                   get(paste0("MyparamMLE_H",i)),
+                                   get(paste0("MyUp_H",i)),
+                                   get(paste0("MyLow_H",i))))
+    }
+    return(list(H0 = Result_H0, H1 = Result_H1, H2 = Result_H2, H3 = Result_H3))
+}
+
+##All_MLE <- list(HO = MyMLE_H0, H1 = MyMLE_H1, H2 = MyMLE_H2, H3 = MyMLE_H3)
+## Test ## ******************
+TEST <- RunOptim(TestData, PDFNegBin, "L-BFGS-B",
+                     k = 2, kmin = 0, kmax = 8,
+                     Alpha = 0, Alphamin = -5, Alphamax = 5,
+                     Meanload = 2, Meanloadmin = 0, Meanloadmax = 50,
+                 Dm = 2, Dmmin = 0, Dmmax = 10)
+
+TEST
+## okaaay :D
+## Test ## ******************
+
+## Storage and G-tests
+
+for (i in 0:3){
+    HYP <- TEST[[paste0("H",i)]]
+    df <- data.frame(HYP[-1])
+    df <- t(df)
+    row.names(df) <- c("min", "max", "est")
+    assign(paste0("HYP",i), df)
+}
+
+as.data.frame(HYP0, nrows = 1)
+
+reshape(HYP0, direction = "long", varying=list(names(HYP0)[1:2]))
+
+##############################################################
+    ## Test if the difference between 2 likelihood is significant
+    Gtest <- function(dLL, dDF){
+        1 - pchisq(2*dLL, df=dDF) 
+    }
+    GtestOnNestedMLEs <- function(hyp1, hyp2){
+        MyMLE1 <- get(paste0("MyMLE_",hyp1))
+        MyMLE2 <- get(paste0("MyMLE_",hyp2))
+        dLL <- round(abs(MyMLE1$value - MyMLE2$value),4)
+        dDF <- length(MyMLE1$par) - length(MyMLE2$par)
+        p <- round(Gtest(dLL, dDF),4)
+        Gresults <- c(dLL, dDF, p)
+        return(Gresults)
+    }
+
+
+
 
     ## H0:
     hyp <- "H0"    
@@ -355,7 +463,8 @@ RunOptim <- function(data, PDF4cMeanLoad, method,
     SumTab$k.MLE[1] <- MyMLE_H0$par[1]
     SumTab$alpha.MLE[1] <- MyMLE_H0$par[2]
     SumTab$M1m.MLE[1] = SumTab$F1m.MLE[1] = SumTab$DmM.MLE[1] = SumTab$DmF.MLE[1] = MyMLE_H0$par[3]
-    ##store upper parameters
+
+##store upper parameters
     up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H0, upper_H0, start_H0, method, MyMLE_H0)
     SumTab$k.max[1] <- up[1]
     SumTab$alpha.max[1] <- up[2]
@@ -480,7 +589,6 @@ RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
          Dmstart=2, Dmmin=1, Dmmax=10) 
 
 ## Crash. Ideas : small grid with movable steps OR no constraints...
-
 RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "BFGS",
          kstart=2, kmin=NA, kmax=NA,
          Alphastart=0, Alphamin=NA, Alphamax=NA,
@@ -494,20 +602,27 @@ RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
          Dmstart=2, Dmmin=0, Dmmax=50) 
 
 ## Grid for the start
+k <- c(4,5,6)
 alpha <- c(-3, 0, 3)
-k <- c(1, 2, 3)
 MeanLoad <- c(1, 5, 10)
 Dm <- c(1, 5, 10)
 
-i <- 3
-RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
-         k[i], kmin=0, kmax=8,
-         alpha[i], Alphamin=-5, Alphamax=5,
-         MeanLoad[i], Meanloadmin=10, Meanloadmax=85,
-         Dm[i], Dmmin=10, Dmmax=50) 
+gridA <- expand.grid(k, alpha, MeanLoad, Dm)
+
+##Create list to store updated models
+mod.list=list()
+
+for (i in 1:nrow(gridA)){
+    mod2 <- try(RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
+                         gridA[i,1], kmin=0, kmax=8,
+                         gridA[i,2], Alphamin=-5, Alphamax=5,
+                         gridA[i,3], Meanloadmin=10, Meanloadmax=85,
+                         gridA[i,4], Dmmin=10, Dmmax=50), TRUE)
+    if(isTRUE(class(mod2)=="try-error")) {next} else {mod.list[i] <- mod2}
+}
 
 
-
+mod.list
 
 
 
