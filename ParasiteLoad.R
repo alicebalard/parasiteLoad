@@ -337,9 +337,17 @@ LowerBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, m
 ## testRun("H3") ## ok
 ## testRun("H2") ## ok
 ## testRun("H1") ## ok
-testRun("H0") ## ok
+## testRun("H0") ## ok
 
 ## Test ## ******************
+## 4 Test ## ******************
+    ## data= TestData; PDF4cMeanLoad= PDFNegBin
+    ## method= "L-BFGS-B";
+    ## k = 2; kmin = 0; kmax = 8;
+    ## Alpha = 0; Alphamin = -5; Alphamax = 5;
+    ## Meanload = 2; Meanloadmin = 0; Meanloadmax = 50;
+    ## Dm = 2; Dmmin = 0; Dmmax = 10
+
 
 ## 4. Function to run the optimisations over the 4 hypotheses :
 RunOptim <- function(data, PDF4cMeanLoad, method,
@@ -347,15 +355,6 @@ RunOptim <- function(data, PDF4cMeanLoad, method,
                      Alpha, Alphamin, Alphamax,
                      Meanload, Meanloadmin, Meanloadmax,
                      Dm, Dmmin, Dmmax) {
-    ## Create a summary table for all hypotheses:
-    SumTab <- data.frame(hyp=c("H0", "H1", "H2", "H3"),
-                         LL = NA, deltaLL_H0 = NA, deltaDF_H0 = NA, p = NA,
-                         alpha.min = NA, alpha.MLE = NA, alpha.max = NA,
-                         M1m.min = NA, M1m.MLE = NA, M1m.max = NA,
-                         F1m.min = NA, F1m.MLE = NA, F1m.max = NA,
-                         DmM.min = NA, DmM.MLE = NA, DmM.max = NA,
-                         DmF.min = NA, DmF.MLE = NA, DmF.max = NA,
-                         k.min = NA, k.MLE = NA, k.max = NA)
     ## Constraints:
     lower <- c(kmin = kmin, Alphamin = Alphamin, MeanLoadmin1 = Meanloadmin,
                MeanLoadmin2 = Meanloadmin, Dmmin = Dmmin, Dmmin = Dmmin)
@@ -381,6 +380,8 @@ RunOptim <- function(data, PDF4cMeanLoad, method,
                                           get(paste0("start_H",i)), method))
         assign(paste0("MLEvalue_H",i), get(paste0("MyMLE_H",i))$value)
         assign(paste0("MyparamMLE_H",i), get(paste0("MyMLE_H",i))$par)
+        assign(paste0("df_H",i), length(get(paste0("MyMLE_H",i))$par))
+        assign(paste0("Ddf_H",i), get(paste0("df_H",i)) - df_H0)
     }
     ## Run the upperbounds over the 4 hypotheses:
     for (i in 0:3){
@@ -395,398 +396,276 @@ RunOptim <- function(data, PDF4cMeanLoad, method,
     ## Run the lowerbounds over the 4 hypotheses:
     for (i in 0:3){
         assign(paste0("MyLow_H", i), LowerBoundsFunction(data, PDF4cMeanLoad,
-                                                        paste0("H",i),
-                                                        get(paste0("lower_H",i)),
-                                                        get(paste0("upper_H",i)),
-                                                        get(paste0("start_H",i)),
-                                                        method,
-                                                        get(paste0("MyMLE_H",i))))
+                                                         paste0("H",i),
+                                                         get(paste0("lower_H",i)),
+                                                         get(paste0("upper_H",i)),
+                                                         get(paste0("start_H",i)),
+                                                         method,
+                                                         get(paste0("MyMLE_H",i))))
     }
     ## Store in a list over the 4 hypotheses :
     for (i in 0:3){
         assign(paste0("Result_H",i), list(get(paste0("MLEvalue_H",i)),
-                                   get(paste0("MyparamMLE_H",i)),
-                                   get(paste0("MyUp_H",i)),
-                                   get(paste0("MyLow_H",i))))
+                                          get(paste0("MyLow_H",i)),
+                                          get(paste0("MyparamMLE_H",i)),
+                                          get(paste0("MyUp_H",i)),
+                                          get(paste0("Ddf_H",i))))
     }
-    return(list(H0 = Result_H0, H1 = Result_H1, H2 = Result_H2, H3 = Result_H3))
+    ## Storage:
+    Tot <- list(H0 = Result_H0, H1 = Result_H1, H2 = Result_H2, H3 = Result_H3)
+    ## Loop over hypotheses:
+    for (i in 0:3){
+        HYP <- Tot[[paste0("H",i)]]
+        ## Store maximum likelihood value:
+        df0 <- data.frame(unlist(Tot[[paste0("H",i)]][1]))
+        names(df0) <- "MLE"
+        ## Store delta degree of freedom:
+        df1 <- data.frame(unlist(Tot[[paste0("H",i)]][5]))
+        names(df1) <- "Ddf(H0)"
+        ## Store parameters:
+        df2 <- data.frame(HYP[-c(1,5)])
+        df2 <- t(df2)
+        row.names(df2) <- c("min","est", "max")
+        df2 <- as.data.frame(df2)
+        df2$names <- row.names(df2)
+        df2 <- melt(df2, id.vars = "names")
+        df2$param <- paste(df2$variable, df2$names, sep = "_")
+        df2 <- df2[c(4,3)]
+        df2 <- as.data.frame(t(df2))
+        Names <- NULL
+        for (j in 1:ncol(df2)){
+            Names <- c(Names,(as.character(df2[1,j])))
+        }
+        colnames(df2) <- Names
+        df2 <- df2[-1,]
+        ## Collapse the dataframes:
+        df <- merge(merge(df0,df1, all=TRUE), df2, all= TRUE)
+        Hyp <- paste0("H", i)
+        df <- merge(Hyp, df, all=TRUE)
+        names(df)[1] <- "hyp"
+        ## Give name of the hypothese:
+        assign(paste0("HYP",i), df)
+    }
+    Summary <- merge(merge(HYP0,HYP1, all=TRUE), merge(HYP2,HYP3, all=TRUE), all= TRUE)
+    ## Test if the difference between 2 likelihood is significant
+    Gtest <- function(dLL, dDF){
+        1 - pchisq(2*dLL, df=dDF) 
+    }
+    GtestOnNestedMLEs <- function(a){
+        MyMLE1 <- Summary$MLE[1]
+        MyMLE2 <- Summary$MLE[a+1]
+        dLL <- round(abs(MyMLE1 - MyMLE2),4)
+        dDF <- Summary$'Ddf(H0)'[a+1]
+        p <- round(Gtest(dLL, dDF),4)
+        Gresults <- c(dLL, dDF, p)
+        return(Gresults)
+    }
+    dLL <- c(NA, GtestOnNestedMLEs(1)[1],GtestOnNestedMLEs(2)[1],GtestOnNestedMLEs(3)[1])
+    p_Gtest <- c(NA, GtestOnNestedMLEs(1)[3],GtestOnNestedMLEs(2)[3],GtestOnNestedMLEs(3)[3])
+    Summary <- cbind(Summary[1], dLL, p_Gtest, Summary[-1])
+    return(Summary) 
 }
 
-##All_MLE <- list(HO = MyMLE_H0, H1 = MyMLE_H1, H2 = MyMLE_H2, H3 = MyMLE_H3)
 ## Test ## ******************
-TEST <- RunOptim(TestData, PDFNegBin, "L-BFGS-B",
+TEST2 <- RunOptim(TestData, PDFNegBin, "L-BFGS-B",
                      k = 2, kmin = 0, kmax = 8,
                      Alpha = 0, Alphamin = -5, Alphamax = 5,
                      Meanload = 2, Meanloadmin = 0, Meanloadmax = 50,
                  Dm = 2, Dmmin = 0, Dmmax = 10)
 
-TEST
+## STORE <- TEST
+
+## library(tableHTML)
+### create an html table as string
+## tableHTML(TEST2)
+###and to export in a file
+## write_tableHTML(tableHTML(TEST2), file = 'test.html')
+
 ## okaaay :D
 ## Test ## ******************
-
-## Storage and G-tests
-
-for (i in 0:3){
-    HYP <- TEST[[paste0("H",i)]]
-    df <- data.frame(HYP[-1])
-    df <- t(df)
-    row.names(df) <- c("min", "max", "est")
-    assign(paste0("HYP",i), df)
-}
-
-as.data.frame(HYP0, nrows = 1)
-
-reshape(HYP0, direction = "long", varying=list(names(HYP0)[1:2]))
-
-##############################################################
-    ## Test if the difference between 2 likelihood is significant
-    Gtest <- function(dLL, dDF){
-        1 - pchisq(2*dLL, df=dDF) 
-    }
-    GtestOnNestedMLEs <- function(hyp1, hyp2){
-        MyMLE1 <- get(paste0("MyMLE_",hyp1))
-        MyMLE2 <- get(paste0("MyMLE_",hyp2))
-        dLL <- round(abs(MyMLE1$value - MyMLE2$value),4)
-        dDF <- length(MyMLE1$par) - length(MyMLE2$par)
-        p <- round(Gtest(dLL, dDF),4)
-        Gresults <- c(dLL, dDF, p)
-        return(Gresults)
-    }
-
-
-
-
-    ## H0:
-    hyp <- "H0"    
-    ## Optimisation of the parameters:
-    MyMLE_H0 <- mymle(data, PDF4cMeanLoad, hyp, lower_H0, upper_H0, start_H0, method)
-    SumTab$k.MLE[1] <- MyMLE_H0$par[1]
-    SumTab$alpha.MLE[1] <- MyMLE_H0$par[2]
-    SumTab$M1m.MLE[1] = SumTab$F1m.MLE[1] = SumTab$DmM.MLE[1] = SumTab$DmF.MLE[1] = MyMLE_H0$par[3]
-
-##store upper parameters
-    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H0, upper_H0, start_H0, method, MyMLE_H0)
-    SumTab$k.max[1] <- up[1]
-    SumTab$alpha.max[1] <- up[2]
-    SumTab$M1m.max[1] = SumTab$F1m.max[1] = SumTab$DmM.max[1] = SumTab$DmF.max[1] = up[3]
-    ##store lower parameters
-    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H0, upper_H0, start_H0, method, MyMLE_H0)
-    SumTab$k.min[1] <- low[1]
-    SumTab$alpha.min[1] <- low[2]
-    SumTab$M1m.min[1] = SumTab$F1m.min[1] = SumTab$DmM.min[1] = SumTab$DmF.min[1] = low[3]
-
-    ## H1:
-    hyp <- "H1"
-    ## Optimisation of the parameters:
-    MyMLE_H1 <- mymle(data, PDF4cMeanLoad, hyp, lower_H1, upper_H1, start_H1, method)
-    SumTab$k.MLE[2] <- MyMLE_H1$par[1]
-    SumTab$alpha.MLE[2] <- MyMLE_H1$par[2]
-    SumTab$M1m.MLE[2] = SumTab$F1m.MLE[2] <- MyMLE_H1$par[3]
-    SumTab$DmM.MLE[2] = SumTab$DmF.MLE[2] <- MyMLE_H1$par[4]
-    ##store upper parameters
-    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H1, upper_H1, start_H1, method, MyMLE_H1)
-    SumTab$k.max[2] <- up[1]
-    SumTab$alpha.max[2] <- up[2]
-    SumTab$M1m.max[2] = SumTab$F1m.max[2] = up[3]
-    SumTab$DmM.max[2] = SumTab$DmF.max[2] = up[4]
-    ##store lower parameters
-    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H1, upper_H1, start_H1, method, MyMLE_H1)
-    SumTab$k.min[2] <- low[1]
-    SumTab$alpha.min[2] <- low[2]
-    SumTab$M1m.min[2] = SumTab$F1m.min[2] = low[3]
-    SumTab$DmM.min[2] = SumTab$DmF.min[2] = low[4]
-
-    ## H2:
-    hyp <- "H2"
-    ## Optimisation of the parameters:
-    MyMLE_H2 <- mymle(data, PDF4cMeanLoad, hyp, lower_H2, upper_H2, start_H2, method)
-    SumTab$k.MLE[3] <- MyMLE_H2$par[1]
-    SumTab$alpha.MLE[3] <- MyMLE_H2$par[2]
-    SumTab$M1m.MLE[3] = SumTab$DmM.MLE[3] = MyMLE_H2$par[3]
-    SumTab$F1m.MLE[3] = SumTab$DmF.MLE[3] = MyMLE_H2$par[4]
-    ##store upper parameters
-    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H2, upper_H2, start_H2, method, MyMLE_H2)
-    SumTab$k.max[3] <- up[1]
-    SumTab$alpha.max[3] <- up[2]
-    SumTab$M1m.max[3] = SumTab$DmM.max[3] = up[3]
-    SumTab$F1m.max[3] = SumTab$DmF.max[3] = up[4]
-    ##store lower parameters
-    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H2, upper_H2, start_H2, method, MyMLE_H2)
-    SumTab$k.min[3] <- low[1]
-    SumTab$alpha.min[3] <- low[2]
-    SumTab$M1m.min[3] = SumTab$DmM.min[3] = low[3]
-    SumTab$F1m.min[3] = SumTab$DmF.min[3] = low[4]
-
-    ## H3:
-    hyp <- "H3"
-    ## Optimisation of the parameters:
-    MyMLE_H3 <- mymle(data, PDF4cMeanLoad, hyp, lower_H3, upper_H3, start_H3, method)
-    SumTab$k.MLE[4] <- MyMLE_H3$par[1]
-    SumTab$alpha.MLE[4] <- MyMLE_H3$par[2]
-    SumTab$M1m.MLE[4] <- MyMLE_H3$par[3]
-    SumTab$F1m.MLE[4] <- MyMLE_H3$par[4]
-    SumTab$DmM.MLE[4] <- MyMLE_H3$par[5]
-    SumTab$DmF.MLE[4] <- MyMLE_H3$par[6]
-    ##store upper parameters
-    up <- UpperBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H3, upper_H3, start_H3, method, MyMLE_H3)
-    SumTab$k.max[4] <- up[1]
-    SumTab$alpha.max[4] <- up[2]
-    SumTab$M1m.max[4] <- up[3]
-    SumTab$F1m.max[4] <- up[4]
-    SumTab$DmM.max[4] <- up[5]
-    SumTab$DmF.max[4] <- up[6]
-    ##store lower parameters
-    low <- LowerBoundsFunction(data, PDF4cMeanLoad, hyp, lower_H3, upper_H3, start_H3, method, MyMLE_H3)
-    SumTab$k.min[4] <- low[1]
-    SumTab$alpha.min[4] <- low[2]
-    SumTab$M1m.min[4] <- low[3]
-    SumTab$F1m.min[4] <- low[4]
-    SumTab$DmM.min[4] <- low[5]
-    SumTab$DmF.min[4] <- low[6]
-    ## Add the max likelihoods
-    SumTab$LL[1] <- MyMLE_H0$value
-    SumTab$LL[2] <- MyMLE_H1$value
-    SumTab$LL[3] <- MyMLE_H2$value
-    SumTab$LL[4] <- MyMLE_H3$value
-
-    ##############################################################
-    ## Test if the difference between 2 likelihood is significant
-    Gtest <- function(dLL, dDF){
-        1 - pchisq(2*dLL, df=dDF) 
-    }
-    GtestOnNestedMLEs <- function(hyp1, hyp2){
-        MyMLE1 <- get(paste0("MyMLE_",hyp1))
-        MyMLE2 <- get(paste0("MyMLE_",hyp2))
-        dLL <- round(abs(MyMLE1$value - MyMLE2$value),4)
-        dDF <- length(MyMLE1$par) - length(MyMLE2$par)
-        p <- round(Gtest(dLL, dDF),4)
-        Gresults <- c(dLL, dDF, p)
-        return(Gresults)
-    }
-    ## Test the differences of likelihood between each hypotheses and the H0
-    SumTab$deltaLL_H0[1] <- " "
-    SumTab$deltaLL_H0[2] <- MyMLE_H1$value - MyMLE_H0$value
-    SumTab$deltaLL_H0[3] <- MyMLE_H2$value - MyMLE_H0$value
-    SumTab$deltaLL_H0[4] <- MyMLE_H3$value - MyMLE_H0$value 
-    ##
-    SumTab$deltaDF_H0[1] <- " "
-    SumTab$deltaDF_H0[2] <- round(GtestOnNestedMLEs("H1", "H0")[2],4)
-    SumTab$deltaDF_H0[3] <- round(GtestOnNestedMLEs("H2", "H0")[2],4)
-    SumTab$deltaDF_H0[4] <- round(GtestOnNestedMLEs("H3", "H0")[2],4)
-    ##
-    SumTab$p[1] <- " "
-    SumTab$p[2] <- round(GtestOnNestedMLEs("H1", "H0")[3],4)
-    SumTab$p[3] <- round(GtestOnNestedMLEs("H2", "H0")[3],4)
-    SumTab$p[4] <- round(GtestOnNestedMLEs("H3", "H0")[3],4)
-    return(SumTab)
-}
-
-## Test :
-RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
-         kstart=2, kmin=0, kmax=8,
-         Alphastart=0, Alphamin=-5, Alphamax=5,
-         Meanloadstart=10, Meanloadmin=1, Meanloadmax=50,
-         Dmstart=2, Dmmin=1, Dmmax=10) 
-
-## Crash. Ideas : small grid with movable steps OR no constraints...
-RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "BFGS",
-         kstart=2, kmin=NA, kmax=NA,
-         Alphastart=0, Alphamin=NA, Alphamax=NA,
-         Meanloadstart=10, Meanloadmin=NA, Meanloadmax=NA,
-         Dmstart=2, Dmmin=NA, Dmmax=NA) 
-
-RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
-         kstart=1, kmin=0, kmax=8,
-         Alphastart=0, Alphamin=-5, Alphamax=5,
-         Meanloadstart=15, Meanloadmin=0, Meanloadmax=85,
-         Dmstart=2, Dmmin=0, Dmmax=50) 
-
-## Grid for the start
-k <- c(4,5,6)
-alpha <- c(-3, 0, 3)
-MeanLoad <- c(1, 5, 10)
-Dm <- c(1, 5, 10)
-
-gridA <- expand.grid(k, alpha, MeanLoad, Dm)
-
-##Create list to store updated models
-mod.list=list()
-
-for (i in 1:nrow(gridA)){
-    mod2 <- try(RunOptim(data = TestData, PDF4cMeanLoad = PDFNegBin, method = "L-BFGS-B",
-                         gridA[i,1], kmin=0, kmax=8,
-                         gridA[i,2], Alphamin=-5, Alphamax=5,
-                         gridA[i,3], Meanloadmin=10, Meanloadmax=85,
-                         gridA[i,4], Dmmin=10, Dmmax=50), TRUE)
-    if(isTRUE(class(mod2)=="try-error")) {next} else {mod.list[i] <- mod2}
-}
-
-
-mod.list
-
-
-
-
 
 ################################################################
 ## It's plotting time!!
 ## Plot the mean load model along the hybrid zone, according to the hyp.
 
-## H0:
-HI <- seq(0,1,0.001)
-df <- data.frame(HI,
-                 LB=MeanLoad(m1=SumTab$M1m.min[1],
-                          Dm=0,
-                          alpha=SumTab$alpha.min[1],
-                          HI),
-                 est=MeanLoad(m1=SumTab$M1m.MLE[1],
-                          Dm=0,
-                          alpha=SumTab$alpha.MLE[1],
-                          HI),
-                 UB=MeanLoad(m1=SumTab$M1m.max[1],
-                          Dm=0,
-                          alpha=SumTab$alpha.max[1],
-                          HI))
-plot0 <- ggplot(df, aes(x=HI, y=est))+
-    geom_line()+
-    geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.5)+
-    ggtitle("H0")+
-    theme_bw()
-plot0
-
-## H1:
-df <- data.frame(HI,
-                 LB=MeanLoad(m1=summaryDF_H1[1,3],
-                          Dm=summaryDF_H1[1,4],
-                          alpha=summaryDF_H1[1,2],
-                          HI),
-                 est=MeanLoad(m1=summaryDF_H1[2,3],
-                          Dm=summaryDF_H1[2,4],                          
-                          alpha=summaryDF_H1[2,2],
-                          HI),
-                 UB=MeanLoad(m1=summaryDF_H1[3,3],
-                          Dm=summaryDF_H1[3,4],                         
-                          alpha=summaryDF_H1[3,2],
-                          HI))
-plot1 <- ggplot(df, aes(x=HI, y=est))+
-    geom_line()+
-    geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.5)+
-    ggtitle("H1")+
-    theme_bw()
-plot1
-
-## H2:
-df <- data.frame(HI=HI,
-                 LBF=MeanLoad(m1=summaryDF_H2[1,4],
-                          Dm=0,
-                          alpha=summaryDF_H2[1,2],
-                          HI),
-                 UBF=MeanLoad(m1=summaryDF_H2[3,4],
-                          Dm=0,                          
-                          alpha=summaryDF_H2[3,2],
-                          HI),
-                 estF=MeanLoad(m1=summaryDF_H2[2,4],
-                          Dm=0,                         
-                          alpha=summaryDF_H2[2,2],
-                          HI),                 
-                 LBM=MeanLoad(m1=summaryDF_H2[1,3],
-                          Dm=0,
-                          alpha=summaryDF_H2[1,2],
-                          HI),
-                 UBM=MeanLoad(m1=summaryDF_H2[3,3],
-                          Dm=0,                          
-                          alpha=summaryDF_H2[3,2],
-                          HI),
-                 estM=MeanLoad(m1=summaryDF_H2[2,3],
-                          Dm=0,                         
-                          alpha=summaryDF_H2[2,2],
-                          HI)
-                 )
-plot2 <-ggplot(df, aes(x=HI, y=estM))+
-    geom_line(color="darkblue")+
-    geom_line(aes(x=HI, y=estF), color="red")+
-    geom_ribbon(aes(x=HI, ymax=UBF, ymin=LBF), fill="pink", alpha=.5)+
-    geom_ribbon(aes(x=HI, ymax=UBM, ymin=LBM), fill="blue", alpha=.5)+
-    ggtitle("H2")+
-    theme_bw()
-plot2
-
-## H3:
-summaryDF_H3
-
-df <- data.frame(HI=HI,
-                 LBF=MeanLoad(m1=summaryDF_H3[1,4],
-                          Dm=summaryDF_H3[1,6],
-                          alpha=summaryDF_H3[1,2],
-                          HI),
-                 UBF=MeanLoad(m1=summaryDF_H3[3,4],
-                          Dm=summaryDF_H3[3,6],           
-                          alpha=summaryDF_H3[3,2],
-                          HI),
-                 estF=MeanLoad(m1=summaryDF_H3[2,4],
-                          Dm=summaryDF_H3[2,6],                         
-                          alpha=summaryDF_H3[2,2],
-                          HI),                 
-                 LBM=MeanLoad(m1=summaryDF_H3[1,3],
-                          Dm=summaryDF_H3[1,5],
-                          alpha=summaryDF_H3[1,2],
-                          HI),
-                 UBM=MeanLoad(m1=summaryDF_H3[3,3],
-                          Dm=summaryDF_H3[3,5],            
-                          alpha=summaryDF_H3[3,2],
-                          HI),
-                 estM=MeanLoad(m1=summaryDF_H3[2,3],
-                          Dm=summaryDF_H3[2,5],           
-                          alpha=summaryDF_H3[2,2],
-                          HI)
-                 )
-plot3 <-ggplot(df, aes(x=HI, y=estM))+
-    geom_line(color="darkblue")+
-    geom_line(aes(x=HI, y=estF), color="red")+
-    geom_ribbon(aes(x=HI, ymax=UBF, ymin=LBF), fill="pink", alpha=.5)+
-    geom_ribbon(aes(x=HI, ymax=UBM, ymin=LBM), fill="blue", alpha=.5)+
-    ggtitle("H3")+
-    theme_bw()
-plot3
-
-###########################################
-# Multiple plot function
-#
-# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-# - cols:   Number of columns in layout
-# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-#
-# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-# then plot 1 will go in the upper left, 2 will go in the upper right, and
-# 3 will go all the way across the bottom.
-#
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-  numPlots = length(plots)
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                    ncol = cols, nrow = ceiling(numPlots/cols))
-  }
- if (numPlots==1) {
-    print(plots[[1]])
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
+ParaPlot <- function(data, PDF4cMeanLoad, method,
+                     k, kmin, kmax,
+                     Alpha, Alphamin, Alphamax,
+                     Meanload, Meanloadmin, Meanloadmax,
+                     Dm, Dmmin, Dmmax){
+    ## Create a summary table:
+    Summary <- RunOptim(data, PDF4cMeanLoad, method,
+                        k, kmin, kmax,
+                        Alpha, Alphamin, Alphamax,
+                        Meanload, Meanloadmin, Meanloadmax,
+                        Dm, Dmmin, Dmmax)
+    ## Define HI
+    HI <- seq(0,1,0.01)
+    anar <- function(x){
+        as.numeric(as.character(x))
     }
-  }}
+    ## Case 1 : group 1/no groups, no Dm (H0, H2)
+    case1 <- function(i){
+        data.frame(LB=MeanLoad(m1 = anar(Summary$MeanLoad1_min[i]),
+                               Dm = 0,
+                               alpha = anar(Summary$Alpha_min[i]),
+                               HI),
+                   UB=MeanLoad(m1 = anar(Summary$MeanLoad1_max[i]),
+                               Dm = 0,
+                               alpha = anar(Summary$Alpha_max[i]),
+                               HI),
+                   est=MeanLoad(m1 = anar(Summary$MeanLoad1_est[i]),
+                                Dm = 0,
+                                alpha = anar(Summary$Alpha_est[i]),
+                                HI),
+                   HI)
+    }
+    ## Case 2 : group 1/no group, Dm (H1, H3)
+    case2 <- function(i){
+        data.frame(LB=MeanLoad(m1 = anar(Summary$MeanLoad1_min[i]),
+                               Dm = anar(Summary$Dm1_min[i]),
+                               alpha = anar(Summary$Alpha_min[i]),
+                               HI),
+                   UB=MeanLoad(m1 = anar(Summary$MeanLoad1_max[i]),
+                               Dm = anar(Summary$Dm1_max[i]),
+                               alpha = anar(Summary$Alpha_max[i]),
+                               HI),
+                   est=MeanLoad(m1 = anar(Summary$MeanLoad1_est[i]),
+                                Dm = anar(Summary$Dm1_max[i]),
+                                alpha = anar(Summary$Alpha_est[i]),
+                                HI),
+                   HI)
+    }
+    ## Case 3 : group 2, no Dm (H2)
+    case3 <- function(i){
+        data.frame(LB=MeanLoad(m1 = anar(Summary$MeanLoad2_min[i]),
+                               Dm = 0,
+                               alpha = anar(Summary$Alpha_min[i]),
+                               HI),
+                   UB=MeanLoad(m1 = anar(Summary$MeanLoad2_max[i]),
+                               Dm = 0,
+                               alpha = anar(Summary$Alpha_max[i]),
+                               HI),
+                   est=MeanLoad(m1 = anar(Summary$MeanLoad2_est[i]),
+                                Dm = 0,
+                                alpha = anar(Summary$Alpha_est[i]),
+                                HI),
+                   HI)
+    }
+    ## Case 4 : group 2, Dm (H3)
+    case4 <- function(i){
+        data.frame(LB=MeanLoad(m1 = anar(Summary$MeanLoad2_min[i]),
+                               Dm = anar(Summary$Dm2_min[i]),
+                               alpha = anar(Summary$Alpha_min[i]),
+                               HI),
+                   UB=MeanLoad(m1 = anar(Summary$MeanLoad2_max[i]),
+                               Dm = anar(Summary$Dm2_max[i]),
+                               alpha = anar(Summary$Alpha_max[i]),
+                               HI),
+                   est=MeanLoad(m1 = anar(Summary$MeanLoad2_est[i]),
+                                Dm = anar(Summary$Dm2_max[i]),
+                                alpha = anar(Summary$Alpha_est[i]),
+                                HI),
+                   HI)
+    }
+    ##Formatting data for gg_point
+    dataDF_1 <- as.data.frame(data[1])
+    dataDF_1$group <- names(data[1])
+    names(dataDF_1) <- c("IndHIs", "IndLoads", "group")
+    dataDF_2 <- as.data.frame(data[2])
+    dataDF_2$group <- names(data[2])
+    names(dataDF_2) <- c("IndHIs", "IndLoads", "group")
+    dataDF <- rbind(dataDF_1, dataDF_2)
+    ## H0:
+    df <- case1(1)
+    plot0 <- ggplot(df, aes(x=HI, y=est))+
+        ggtitle("H0")+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="green", size=0.3)+
+        geom_line()+
+        geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.3)+
+        theme_bw()+
+        theme(legend.position="none")
+    ## H1:
+    df <- case2(2)
+    plot1 <- ggplot(df, aes(x=HI, y=est))+
+        ggtitle("H0")+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="green", size=0.3)+
+        geom_line()+
+        geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.3)+
+        theme_bw()+
+        theme(legend.position="none")
+    ## H2:
+    df1 <- case1(3)
+    df2 <- case3(3)
+    df1$group <- "group1"
+    df2$group <- "group2"
+    df <- rbind(df1, df2)
 
-
-multiplot(plot0,plot1,plot2,plot3, cols=2)
+    plot2 <-ggplot(df, aes(x=HI, y=est, color=group, fill =group))+
+        geom_line()+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="darkgreen", size=0.5)+
+        geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), alpha=.3)+
+        ggtitle("H2")+
+        theme_bw()+
+        theme(legend.position="none")+
+        scale_colour_manual(values=c("red", "blue"))+
+        scale_fill_manual(values=c("red", "red", "blue", "blue"))+
+        annotate("text", x = .1, y = 50, label = "Group 1", color = "red", size=10)+
+        annotate("text", x = .1, y = 45, label = "Group 2", color = "blue", size=10)
+    ## H3:
+    df1 <- case2(4)
+    df2 <- case4(4)
+    df1$group <- "group1"
+    df2$group <- "group2"
+    df <- rbind(df1, df2)
+    plot3 <-ggplot(df, aes(x=HI, y=est, color=group, fill =group))+
+        geom_line()+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="darkgreen", size=0.5)+
+        geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), alpha=.3)+
+        ggtitle("H3")+
+        theme_bw()+
+        theme(legend.position="none")+
+        scale_colour_manual(values=c("red", "blue"))+
+        scale_fill_manual(values=c("red", "red", "blue", "blue"))+
+        annotate("text", x = .1, y = 50, label = "Group 1", color = "red", size=10)+
+        annotate("text", x = .1, y = 45, label = "Group 2", color = "blue", size=10)
+###########################################
+    ## Multiple plot function
+    ##
+    ## ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+    ## - cols:   Number of columns in layout
+    ## - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+    ##
+    ## If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+    ## then plot 1 will go in the upper left, 2 will go in the upper right, and
+    ## 3 will go all the way across the bottom.
+    ##
+    multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+        library(grid)
+        ## Make a list from the ... arguments and plotlist
+        plots <- c(list(...), plotlist)
+        numPlots = length(plots)
+        ## If layout is NULL, then use 'cols' to determine layout
+        if (is.null(layout)) {
+            ## Make the panel
+            ## ncol: Number of columns of plots
+            ## nrow: Number of rows needed, calculated from # of cols
+            layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                             ncol = cols, nrow = ceiling(numPlots/cols))
+        }
+        if (numPlots==1) {
+            print(plots[[1]])
+        } else {
+            ## Set up the page
+            grid.newpage()
+            pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+            ## Make each plot, in the correct location
+            for (i in 1:numPlots) {
+                ## Get the i,j matrix positions of the regions that contain this subplot
+                matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+                print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                                layout.pos.col = matchidx$col))
+            }
+        }}
+    multiplot(plot0,plot1,plot2,plot3, cols=2)
+}
