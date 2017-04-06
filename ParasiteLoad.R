@@ -7,7 +7,8 @@
 rm(list=ls()) 
 library(ggplot2)
 library(reshape)
-
+library(gridExtra)
+library(tableHTML)
 #####################
 ### MeanLoad model### How does the mean load vary depending on the parameters?
 #####################
@@ -103,11 +104,10 @@ SimulatedData <- function(Ninds, m1, Dm, alpha, k){
     TheMeanLoads <- sapply(IndHIs, TheMeanLoadModel)
     IndLoads  <- rnbinom(Ninds, size=k, mu= TheMeanLoads)
     data.frame(IndHIs, IndLoads)}
-TestData <- list(males = SimulatedData(50, 20, 10, 1, 2), 
-                 females = SimulatedData(50, 10, 30, 1, 2))
+TestData <- list(males = SimulatedData(500, 20, 10, 1, 2), 
+                 females = SimulatedData(500, 10, 30, 1, 2))
 TestData[[1]][1,] <- c(0.5, 31) ## Stick to Stuart example
 testvec <- c(TestData$males$IndLoads, TestData$females$IndLoads)
-summary(testvec)
 
 ###########################################################
 ### PrNegativeBinomialLoad: Probability an Ind has some ###
@@ -348,7 +348,6 @@ LowerBoundsFunction <- function(data, PDF4cMeanLoad, hyp, lower, upper, start, m
     ## Meanload = 2; Meanloadmin = 0; Meanloadmax = 50;
     ## Dm = 2; Dmmin = 0; Dmmax = 10
 
-
 ## 4. Function to run the optimisations over the 4 hypotheses :
 RunOptim <- function(data, PDF4cMeanLoad, method,
                      k, kmin, kmax,
@@ -467,20 +466,19 @@ RunOptim <- function(data, PDF4cMeanLoad, method,
 }
 
 ## Test ## ******************
-TEST2 <- RunOptim(TestData, PDFNegBin, "L-BFGS-B",
-                     k = 2, kmin = 0, kmax = 8,
-                     Alpha = 0, Alphamin = -5, Alphamax = 5,
-                     Meanload = 2, Meanloadmin = 0, Meanloadmax = 50,
-                 Dm = 2, Dmmin = 0, Dmmax = 10)
+Summary <- RunOptim(TestData, PDFNegBin, "L-BFGS-B",
+                      k = 2, kmin = 0, kmax = 8,
+                      Alpha = 0, Alphamin = -5, Alphamax = 5,
+                      Meanload = 2, Meanloadmin = 0, Meanloadmax = 50,
+                      Dm = 2, Dmmin = 0, Dmmax = 10)
 
-## STORE <- TEST
 
-## library(tableHTML)
 ### create an html table as string
-## tableHTML(TEST2)
+tableHTML(Summary)
 ###and to export in a file
-## write_tableHTML(tableHTML(TEST2), file = 'test.html')
-
+## write_tableHTML(tableHTML(TESTFinal), file = 'TestFinal.html')
+## write.csv(TESTFinal, file = "TESTFinal.csv")
+## Summary <- read.csv("TESTFinal.csv")
 ## okaaay :D
 ## Test ## ******************
 
@@ -492,13 +490,7 @@ ParaPlot <- function(data, PDF4cMeanLoad, method,
                      k, kmin, kmax,
                      Alpha, Alphamin, Alphamax,
                      Meanload, Meanloadmin, Meanloadmax,
-                     Dm, Dmmin, Dmmax){
-    ## Create a summary table:
-    Summary <- RunOptim(data, PDF4cMeanLoad, method,
-                        k, kmin, kmax,
-                        Alpha, Alphamin, Alphamax,
-                        Meanload, Meanloadmin, Meanloadmax,
-                        Dm, Dmmin, Dmmax)
+                     Dm, Dmmin, Dmmax, Summary){
     ## Define HI
     HI <- seq(0,1,0.01)
     anar <- function(x){
@@ -580,7 +572,7 @@ ParaPlot <- function(data, PDF4cMeanLoad, method,
     df <- case1(1)
     plot0 <- ggplot(df, aes(x=HI, y=est))+
         ggtitle("H0")+
-        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="green", size=0.3)+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="darkgreen", size=0.5)+
         geom_line()+
         geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.3)+
         theme_bw()+
@@ -588,8 +580,8 @@ ParaPlot <- function(data, PDF4cMeanLoad, method,
     ## H1:
     df <- case2(2)
     plot1 <- ggplot(df, aes(x=HI, y=est))+
-        ggtitle("H0")+
-        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="green", size=0.3)+
+        ggtitle("H1")+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="darkgreen", size=0.5)+
         geom_line()+
         geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), fill="grey", alpha=.3)+
         theme_bw()+
@@ -600,72 +592,52 @@ ParaPlot <- function(data, PDF4cMeanLoad, method,
     df1$group <- "group1"
     df2$group <- "group2"
     df <- rbind(df1, df2)
-
-    plot2 <-ggplot(df, aes(x=HI, y=est, color=group, fill =group))+
+    plot2 <-ggplot(df, aes(x=HI, y=est, color=group))+
         geom_line()+
-        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="darkgreen", size=0.5)+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads, color=group), size=0.5)+
         geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), alpha=.3)+
+        scale_fill_manual(values=c("red", "red", "blue", "blue"))+
+        scale_color_manual(values=c("red", "red", "blue", "blue"))+
         ggtitle("H2")+
         theme_bw()+
         theme(legend.position="none")+
-        scale_colour_manual(values=c("red", "blue"))+
-        scale_fill_manual(values=c("red", "red", "blue", "blue"))+
-        annotate("text", x = .1, y = 50, label = "Group 1", color = "red", size=10)+
-        annotate("text", x = .1, y = 45, label = "Group 2", color = "blue", size=10)
+        annotate("text", x = .1, y = 100, label = "Group 1", color = "red", size=5)+
+        annotate("text", x = .1, y = 75, label = "Group 2", color = "blue", size=5)
     ## H3:
     df1 <- case2(4)
     df2 <- case4(4)
     df1$group <- "group1"
     df2$group <- "group2"
     df <- rbind(df1, df2)
-    plot3 <-ggplot(df, aes(x=HI, y=est, color=group, fill =group))+
+    plot3 <-ggplot(df, aes(x=HI, y=est, color=group))+
         geom_line()+
-        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), color="darkgreen", size=0.5)+
+        geom_point(data = dataDF, aes(x=IndHIs, y=IndLoads), size=0.5)+
         geom_ribbon(aes(x=HI, ymax=UB, ymin=LB), alpha=.3)+
         ggtitle("H3")+
         theme_bw()+
         theme(legend.position="none")+
-        scale_colour_manual(values=c("red", "blue"))+
         scale_fill_manual(values=c("red", "red", "blue", "blue"))+
-        annotate("text", x = .1, y = 50, label = "Group 1", color = "red", size=10)+
-        annotate("text", x = .1, y = 45, label = "Group 2", color = "blue", size=10)
-###########################################
-    ## Multiple plot function
-    ##
-    ## ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-    ## - cols:   Number of columns in layout
-    ## - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-    ##
-    ## If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-    ## then plot 1 will go in the upper left, 2 will go in the upper right, and
-    ## 3 will go all the way across the bottom.
-    ##
-    multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-        library(grid)
-        ## Make a list from the ... arguments and plotlist
-        plots <- c(list(...), plotlist)
-        numPlots = length(plots)
-        ## If layout is NULL, then use 'cols' to determine layout
-        if (is.null(layout)) {
-            ## Make the panel
-            ## ncol: Number of columns of plots
-            ## nrow: Number of rows needed, calculated from # of cols
-            layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                             ncol = cols, nrow = ceiling(numPlots/cols))
-        }
-        if (numPlots==1) {
-            print(plots[[1]])
-        } else {
-            ## Set up the page
-            grid.newpage()
-            pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-            ## Make each plot, in the correct location
-            for (i in 1:numPlots) {
-                ## Get the i,j matrix positions of the regions that contain this subplot
-                matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-                print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                                layout.pos.col = matchidx$col))
-            }
-        }}
-    multiplot(plot0,plot1,plot2,plot3, cols=2)
+        scale_color_manual(values=c("red", "red", "blue", "blue"))+
+        annotate("text", x = .1, y = 100, label = "Group 1", color = "red", size=5)+
+        annotate("text", x = .1, y = 75, label = "Group 2", color = "blue", size=5)
+    ## Final plot:
+    plotfinal <- arrangeGrob(plot0, plot1, plot2, plot3)
+    ## To save the plot:
+    ## ggsave(file="FinalPlot.pdf", plotfinal)
+    ## To read the plot:
+    ## plot(plotfinal)
+    return(plotfinal)
 }
+## Test: 
+PLOTFinal <- ParaPlot(TestData, PDFNegBin, "L-BFGS-B",
+                      k = 2, kmin = 0, kmax = 8,
+                      Alpha = 0, Alphamin = -5, Alphamax = 5,
+                      Meanload = 2, Meanloadmin = 0, Meanloadmax = 50,
+                      Dm = 2, Dmmin = 0, Dmmax = 10,
+                      Summary)
+
+plot(PLOTFinal)
+
+
+
+
