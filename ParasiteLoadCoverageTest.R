@@ -6,6 +6,28 @@ library(reshape)
 library(gridExtra)
 library(tableHTML)
 
+#########################    
+## Simulate data for 1 independant variable (male/female)
+## NB: add later "age", and generalise...
+
+SimulatedData <- function(NindsF, NindsM, mF, mM, DmF, DmM, alpha, k){
+    ##    set.seed(5)
+    IndHIsF <- round(runif(NindsF), 2)
+    IndHIsM<- round(runif(NindsM), 2)
+    FemLoads  <- data.frame(HI = IndHIsF, loads= rnbinom(NindsF, size=k, mu= MeanLoad(mF, DmF, alpha, IndHIsF)), group1 = "female")
+    MalLoads  <- data.frame(HI = IndHIsM, loads= rnbinom(NindsM, size=k, mu= MeanLoad(mM, DmM, alpha, IndHIsM)), group1 = "male")
+    ## Bind the dataframes:
+    return(rbind(FemLoads, MalLoads))
+}
+
+## example:
+## 1.Choose our parameters for the simulation:
+     NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 22
+     DmF_exp <- 5; DmM_exp <- 0; alpha_exp <- 1.1; k_exp <- 4
+## And simulate data:
+alicedata <- SimulatedData(NindsF_exp, NindsM_exp, mF_exp, mM_exp,
+                              DmF_exp, DmM_exp, alpha_exp, k_exp)
+
 #####################
 ### MeanLoad model### How does the mean load vary depending on the parameters?
 #####################
@@ -28,7 +50,6 @@ PrLoad <- function(data, k, m, Dm, alpha, ind){
 
 ## example:
 ## PrLoad(alicedata, k=2, m=10, Dm=2, alpha=1, ind=2)
-
 
 ##################################################
 ### The likelihood function over a set of inds ###
@@ -86,7 +107,7 @@ LikelihoodFunction <- function(param, data, hyp) {
         }
     } else if (hyp== "H3"){ ## H3: k, alpha, m1, Dm1, m2, Dm2
         k <- param[1]; alpha <- param[2]
-        m1 <- param[3]; Dm1 <- param[4]; m2 <- param[5]; Dm2 <- param[6]
+        m1 <- param[3]; m2 <- param[4]; Dm1 <- param[5]; Dm2 <- param[6]
         m <- c(m1,m2) ## group the m of each level of Group1
         Dm <- c(Dm1, Dm2) ## same for Dm
         ## For all levels of group1:
@@ -103,13 +124,12 @@ LikelihoodFunction <- function(param, data, hyp) {
     return(S)
 }
 
-
 ## example:
-## LikelihoodFunction(c(2,1,10), alicedata, "H0")
-## LikelihoodFunction(c(2,1,10,2), alicedata, "H1")
-## LikelihoodFunction(c(2,1,10,15), alicedata, "H2")
-## LikelihoodFunction(c(k=2, alpha=1, m1=10, Dm1=2,
-##                      m2=15, Dm2=3), alicedata, "H3")
+LikelihoodFunction(c(2,1,10), alicedata, "H0")
+LikelihoodFunction(c(2,1,10,2), alicedata, "H1")
+LikelihoodFunction(c(2,1,10,15), alicedata, "H2")
+LikelihoodFunction(c(k=2, alpha=1, m1=10, Dm1=2,
+                      m2=15, Dm2=3), alicedata, "H3")
         
 #######################################
 ### The Maximum likelihood analysis ###
@@ -136,21 +156,26 @@ UpperBoundsFunction <- function(data, hyp, lower, upper, start, method,
     summaryVec <- vector()
     max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
-        ## Functional constraint on search (L > MLE-2) + max&min each param
-        OptimBounds <- function(param){
-            LK <- LikelihoodFunction(param, data, hyp)
-            if (LK <= (MyMLE$value - 2)){
-                param[rankpar] <- -100
+        ## eliminate errors:
+        if (!is.na(MyMLE$value)){
+            ## Functional constraint on search (L > MLE-2) + max&min each param
+            OptimBounds <- function(param){
+                LK <- LikelihoodFunction(param, data, hyp)
+                if (LK <= !is.na(MyMLE$value - 2)){ ## why !is.na works better? unclear
+                    param[rankpar] <- -100
+                }
+                return(param[rankpar])
             }
-            return(param[rankpar])
+            MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                                 fn = OptimBounds, ## function to be maximized
+                                 lower = lower, ## lower bounds for the parameters
+                                 upper = upper, ## upper bounds for the parameters
+                                 method = method, ## set the method
+                                 control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+            summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
+        } else {
+            summaryVec <- c(summaryVec, "MLE optimisation error")
         }
-        MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
-                             fn = OptimBounds, ## function to be maximized
-                             lower = lower, ## lower bounds for the parameters
-                             upper = upper, ## upper bounds for the parameters
-                             method = method, ## set the method
-                             control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-        summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
     return(summaryVec)
 }
@@ -164,20 +189,25 @@ LowerBoundsFunction <- function(data, hyp, lower, upper, start, method,
     summaryVec <- vector()
     max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
-        ## Functional constraint on search (L > MLE-2) + max&min each param
-        OptimBounds <- function(param){
-            LK <- LikelihoodFunction(param, data, hyp)
-            if (LK <= (MyMLE$value - 2)){
-                param[rankpar] <- 100
+        ## eliminate errors:
+        if (!is.na(MyMLE$value)){
+            ## Functional constraint on search (L > MLE-2) + max&min each param
+            OptimBounds <- function(param){
+                LK <- LikelihoodFunction(param, data, hyp)
+                if (LK <= MyMLE$value - 2){
+                    param[rankpar] <- 100
+                }
+                return(param[rankpar])
             }
-            return(param[rankpar])
+            MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                                 fn = OptimBounds, ## function to be maximized
+                                 lower = lower, ## lower bounds for the parameters
+                                 upper = upper, ## upper bounds for the parameters
+                                 method = method) ## set the method
+            summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
+        } else {
+            summaryVec <- c(summaryVec, "MLE optimisation error")
         }
-        MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
-                             fn = OptimBounds, ## function to be maximized
-                             lower = lower, ## lower bounds for the parameters
-                             upper = upper, ## upper bounds for the parameters
-                             method = method) ## set the method
-        summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
     return(summaryVec)
 }
@@ -217,32 +247,32 @@ RunOptim <- function(data, method,
         assign(paste0("Ddf_H",i), get(paste0("df_H",i)) - df_H0)
     }
     ## Run the upperbounds over the 4 hypotheses:
-    for (i in 0:3){
-        assign(paste0("MyUp_H", i), UpperBoundsFunction(data, 
-                                                        paste0("H",i),
-                                                        get(paste0("lower_H",i)),
-                                                        get(paste0("upper_H",i)),
-                                                        get(paste0("start_H",i)),
+    for (j in 0:3){
+        assign(paste0("MyUp_H", j), UpperBoundsFunction(data, 
+                                                        paste0("H",j),
+                                                        get(paste0("lower_H",j)),
+                                                        get(paste0("upper_H",j)),
+                                                        get(paste0("start_H",j)),
                                                         method,
-                                                        get(paste0("MyMLE_H",i))))
+                                                        get(paste0("MyMLE_H",j))))
     }
     ## Run the lowerbounds over the 4 hypotheses:
-    for (i in 0:3){
-        assign(paste0("MyLow_H", i), LowerBoundsFunction(data,
-                                                         paste0("H",i),
-                                                         get(paste0("lower_H",i)),
-                                                         get(paste0("upper_H",i)),
-                                                         get(paste0("start_H",i)),
+    for (h in 0:3){
+        assign(paste0("MyLow_H", h), LowerBoundsFunction(data,
+                                                         paste0("H",h),
+                                                         get(paste0("lower_H",h)),
+                                                         get(paste0("upper_H",h)),
+                                                         get(paste0("start_H",h)),
                                                          method,
-                                                         get(paste0("MyMLE_H",i))))
+                                                         get(paste0("MyMLE_H",h))))
     }
     ## Store in a list over the 4 hypotheses :
-    for (i in 0:3){
-        assign(paste0("Result_H",i), list(get(paste0("MLEvalue_H",i)),
-                                          get(paste0("MyLow_H",i)),
-                                          get(paste0("MyparamMLE_H",i)),
-                                          get(paste0("MyUp_H",i)),
-                                          get(paste0("Ddf_H",i))))
+    for (l in 0:3){
+        assign(paste0("Result_H",l), list(get(paste0("MLEvalue_H",l)),
+                                          get(paste0("MyLow_H",l)),
+                                          get(paste0("MyparamMLE_H",l)),
+                                          get(paste0("MyUp_H",l)),
+                                          get(paste0("Ddf_H",l))))
     }
     ## Storage:
     Tot <- list(H0 = Result_H0, H1 = Result_H1, H2 = Result_H2, H3 = Result_H3)
@@ -310,34 +340,13 @@ RunOptim <- function(data, method,
 ##                         m1, m1min, m1max,
 ##                         Dm, Dmmin, Dmmax)
 
-#########################    
-## Simulate data for 1 independant variable (male/female)
-## NB: add later "age", and generalise...
-
-SimulatedData <- function(NindsF, NindsM, mF, mM, DmF, DmM, alpha, k){
-    ##    set.seed(5)
-    IndHIsF <- round(runif(NindsF), 2)
-    IndHIsM<- round(runif(NindsM), 2)
-    FemLoads  <- data.frame(HI = IndHIsF, loads= rnbinom(NindsF, size=k, mu= MeanLoad(mF, DmF, alpha, IndHIsF)), group1 = "female")
-    MalLoads  <- data.frame(HI = IndHIsM, loads= rnbinom(NindsM, size=k, mu= MeanLoad(mM, DmM, alpha, IndHIsM)), group1 = "male")
-    ## Bind the dataframes:
-    return(rbind(FemLoads, MalLoads))
-}
-
-## example:
-## ## 1.Choose our parameters for the simulation:
-##     NindsF_exp <- 20; NindsM_exp <- 15; mF_exp <- 20; mM_exp <- 22
-##     DmF_exp <- 5; DmM_exp <- 1; alpha_exp <- 1; k_exp <- 3
-## ## And simulate data:
-## alicedata <- SimulatedData(NindsF_exp, NindsM_exp, mF_exp, mM_exp,
-##                              DmF_exp, DmM_exp, alpha_exp, k_exp)
 
 ######## Let's calculate the coverage of the parameters
 ## (which % of time are the parameters taken to simulate data
 ## found in the interval estimated)
 MyBS <- function(){
     ## 1.Choose our parameters for the simulation:
-    NindsF_exp <- 50; NindsM_exp <- 45; mF_exp <- 20; mM_exp <- 22
+    NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 20; mM_exp <- 22
     DmF_exp <- 5; DmM_exp <- 1; alpha_exp <- 1; k_exp <- 3
     ## And simulate data:
     alicedata <- SimulatedData(NindsF_exp, NindsM_exp, mF_exp, mM_exp,
@@ -355,52 +364,47 @@ MyBS <- function(){
                         Dm, Dmmin, Dmmax))
 }
 
-try <- MyBS()
 
-Mytry <- replicate(3, {MyBS()})
+################
+MyParallel <- function(N_BS){ ## N_BS <- number of repeats
+    ##create cluster
+    library(parallel)
+    cl <- makeCluster(detectCores()-2)
+    ##put objects in place that might be needed for the code
+    clusterExport(cl,c("MeanLoad", "PrLoad", "LikelihoodFunction", "mymle","UpperBoundsFunction", "LowerBoundsFunction", "RunOptim", "SimulatedData", "melt", "MyBS"))
+                                        #... then parallel replicate...
+    myResult <- parSapply(cl, 1:N_BS, function(i,...) { MyBS() } )
+    ##stop the cluster
+    stopCluster(cl)
+    return(myResult)
+}
 
-#######################
-## initialise the coverage values
-cov_k <- 0
-cov_alpha <- 0
-cov_m1 <- 0
-cov_Dm <- 0
-
-## Reminder: parameters for simulation:
-NindsF_exp <- 50; NindsM_exp <- 45; mF_exp <- 20; mM_exp <- 22
-DmF_exp <- 5; DmM_exp <- 1; alpha_exp <- 1; k_exp <- 3
-
-## 5.Check if param_exp belongs to [parammin-parammax] for H3
-data.frame(k = data.table::between(k_exp, try$k_min[4], try$k_max[4]),
-           alpha = data.table::between(alpha_exp, try$Alpha_min[4], try$Alpha_max[4]),
-           m1 = data.table::between(mF_exp, try$m1_min[4], try$m1_max[4]),
-           m2 = data.table::between(mM_exp, try$m2_min[4], try$m2_max[4]),
-           Dm1 = data.table::between(DmF_exp, try$Dm1_min[4], try$Dm1_max[4]),
-           Dm2 = data.table::between(DmM_exp, try$Dm2_min[4], try$Dm2_max[4]))
+before <- Sys.time()
+TestAlice <- MyParallel(1000)
+after <-  Sys.time()
+after - before
 
 
-tableHTML(try)
-try$k_min
-try$k_max
-k_exp
-## FAIL:
-library(doParallel)
-library(foreach)
-library(data.table)
+## Check if param_exp belongs to [parammin-parammax] for H3: 
+MyCoverageFunction <- function(N_BS, myResult){     ## N_BS <- number of repeats
+    myMins <- c("k_min", "alpha_min", "m1_min", "Dm1_min", "m2_min", "Dm2_min")
+    myMaxs <- c("k_max", "alpha_max", "m1_max", "Dm1_max", "m2_max", "Dm2_max")
+    myExps <- c(k_exp, alpha_exp, mF_exp, DmF_exp, mM_exp, DmM_exp)
+    ## Check if param_exp belongs to [parammin-parammax] for H3:
+    cov <- 0
+    for (j in 1:length(myExps)){
+        A <- vector()
+        for (i in 1:N_BS){
+            A <- c(A,
+                   data.table::between(myExps[j],
+                                       as.numeric(as.character(myResult[which(rownames(myResult)==myMins[j]),][[i]][4])),
+                                       as.numeric(as.character(myResult[which(rownames(myResult)==myMaxs[j]),][[i]][4]))))
+            cov[j] <- prop.table(table(A))[2]*100
+        }
+    }
+    names(cov) <- c("k", "alpha", "m1", "Dm1", "m2", "Dm2")
+    return(cov)
+}
 
-## Calculate the number of cores
-no_cores <- detectCores() - 4
-## Initiate cluster
-cl <- makeCluster(no_cores)
-## Register parallel backend
-registerDoParallel(cl)
-## Go:
-MyList <- list()
-for (i in 1:10){
-    MyList[i] <- MyBS()}
-## Store the results for a lot of replicates :
-results <- foreach(i=1:10, .export=c("MeanLoad", "PrLoad", "LikelihoodFunction", "mymle","UpperBoundsFunction", "LowerBoundsFunction", "RunOptim", "SimulatedData", "melt"),.packages=c("ggplot2","reshape","gridExtra","tableHTML", "data.table"),
-                   .combine='rbind') %dopar% MyList[i] <- MyBS()
-
-## Stop the cluster:
-stopCluster(cl)
+## NB: find the parameters chosen for simulation on top of the code:
+MyCoverageFunction(100, myResult)
