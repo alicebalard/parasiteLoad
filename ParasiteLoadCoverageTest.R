@@ -20,6 +20,13 @@ SimulatedData <- function(NindsF, NindsM, mF, mM, DmF, DmM, alpha, k){
     return(rbind(FemLoads, MalLoads))
 }
 
+#####################
+### MeanLoad model### How does the mean load vary depending on the parameters?
+#####################
+MeanLoad <- function(m,Dm,alpha,HI){
+    (m + Dm*HI)*(1 - alpha*2*HI*(1 - HI))
+}
+
 ## example:
 ## 1.Choose our parameters for the simulation:
      NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 22
@@ -27,13 +34,6 @@ SimulatedData <- function(NindsF, NindsM, mF, mM, DmF, DmM, alpha, k){
 ## And simulate data:
 alicedata <- SimulatedData(NindsF_exp, NindsM_exp, mF_exp, mM_exp,
                               DmF_exp, DmM_exp, alpha_exp, k_exp)
-
-#####################
-### MeanLoad model### How does the mean load vary depending on the parameters?
-#####################
-MeanLoad <- function(m,Dm,alpha,HI){
-    (m + Dm*HI)*(1 - alpha*2*HI*(1 - HI))
-}
 
 ###########################################################
 ### PrNegativeBinomialLoad: Probability an Ind has some ###
@@ -156,26 +156,21 @@ UpperBoundsFunction <- function(data, hyp, lower, upper, start, method,
     summaryVec <- vector()
     max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
-        ## eliminate errors:
-        if (!is.na(MyMLE$value)){
-            ## Functional constraint on search (L > MLE-2) + max&min each param
-            OptimBounds <- function(param){
-                LK <- LikelihoodFunction(param, data, hyp)
-                if (LK <= !is.na(MyMLE$value - 2)){ ## why !is.na works better? unclear
-                    param[rankpar] <- -100
-                }
-                return(param[rankpar])
+        ## Functional constraint on search (L > MLE-2) + max&min each param
+        OptimBounds <- function(param){
+            LK <- LikelihoodFunction(param, data, hyp)
+            if (LK <= !is.na(MyMLE$value - 2)){ ## why !is.na works better? unclear
+                param[rankpar] <- -100
             }
-            MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
-                                 fn = OptimBounds, ## function to be maximized
-                                 lower = lower, ## lower bounds for the parameters
-                                 upper = upper, ## upper bounds for the parameters
-                                 method = method, ## set the method
-                                 control = list(fnscale=-1)) ##turn the default minimizer into maximizer
-            summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
-        } else {
-            summaryVec <- c(summaryVec, "MLE optimisation error")
+            return(param[rankpar])
         }
+        MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                             fn = OptimBounds, ## function to be maximized
+                             lower = lower, ## lower bounds for the parameters
+                             upper = upper, ## upper bounds for the parameters
+                             method = method, ## set the method
+                             control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+        summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
     return(summaryVec)
 }
@@ -189,25 +184,20 @@ LowerBoundsFunction <- function(data, hyp, lower, upper, start, method,
     summaryVec <- vector()
     max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
-        ## eliminate errors:
-        if (!is.na(MyMLE$value)){
-            ## Functional constraint on search (L > MLE-2) + max&min each param
-            OptimBounds <- function(param){
-                LK <- LikelihoodFunction(param, data, hyp)
-                if (LK <= MyMLE$value - 2){
-                    param[rankpar] <- 100
-                }
-                return(param[rankpar])
+        ## Functional constraint on search (L > MLE-2) + max&min each param
+        OptimBounds <- function(param){
+            LK <- LikelihoodFunction(param, data, hyp)
+            if (LK <= MyMLE$value - 2){
+                param[rankpar] <- 100
             }
-            MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
-                                 fn = OptimBounds, ## function to be maximized
-                                 lower = lower, ## lower bounds for the parameters
-                                 upper = upper, ## upper bounds for the parameters
-                                 method = method) ## set the method
-            summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
-        } else {
-            summaryVec <- c(summaryVec, "MLE optimisation error")
+            return(param[rankpar])
         }
+        MyBoundsMax <- optim(par = MyMLE$par, ## initial values for the parameters
+                             fn = OptimBounds, ## function to be maximized
+                             lower = lower, ## lower bounds for the parameters
+                             upper = upper, ## upper bounds for the parameters
+                             method = method) ## set the method
+        summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
     return(summaryVec)
 }
@@ -330,15 +320,15 @@ RunOptim <- function(data, method,
 }
 
 ## example:
-## k <- 5; kmin <- 0; kmax <- 8
-## alpha <- 0; alphamin <- -2; alphamax <- 2
-## m1 <- 0; m1min <- 0; m1max <- 30
-## Dm <- 0; Dmmin <- 0; Dmmax <- 1
-## RunOptim(alicedata, "L-BFGS-B",
-##                         k , kmin, kmax,
-##                         alpha, alphamin, alphamax,
-##                         m1, m1min, m1max,
-##                         Dm, Dmmin, Dmmax)
+k <- 5; kmin <- 0; kmax <- 8
+alpha <- 0; alphamin <- -2; alphamax <- 2
+m1 <- 0; m1min <- 0; m1max <- 30
+Dm <- 0; Dmmin <- 0; Dmmax <- 1
+RunOptim(alicedata, "L-BFGS-B",
+                        k , kmin, kmax,
+                        alpha, alphamin, alphamax,
+                        m1, m1min, m1max,
+                        Dm, Dmmin, Dmmax)
 
 
 ######## Let's calculate the coverage of the parameters
@@ -346,10 +336,10 @@ RunOptim <- function(data, method,
 ## found in the interval estimated)
 MyBS <- function(){
     ## 1.Choose our parameters for the simulation:
-    NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 20; mM_exp <- 22
-    DmF_exp <- 5; DmM_exp <- 1; alpha_exp <- 1; k_exp <- 3
+    NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 22
+    DmF_exp <- 5; DmM_exp <- 0; alpha_exp <- 1.1; k_exp <- 4
     ## And simulate data:
-    alicedata <- SimulatedData(NindsF_exp, NindsM_exp, mF_exp, mM_exp,
+    TestData <- SimulatedData(NindsF_exp, NindsM_exp, mF_exp, mM_exp,
                                DmF_exp, DmM_exp, alpha_exp, k_exp)
     ## 2.Choose our parameters for start of search of MaxLik (should be different):
     k <- 1; kmin <- 0; kmax <- 8;
@@ -357,15 +347,55 @@ MyBS <- function(){
     m1 <- 1; m1min <- 0; m1max <- 30;
     Dm <- 1; Dmmin <- 0; Dmmax <- 10
     ## 3.Run the full optimisation:
-    return(RunOptim(alicedata, "L-BFGS-B",
+    return(RunOptim(TestData, "L-BFGS-B",
                         k , kmin, kmax,
                         alpha, alphamin, alphamax,
                         m1, m1min, m1max,
                         Dm, Dmmin, Dmmax))
 }
 
+before <- Sys.time()
+before
+result1 <- MyBS()
+after <-  Sys.time()
+after
+after - before
 
-################
+## Check if param_exp belongs to [parammin-parammax] for H3: 
+myCoverageFunction <- function(myResult){ 
+    myMins <- c("k_min", "alpha_min", "m1_min", "Dm1_min", "m2_min", "Dm2_min")
+    myMaxs <- c("k_max", "alpha_max", "m1_max", "Dm1_max", "m2_max", "Dm2_max")
+    myExps <- c(k_exp, alpha_exp, mF_exp, DmF_exp, mM_exp, DmM_exp)
+    ## Check if param_exp belongs to [parammin-parammax] for H3:
+    cov <- 0
+    for (j in 1:length(myExps)){
+        A <- vector()
+        for (i in 1:N_BS){
+            A <- c(A,
+                   data.table::between(myExps[j],
+                                       as.numeric(as.character(myResult[which(rownames(myResult)==myMins[j]),][[i]][4])),
+                                       as.numeric(as.character(myResult[which(rownames(myResult)==myMaxs[j]),][[i]][4]))))
+            cov[j] <- prop.table(table(A))[2]*100
+        }
+    }
+    names(cov) <- c("k", "alpha", "m1", "Dm1", "m2", "Dm2")
+    return(cov)
+}
+
+## NB: find the parameters chosen for simulation on top of the code:
+MyCoverageFunction(1, result1)
+
+result1
+
+
+
+result1[which(rownames(result1)==myMins[1]),]
+
+,
+                                       as.numeric(as.character(myResult[which(rownames(myResult)==myMaxs[j]),][[i]][4]))))
+            cov[j] <- prop.table(table(A))[2]*100
+  
+################ NOT WORKING ???
 MyParallel <- function(N_BS){ ## N_BS <- number of repeats
     ##create cluster
     library(parallel)
@@ -380,10 +410,11 @@ MyParallel <- function(N_BS){ ## N_BS <- number of repeats
 }
 
 before <- Sys.time()
+before
 TestAlice <- MyParallel(1000)
 after <-  Sys.time()
+after
 after - before
-
 
 ## Check if param_exp belongs to [parammin-parammax] for H3: 
 MyCoverageFunction <- function(N_BS, myResult){     ## N_BS <- number of repeats
@@ -405,6 +436,3 @@ MyCoverageFunction <- function(N_BS, myResult){     ## N_BS <- number of repeats
     names(cov) <- c("k", "alpha", "m1", "Dm1", "m2", "Dm2")
     return(cov)
 }
-
-## NB: find the parameters chosen for simulation on top of the code:
-MyCoverageFunction(100, myResult)
