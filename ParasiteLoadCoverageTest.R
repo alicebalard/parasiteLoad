@@ -1,6 +1,5 @@
 ########################## On reprend... 8 Mai
 rm(list=ls()) 
-
 library(ggplot2)
 library(reshape)
 library(gridExtra)
@@ -8,7 +7,6 @@ library(tableHTML)
 
 #########################    
 ## Generate an hypotheses matrix:
-
 ## All hypotheses (so far...):
 ## H0: k, alpha, mB
 ## H1: k, alpha, mB, DmB
@@ -39,10 +37,10 @@ SimulatedData <- function(NindsM, NindsF, mM, mF, DmM, DmF, alpha, k){
     return(rbind(MalLoads, FemLoads))
 }
 
-## example:
+## Example:
 ## 1.Choose our parameters for the simulation:
 NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 10
-DmF_exp <- 2; DmM_exp <- 0; alpha_exp <- 1.1; k_exp <- 4
+DmF_exp <- 2; DmM_exp <- 0; alpha_exp <- 2; k_exp <- 4
 ## And simulate data:
 alicedata <- SimulatedData(NindsM_exp, NindsF_exp, mM_exp, mF_exp,
                               DmM_exp, DmF_exp, alpha_exp, k_exp)
@@ -99,11 +97,6 @@ LikelihoodFunction <- function(param, data, multi) {
     return(S)
 }
 
-## Test:
-data <- alicedata
-param <- c(k=2, alpha=1, mM=8, mF=15, DmM=2, DmF=2)
-lapply(1:4, function(x) LikelihoodFunction(param, alicedata, HypMat[x,]))
-
 #########################
 ## The Maximum likelihood analysis
 
@@ -124,19 +117,6 @@ mymle <- function(data, lower, upper, start, multi){
           data = alicedata,
           multi = multi) ## extra param for LikelihoodFunction
 }
-
-## Test:
-## data <- alicedata
-## start <- c(k=1, alpha=0, mM=20, mF=20, DmM=2, DmF=2)
-## lower <- c(k=1, alpha=-3, mM=0, mF=0, DmM=0, DmF=0)
-## upper <- c(k=8, alpha=3, mM=30, mF=30, DmM=10, DmF=10)
-## MyMLETEST <- mymle(data, lower, upper, start, HypMat[1,])
-## MyMLETEST$par
-## lapply(1:4, function(x) mymle(data, lower, upper, start, HypMat[x,]))
-
-## Simulated values were :
-## NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 10
-## DmF_exp <- 2; DmM_exp <- 0; alpha_exp <- 1.1; k_exp <- 4
 
 ## 2. Function to maximize the parameters in MLE+/- 2 :
 
@@ -221,10 +201,28 @@ after <-  Sys.time()
 print("The optimisation took that long:")
 after - before
 
+
+
 ## Better visualisation:
-MySupaResult[[1]][[2]]
-MySupaResult[[1]][[1]]$par
-MySupaResult[[1]][[3]]
+MyResults <- function(x){
+    DF <- t(data.frame(MySupaResult[[x]][[2]],MySupaResult[[x]][[1]]$par,MySupaResult[[x]][[3]]))
+    rownames(DF) <- c("low", "est", "high")
+    DF
+}
+
+lapply(1:4, function(x) MyResults(x))
+
+## To compare with the simulation:
+simpar <- c(k_exp, alpha_exp, mM_exp, mF_exp, DmM_exp, DmF_exp)
+
+list(lapply(1:4, function(x) MyResults(x)), simpar)
+
+
+
+
+
+
+
 
 
 ############################
