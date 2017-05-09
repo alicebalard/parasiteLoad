@@ -1,4 +1,4 @@
-########################## On reprend... 29 april
+########################## On reprend... 8 Mai
 rm(list=ls()) 
 
 library(ggplot2)
@@ -7,159 +7,154 @@ library(gridExtra)
 library(tableHTML)
 
 #########################    
-## Simulate data for 1 independant variable (male/female)
-## NB: add later "age", and generalise...
-
-SimulatedData <- function(NindsF, NindsM, mF, mM, DmF, DmM, alpha, k){
-    ##    set.seed(5)
-    IndHIsF <- round(runif(NindsF), 2)
-    IndHIsM<- round(runif(NindsM), 2)
-    FemLoads  <- data.frame(HI = IndHIsF, loads= rnbinom(NindsF, size=k, mu= MeanLoad(mF, DmF, alpha, IndHIsF)), group1 = "female")
-    MalLoads  <- data.frame(HI = IndHIsM, loads= rnbinom(NindsM, size=k, mu= MeanLoad(mM, DmM, alpha, IndHIsM)), group1 = "male")
-    ## Bind the dataframes:
-    return(rbind(FemLoads, MalLoads))
-}
-
-#####################
-### MeanLoad model### How does the mean load vary depending on the parameters?
-#####################
-MeanLoad <- function(m,Dm,alpha,HI){
-    (m + Dm*HI)*(1 - alpha*2*HI*(1 - HI))
-}
-
-## example:
-## 1.Choose our parameters for the simulation:
-     NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 22
-     DmF_exp <- 5; DmM_exp <- 0; alpha_exp <- 1.1; k_exp <- 4
-## And simulate data:
-alicedata <- SimulatedData(NindsF_exp, NindsM_exp, mF_exp, mM_exp,
-                              DmF_exp, DmM_exp, alpha_exp, k_exp)
-
-###########################################################
-### PrNegativeBinomialLoad: Probability an Ind has some ###
-### observed Load, given its HI (and the model)         ###
-###########################################################
-
-## Generalised, ie the MeanLoad model is passed as an argument
-PrLoad <- function(data, k, m, Dm, alpha, ind){
-    HI <- data$HI[ind]
-    Load <- data$loads[ind]
-    ## Always a good idea to make contributions to the likelihood function Bombproof, and never return zero (???)
-    max(10^-20, dnbinom(Load, size=abs(k), mu=abs(MeanLoad(m, Dm, alpha, HI))))
-}
-
-## example:
-## PrLoad(alicedata, k=2, m=10, Dm=2, alpha=1, ind=2)
-
-##################################################
-### The likelihood function over a set of inds ###
-##################################################
-
-## 'data' is a dataframe with HI, loads, group1 (so far...)
-## PDF4cMeanLoad will be a chosen MeanLoad model function (e.g. PDFNegBin)
-## the first argument will be optimised with "optim" later (k, alpha)
+## Generate an hypotheses matrix:
 
 ## All hypotheses (so far...):
 ## H0: k, alpha, mB
 ## H1: k, alpha, mB, DmB
-## H2: k, alpha, m1M, m1F
-## H3: k, alpha, m1M, m1F, DmM, DmF
+## H2: k, alpha, m1, m2
+## H3: k, alpha, m1, m2, Dm1, Dm2
+HypMat <- t(matrix(c(1,1,1,0,0,0,
+                     1,1,1,0,1,0,
+                     1,1,1,1,0,0,
+                     1,1,1,1,1,1),
+                   nrow=6))
 
-## parametre given for optimisation: k, alpha, m, Dm
-LikelihoodFunction <- function(param, data, hyp) {
-    S <- 0 ## initialisation
-    if (hyp== "H0"){ ## H0: k, alpha, m
-        k <- param[1]; alpha <- param[2];m <- param[3]; Dm <- 0
-        ## For all levels of group1:
-        G1_levels <- levels(data$group1)
-        for (lev in 1:length(G1_levels)){
-            ## Subset the dataframe for each level:
-            subdata <- data[which(data$group1 %in% G1_levels[lev]),]
-            ## For all individuals in each level:
-            for (ind in 1:nrow(subdata)){
-                S <- S + log(PrLoad(subdata, k, m, Dm, alpha, ind))
-            }
+#########################
+## MeanLoad model: How does the mean load vary depending on the parameters?
+MeanLoad <- function(m,Dm,alpha,HI){
+    (m + Dm*HI)*(1 - alpha*2*HI*(1 - HI))
+}
+
+#########################    
+## Simulate data for 1 independant variable (male/female)
+## NB: add later "age", and generalise...
+SimulatedData <- function(NindsM, NindsF, mM, mF, DmM, DmF, alpha, k){
+    ##    set.seed(5)
+    IndHIsM<- round(runif(NindsM), 2)
+    IndHIsF <- round(runif(NindsF), 2)
+    MalLoads  <- data.frame(HI = IndHIsM, loads= rnbinom(NindsM, size=k, mu= MeanLoad(mM, DmM, alpha, IndHIsM)), group1 = "male")
+    FemLoads  <- data.frame(HI = IndHIsF, loads= rnbinom(NindsF, size=k, mu= MeanLoad(mF, DmF, alpha, IndHIsF)), group1 = "female")
+    ## Bind the dataframes:
+    return(rbind(MalLoads, FemLoads))
+}
+
+## example:
+## 1.Choose our parameters for the simulation:
+NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 10
+DmF_exp <- 2; DmM_exp <- 0; alpha_exp <- 1.1; k_exp <- 4
+## And simulate data:
+alicedata <- SimulatedData(NindsM_exp, NindsF_exp, mM_exp, mF_exp,
+                              DmM_exp, DmF_exp, alpha_exp, k_exp)
+
+#########################    
+## PrLoad: Probability an Ind has some
+## observed Load, given its HI (and the model)        
+## Generalised, ie the MeanLoad model is passed as an argument
+PrLoad <- function(data, k, m, Dm, alpha, ind){
+    HI <- data$HI[ind]
+    Load <- data$loads[ind]
+    ## Always a good idea to make contributions to the likelihood function Bombproof, and never return zero
+    max(10^-20, dnbinom(Load, size=abs(k), mu=abs(MeanLoad(m, Dm, alpha, HI))))
+}
+
+## Test:
+PrLoad(alicedata, k=2, m=10, Dm=2, alpha=1, ind=2)
+
+#########################
+## The likelihood function over a set of inds
+## param: k, alpha, mM, mF, DmM, DmF
+LikelihoodFunction <- function(param, data, multi) { 
+    ## Likelihood initialisation:
+    S <- 0
+    ## Parameters X HypMat line:
+    mypar <- param*multi
+    ## Assign each parameter to its value:
+    for (i in 1:length(names(mypar))) assign(names(mypar[i]),as.numeric(mypar[i]))
+    ## Group the m & Dm of each level of Group1:
+    m <- c(mM,mF)
+    Dm <- c(DmM, DmF)
+    ## In the case of H0 and H1, there are NO independant variables considered:
+    if (length(m[m!=0]) == 1){
+        mB <- m[m!=0]
+        ## Dm is either 0 or a given value:
+        if (length(Dm[Dm!=0]) == 1) {DmB <- Dm[Dm!=0]
+        } else { DmB <- 0 }
+        ## For all individuals in each level:
+        for (ind in 1:nrow(data)){
+            S <- S + log(PrLoad(data, k, mB, DmB, alpha, ind))
         }
-    } else if (hyp== "H1"){ ## H1: k, alpha, m, Dm
-        k <- param[1]; alpha <- param[2];m <- param[3]; Dm <- param[4]
-        ## For all levels of group1:
-        G1_levels <- levels(data$group1)
-        for (lev in 1:length(G1_levels)){
-            ## Subset the dataframe for each level:
-            subdata <- data[which(data$group1 %in% G1_levels[lev]),]
-            ## For all individuals in each level:
-            for (ind in 1:nrow(subdata)){
-                S <- S + log(PrLoad(subdata, k, m, Dm, alpha, ind))
-            }
-        }
-    } else if (hyp== "H2"){ ## H2: k, alpha, m1, m2
-        k <- param[1]; alpha <- param[2]; m1 <- param[3]; m2 <- param[4]
-        m <- c(m1,m2) ## group the m of each level of Group1
-        ## For all levels of group1:
-        G1_levels <- levels(data$group1)
-        for (lev in 1:length(G1_levels)){
-            ## Subset the dataframe for each level:
-            subdata <- data[which(data$group1 %in% G1_levels[lev]),]
-            ## For all individuals in each level:
-            for (ind in 1:nrow(subdata)){
-                S <- S + log(PrLoad(subdata, k, m[lev], 0, alpha, ind))
-            }
-        }
-    } else if (hyp== "H3"){ ## H3: k, alpha, m1, Dm1, m2, Dm2
-        k <- param[1]; alpha <- param[2]
-        m1 <- param[3]; m2 <- param[4]; Dm1 <- param[5]; Dm2 <- param[6]
-        m <- c(m1,m2) ## group the m of each level of Group1
-        Dm <- c(Dm1, Dm2) ## same for Dm
-        ## For all levels of group1:
-        G1_levels <- levels(data$group1)
-        for (lev in 1:length(G1_levels)){
-            ## Subset the dataframe for each level:
-            subdata <- data[which(data$group1 %in% G1_levels[lev]),]
-            ## For all individuals in each level:
-            for (ind in 1:nrow(subdata)){
-                S <- S + log(PrLoad(subdata, k, m[lev], Dm[lev], alpha, ind))
+    } else {
+        ## We consider so far 1 independant variable: sex, with 2 levels (TO IMPROVE)
+        ## Run over all its levels:
+        for (lev in 1:2) {
+            ## subset the dataframe:
+            subdata <- data[levels(data[ ,3]) %in% levels(data[ ,3])[lev],]
+            ## For all individuals of this level:
+            for (indiv in 1:nrow(subdata)){
+                S <- S + log(PrLoad(subdata, k, m[lev], Dm[lev], alpha, indiv))
             }
         }
     }
     return(S)
 }
 
-## example:
-LikelihoodFunction(c(2,1,10), alicedata, "H0")
-LikelihoodFunction(c(2,1,10,2), alicedata, "H1")
-LikelihoodFunction(c(2,1,10,15), alicedata, "H2")
-LikelihoodFunction(c(k=2, alpha=1, m1=10, Dm1=2,
-                      m2=15, Dm2=3), alicedata, "H3")
-        
-#######################################
-### The Maximum likelihood analysis ###
-#######################################
+## Test:
+data <- alicedata
+param <- c(k=2, alpha=1, mM=8, mF=15, DmM=2, DmF=2)
+lapply(1:4, function(x) LikelihoodFunction(param, alicedata, HypMat[x,]))
+
+#########################
+## The Maximum likelihood analysis
 
 ## 1. Function to maximize the likelihood:
-mymle <- function(data, hyp, lower, upper, start, method){
-    mymle <- optim(par = start, ## initial values for the parameters
-                   fn = LikelihoodFunction, ## function to be maximized
-                   lower = lower, ## lower bounds for the parameters
-                   upper = upper, ## upper bounds for the parameters
-                   method = method, ## set the optimization method
-                   control = list(fnscale=-1), ##turn the default minimizer into maximizer
-                   data = data, ## extra param for LikelihoodFunction
-                   hyp = hyp)## extra param for LikelihoodFunction
+mymle <- function(data, lower, upper, start, multi){
+    ## Set limits to the lower and upper parameters
+    ## in the case where they must stay NULL (or close to):
+    lower <- lower*multi - 0.1 
+    upper <- upper*multi + 0.1
+    start <- start*multi
+    ## And run the optimisation:    
+    optim(par = start, ## initial values for the parameters
+          fn = LikelihoodFunction, ## function to be maximized
+          lower = lower, ## lower bounds for the parameters
+          upper = upper, ## upper bounds for the parameters
+          control = list(fnscale=-1), ##turn the default minimizer into maximizer
+          method = "L-BFGS-B",
+          data = alicedata,
+          multi = multi) ## extra param for LikelihoodFunction
 }
+
+## Test:
+## data <- alicedata
+## start <- c(k=1, alpha=0, mM=20, mF=20, DmM=2, DmF=2)
+## lower <- c(k=1, alpha=-3, mM=0, mF=0, DmM=0, DmF=0)
+## upper <- c(k=8, alpha=3, mM=30, mF=30, DmM=10, DmF=10)
+## MyMLETEST <- mymle(data, lower, upper, start, HypMat[1,])
+## MyMLETEST$par
+## lapply(1:4, function(x) mymle(data, lower, upper, start, HypMat[x,]))
+
+## Simulated values were :
+## NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 10
+## DmF_exp <- 2; DmM_exp <- 0; alpha_exp <- 1.1; k_exp <- 4
 
 ## 2. Function to maximize the parameters in MLE+/- 2 :
 
 ## MLEbounds : optim function with constraint on the search
-UpperBoundsFunction <- function(data, hyp, lower, upper, start, method,
-                                MyMLE){
+UpperBoundsFunction <- function(data, lower, upper, start,MyMLE, multi){
+    ## Set limits to the lower and upper parameters
+    ## in the case where they must stay NULL (or close to):
+    lower <- lower*multi - 0.01 
+    upper <- upper*multi + 0.01
+    start <- start*multi
     ## empty dataframe to store the data
     summaryVec <- vector()
     max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
         ## Functional constraint on search (L > MLE-2) + max&min each param
         OptimBounds <- function(param){
-            LK <- LikelihoodFunction(param, data, hyp)
-            if (LK <= !is.na(MyMLE$value - 2)){ ## why !is.na works better? unclear
+            LK <- LikelihoodFunction(param, data, multi)
+            if (LK <= MyMLE$value - 2){ 
                 param[rankpar] <- -100
             }
             return(param[rankpar])
@@ -168,7 +163,7 @@ UpperBoundsFunction <- function(data, hyp, lower, upper, start, method,
                              fn = OptimBounds, ## function to be maximized
                              lower = lower, ## lower bounds for the parameters
                              upper = upper, ## upper bounds for the parameters
-                             method = method, ## set the method
+                             method = "L-BFGS-B",
                              control = list(fnscale=-1)) ##turn the default minimizer into maximizer
         summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
@@ -178,16 +173,20 @@ UpperBoundsFunction <- function(data, hyp, lower, upper, start, method,
 ## 3. Function to minimize the parameters in MLE+/- 2 :
 
 ## MLEbounds : optim function with constraint on the search
-LowerBoundsFunction <- function(data, hyp, lower, upper, start, method,
-                                MyMLE){
+LowerBoundsFunction <- function(data, lower, upper, start,MyMLE, multi){
+    ## Set limits to the lower and upper parameters
+    ## in the case where they must stay NULL (or close to):
+    lower <- lower*multi - 0.01 
+    upper <- upper*multi + 0.01
+    start <- start*multi
     ## empty dataframe to store the data
     summaryVec <- vector()
     max <- length(MyMLE$par)
     for (rankpar in 1:max){ ## run over the parameters
         ## Functional constraint on search (L > MLE-2) + max&min each param
         OptimBounds <- function(param){
-            LK <- LikelihoodFunction(param, data, hyp)
-            if (LK <= MyMLE$value - 2){
+            LK <- LikelihoodFunction(param, data, multi)
+            if (LK <= MyMLE$value - 2){ 
                 param[rankpar] <- 100
             }
             return(param[rankpar])
@@ -196,111 +195,40 @@ LowerBoundsFunction <- function(data, hyp, lower, upper, start, method,
                              fn = OptimBounds, ## function to be maximized
                              lower = lower, ## lower bounds for the parameters
                              upper = upper, ## upper bounds for the parameters
-                             method = method) ## set the method
+                             method = "L-BFGS-B")
         summaryVec <- c(summaryVec, MyBoundsMax$par[rankpar])
     }
     return(summaryVec)
 }
 
 ## 4. Function to run the optimisations over the 4 hypotheses :
-RunOptim <- function(data, method,
-                     kstart, kmin, kmax,
-                     alphastart, alphamin, alphamax,
-                     mstart, mmin, mmax,
-                     Dmstart, Dmmin, Dmmax) {
-    ## Constraints:
-    lower <- c(kmin = kmin, alphamin = alphamin, mmin1 = mmin,
-               mmin2 = mmin, Dmmin = Dmmin, Dmmin = Dmmin)
-    upper <- c(kmax = kmax, alphamax = alphamax, mmax1 = mmax,
-               mmax2 = mmax, Dmmax1 = Dmmax, Dmmax2 = Dmmax)
-    ## Starter (likely values) :
-    start <- c(k = kstart, alpha = alphastart, m1 = mstart,
-               m2 = mstart, Dm1 = Dmstart, Dm2 = Dmstart)
-    ## For each hypotese:
-    ## H0:
-    lower_H0 <- lower[c(1,2,3)]; upper_H0 <- upper[c(1,2,3)]; start_H0 <- start[c(1,2,3)]
-    ## H1:
-    lower_H1 <- lower[c(1,2,3,5)]; upper_H1 <- upper[c(1,2,3,5)]; start_H1 <- start[c(1,2,3,5)]
-    ## H2:
-    lower_H2 <- lower[c(1,2,3,4)]; upper_H2 <- upper[c(1,2,3,4)]; start_H2 <- start[c(1,2,3,4)]
-    ## H3:
-    lower_H3 <- lower; upper_H3 <- upper; start_H3 <- start
-    ## Run the function mymle over the 4 hypotheses:
-    for (i in 0:3){
-        assign(paste0("MyMLE_H",i), mymle(data, paste0("H",i),
-                                          get(paste0("lower_H",i)),
-                                          get(paste0("upper_H",i)),
-                                          get(paste0("start_H",i)), method))
-        assign(paste0("MLEvalue_H",i), get(paste0("MyMLE_H",i))$value)
-        assign(paste0("MyparamMLE_H",i), get(paste0("MyMLE_H",i))$par)
-        assign(paste0("df_H",i), length(get(paste0("MyMLE_H",i))$par))
-        assign(paste0("Ddf_H",i), get(paste0("df_H",i)) - df_H0)
-    }
-    ## Run the upperbounds over the 4 hypotheses:
-    for (j in 0:3){
-        assign(paste0("MyUp_H", j), UpperBoundsFunction(data, 
-                                                        paste0("H",j),
-                                                        get(paste0("lower_H",j)),
-                                                        get(paste0("upper_H",j)),
-                                                        get(paste0("start_H",j)),
-                                                        method,
-                                                        get(paste0("MyMLE_H",j))))
-    }
-    ## Run the lowerbounds over the 4 hypotheses:
-    for (h in 0:3){
-        assign(paste0("MyLow_H", h), LowerBoundsFunction(data,
-                                                         paste0("H",h),
-                                                         get(paste0("lower_H",h)),
-                                                         get(paste0("upper_H",h)),
-                                                         get(paste0("start_H",h)),
-                                                         method,
-                                                         get(paste0("MyMLE_H",h))))
-    }
-    ## Store in a list over the 4 hypotheses :
-    for (l in 0:3){
-        assign(paste0("Result_H",l), list(get(paste0("MLEvalue_H",l)),
-                                          get(paste0("MyLow_H",l)),
-                                          get(paste0("MyparamMLE_H",l)),
-                                          get(paste0("MyUp_H",l)),
-                                          get(paste0("Ddf_H",l))))
-    }
-    ## Storage:
-    Tot <- list(H0 = Result_H0, H1 = Result_H1, H2 = Result_H2, H3 = Result_H3)
-    ## Loop over hypotheses:
-    for (i in 0:3){
-        HYP <- Tot[[paste0("H",i)]]
-        ## Store maximum likelihood value:
-        df0 <- data.frame(unlist(Tot[[paste0("H",i)]][1]))
-        names(df0) <- "MLE"
-        ## Store delta degree of freedom:
-        df1 <- data.frame(unlist(Tot[[paste0("H",i)]][5]))
-        names(df1) <- "Ddf(H0)"
-        ## Store parameters:
-        df2 <- data.frame(HYP[-c(1,5)])
-        df2 <- t(df2)
-        row.names(df2) <- c("min","est", "max")
-        df2 <- as.data.frame(df2)
-        df2$names <- row.names(df2)
-        df2 <- melt(df2, id.vars = "names")
-        df2$param <- paste(df2$variable, df2$names, sep = "_")
-        df2 <- df2[c(4,3)]
-        df2 <- as.data.frame(t(df2))
-        Names <- NULL
-        for (j in 1:ncol(df2)){
-            Names <- c(Names,(as.character(df2[1,j])))
-        }
-        colnames(df2) <- Names
-        df2 <- df2[-1,]
-        ## Collapse the dataframes:
-        df <- merge(merge(df0,df1, all=TRUE), df2, all= TRUE)
-        Hyp <- paste0("H", i)
-        df <- merge(Hyp, df, all=TRUE)
-        names(df)[1] <- "hyp"
-        ## Give name of the hypothese:
-        assign(paste0("HYP",i), df)
-    }
-    Summary <- merge(merge(HYP0,HYP1, all=TRUE), merge(HYP2,HYP3, all=TRUE), all= TRUE)
-    ## Test if the difference between 2 likelihood is significant
+RunOptim <- function(data, lower, upper, start, multi) {
+    MyMLE <- mymle(data, lower, upper, start, multi)
+    LB <- LowerBoundsFunction(data, lower, upper, start, MyMLE, multi)
+    UB <- UpperBoundsFunction(data, lower, upper, start, MyMLE, multi)
+    return(list(MyMLE, LB, UB))
+}
+    
+## Test:
+data <- alicedata
+start <- c(k=1, alpha=0, mM=20, mF=20, DmM=2, DmF=2)
+lower <- c(k=1, alpha=-3, mM=0, mF=0, DmM=0, DmF=0)
+upper <- c(k=8, alpha=3, mM=30, mF=30, DmM=10, DmF=10)
+
+before <- Sys.time()
+MySupaResult <- lapply(1:4, function(x) RunOptim(data, lower, upper, start, HypMat[x,]))
+after <-  Sys.time()
+print("The optimisation took that long:")
+after - before
+
+## Better visualisation:
+MySupaResult[[1]][[2]]
+MySupaResult[[1]][[1]]$par
+MySupaResult[[1]][[3]]
+
+
+############################
+## Test if the difference between 2 likelihood is significant
     Gtest <- function(dLL, dDF){
         1 - pchisq(2*dLL, df=dDF) 
     }
