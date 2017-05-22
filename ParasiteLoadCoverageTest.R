@@ -7,62 +7,220 @@ library(tableHTML)
 
 #########################    
 ## Generate an hypotheses matrix:
+## 4 parameters (with various number for each):
+## k, alpha, intercept, growth ## 
 ## All hypotheses (so far...):
-## H0: k, alpha, mB
-## H1: k, alpha, mB, DmB
-## H2: k, alpha, m1, m2
-## H3: k, alpha, m1, m2, Dm1, Dm2
-HypMat <- t(matrix(c(1,1,1,0,0,0,
-                     1,1,1,0,1,0,
-                     1,1,1,1,0,0,
-                     1,1,1,1,1,1),
-                   nrow=6))
+## H0: k, alpha, intercept
+## H1: k, alpha, intercept, growth
+## H2: k, alpha, intercept1, intercept2
+## H3: k, alpha, intercept1, intercept2, growth1, growth2
+HypMat <- t(matrix(c(1,1,1,0,0,
+                     1,1,1,1,0,
+                     1,1,1,0,1,
+                     1,1,1,1,1),
+                   nrow=5))
+
+start <- c(k=1, alpha=0, intercept=20, growth=2)
+lower <- c(k=1, alpha=-3, intercept=0, growth=0)
+upper <- c(k=8, alpha=3, intercept=30, growth=10)
+
+control <- list(HypMat, start, lower, upper)
+
+class(control) <- "MLcontrol"
+
 
 #########################
 ## MeanLoad model: How does the mean load vary depending on the parameters?
-MeanLoad <- function(m,Dm,alpha,HI){
-    (m + Dm*HI)*(1 - alpha*2*HI*(1 - HI))
+MeanLoad <- function(intercept, growth, alpha, HI){
+    (intercept + growth*HI)*(1 - alpha*2*HI*(1 - HI))
 }
 
 #########################    
 ## Simulate data for 1 independant variable (male/female)
 ## NB: add later "age", and generalise...
-SimulatedData <- function(NindsM, NindsF, mM, mF, DmM, DmF, alpha, k){
+SimulatedData <- function(NindsM, NindsF, interceptM, interceptF, growthM, growthF, alpha, k){
     ##    set.seed(5)
     IndHIsM<- round(runif(NindsM), 2)
     IndHIsF <- round(runif(NindsF), 2)
-    MalLoads  <- data.frame(HI = IndHIsM, loads= rnbinom(NindsM, size=k, mu= MeanLoad(mM, DmM, alpha, IndHIsM)), group1 = "male")
-    FemLoads  <- data.frame(HI = IndHIsF, loads= rnbinom(NindsF, size=k, mu= MeanLoad(mF, DmF, alpha, IndHIsF)), group1 = "female")
+    MalLoads  <- data.frame(HI = IndHIsM, loads= rnbinom(NindsM, size=k, mu= MeanLoad(interceptM, growthM, alpha, IndHIsM)), group1 = "male")
+    FemLoads  <- data.frame(HI = IndHIsF, loads= rnbinom(NindsF, size=k, mu= MeanLoad(interceptF, growthF, alpha, IndHIsF)), group1 = "female")
     ## Bind the dataframes:
     return(rbind(MalLoads, FemLoads))
 }
 
 ## Example:
 ## 1.Choose our parameters for the simulation:
-NindsF_exp <- 80; NindsM_exp <- 85; mF_exp <- 15; mM_exp <- 10
-DmF_exp <- 2; DmM_exp <- 0; alpha_exp <- 2; k_exp <- 4
+NindsF_exp <- 80; NindsM_exp <- 85; interceptF_exp <- 15; interceptM_exp <- 10
+growthF_exp <- 2; growthM_exp <- 0; alpha_exp <- 2; k_exp <- 4
 ## And simulate data:
-alicedata <- SimulatedData(NindsM_exp, NindsF_exp, mM_exp, mF_exp,
-                              DmM_exp, DmF_exp, alpha_exp, k_exp)
+alicedata <- SimulatedData(NindsM_exp, NindsF_exp, interceptM_exp, interceptF_exp,
+                              growthM_exp, growthF_exp, alpha_exp, k_exp)
 
 #########################    
 ## PrLoad: Probability an Ind has some
 ## observed Load, given its HI (and the model)        
 ## Generalised, ie the MeanLoad model is passed as an argument
-PrLoad <- function(data, k, m, Dm, alpha, ind){
+PrLoad <- function(data, k, intercept, growth, alpha, ind){
     HI <- data$HI[ind]
     Load <- data$loads[ind]
     ## Always a good idea to make contributions to the likelihood function Bombproof, and never return zero
-    max(10^-20, dnbinom(Load, size=abs(k), mu=abs(MeanLoad(m, Dm, alpha, HI))))
+    max(10^-20, dnbinom(Load, size=abs(k), mu=abs(MeanLoad(intercept, growth, alpha, HI))))
 }
 
 ## Test:
-PrLoad(alicedata, k=2, m=10, Dm=2, alpha=1, ind=2)
+PrLoad(alicedata, k=2, intercept=10, growth=2, alpha=1, ind=2)
+
+### By row?
+PrLoadRow <- function(datarow, k, intercept, growth, alpha){
+    HI <- datarow[[1]]  ## e.g. alicedata[1,][[1]]
+    Load <- datarow[[2]]
+    ## Always a good idea to make contributions to the likelihood function Bombproof, and never return zero
+    max(10^-20, dnbinom(Load, size=abs(k), mu=abs(MeanLoad(intercept, growth, alpha, HI))))
+}
+
+## Test:
+PrLoadRow(alicedata[2,], k=2, intercept=10, growth=2, alpha=1)
+
+#########################
+## Likelihood of a given subgroup of the data (aka male)
+
+## nLev : number of levels to take into consideration
+nLev <- length(levels(alicedata[,3:ncol(alicedata)]))
+
+
+
+## Trial
+fakedata <- cbind(rbind(head(alicedata),tail(alicedata)), group2 = c(rep("old",3),rep("young",9)))
+
+
+
+
+lk <- function(data, k, intercept, growth, alpha){
+    L <- 0
+    L <- L + log(PrLoad(datarow, k, intercept, growth, alpha))
+by(fakedata[,1], fakedata[,3:], summary)
+
+
+
+
+
+
+
+L <- L + log(PrLoad(data, k, intercept, growth, alpha, ind))
+
+
+
+
+
+
+
+
+#########################
+## The likelihood function over a set of inds
+## param: k, alpha, mM, mF, slapeM, slapeF
+LikelihoodFunction <- function(param, data, multi) { 
+    ## Likelihood initialisation:
+    S <- 0
+    ## Parameters X HypMat line:
+    mypar <- param*multi
+    ## Assign each parameter to its value:
+    for (i in 1:length(names(mypar))) assign(names(mypar[i]),as.numeric(mypar[i]))
+    ## Group the m & slape of each level of Group1:
+    m <- c(mM,mF)
+    slape <- c(slapeM, slapeF)
+    ## In the case of H0 and H1, there are NO independant variables considered:
+    if (length(m[m!=0]) == 1){
+        mB <- m[m!=0]
+        ## slape is either 0 or a given value:
+        if (length(slape[slape!=0]) == 1) {slapeB <- slape[slape!=0] ## H1 case
+        } else { slapeB <- 0 } ## H0 case
+        ## For all individuals in each level:
+        for (ind in 1:nrow(data)){
+            S <- S + log(PrLoad(data, k, mB, slapeB, alpha, ind))
+        }
+    } else {
+        ## We consider so far 1 independant variable: sex, with 2 levels (TO IMPROVE)
+        by(data, data$group1, function(x)  {
+
+          
+            S <- S + log(PrLoad(subdata, k, m[lev], slape[lev], alpha, indiv))
+
+
+        ## Run over all its levels:
+        for (lev in 1:2) {
+            ## subset the dataframe:
+            subdata <- data[levels(data[ ,3]) %in% levels(data[ ,3])[lev],]
+            ## For all individuals of this level:
+            for (indiv in 1:nrow(subdata)){
+                S <- S + log(PrLoad(subdata, k, m[lev], slape[lev], alpha, indiv))
+            }
+        }
+    }
+    return(S)
+}
+
+
+
+
+
+
+
+
+##########################################
+
+
+
+
+
+
+
+
 
 #########################
 ## The likelihood function over a set of inds
 ## param: k, alpha, mM, mF, DmM, DmF
 LikelihoodFunction <- function(param, data, multi) { 
+    ## Likelihood initialisation:
+    S <- 0
+    ## Parameters X HypMat line:
+    mypar <- param*multi
+    ## Assign each parameter to its value:
+    for (i in 1:length(names(mypar))) assign(names(mypar[i]),as.numeric(mypar[i]))
+    ## Group the m & Dm of each level of Group1:
+    m <- c(mM,mF)
+    Dm <- c(DmM, DmF)
+    ## In the case of H0 and H1, there are NO independant variables considered:
+    if (length(m[m!=0]) == 1){
+        mB <- m[m!=0]
+        ## Dm is either 0 or a given value:
+        if (length(Dm[Dm!=0]) == 1) {DmB <- Dm[Dm!=0]
+        } else { DmB <- 0 }
+        ## For all individuals in each level:
+        for (ind in 1:nrow(data)){
+            S <- S + log(PrLoad(data, k, mB, DmB, alpha, ind))
+        }
+    } else {
+        ## We consider so far 1 independant variable: sex, with 2 levels (TO IMPROVE)
+
+
+        ## Run over all its levels:
+        for (lev in 1:2) {
+            ## subset the dataframe:
+            subdata <- data[levels(data[ ,3]) %in% levels(data[ ,3])[lev],]
+            ## For all individuals of this level:
+            for (indiv in 1:nrow(subdata)){
+                S <- S + log(PrLoad(subdata, k, m[lev], Dm[lev], alpha, indiv))
+            }
+        }
+    }
+    return(S)
+}
+
+
+
+
+
+LikelihoodFunctionOLD <- function(param, data, multi) { 
     ## Likelihood initialisation:
     S <- 0
     ## Parameters X HypMat line:
@@ -96,6 +254,25 @@ LikelihoodFunction <- function(param, data, multi) {
     }
     return(S)
 }
+
+## Test
+k <- 5; kmin <- 0; kmax <- 8
+alpha <- 0; alphamin <- -2; alphamax <- 2
+m1 <- 0; m1min <- 0; m1max <- 30
+Dm <- 0; Dmmin <- 0; Dmmax <- 1
+
+LikelihoodFunctionOLD(c(k=k, alpha=alpha, mM=m1, mF=m2, DmM=Dm1, DmF=Dm2), alicedata, HypMat[1,])
+
+
+
+
+
+
+
+
+
+
+
 
 #########################
 ## The Maximum likelihood analysis
