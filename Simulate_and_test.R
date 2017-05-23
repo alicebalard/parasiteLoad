@@ -69,6 +69,19 @@ LikelihoodFunction(fakedata,
 LikelihoodFunction(fakedata,
                    ugly.param=param[[3]], name=names(param[3]))
 
+optim(par = c(param[["group1"]]),
+      fn = LikelihoodFunction, ## function to be maximized
+##      upper=c(male=list(1, 1, 1, 1),
+##              female=list(1, 1, 1, 1)),
+##      lower=c(male=list(-0.1, -0.1, 0.001, 0.0001),
+##              female=list(-0.1, -0.1, 0.001, 0.0001)),
+      control = list(fnscale=-1), ##turn the default minimizer into
+                                  ##maximizer
+      ##      method = "L-BFGS-B",
+      data = fakedata,
+      name="group1")
+
+
 optim(par = c(param[["group1:group2"]]),
       fn = LikelihoodFunction, ## function to be maximized
 ##      upper=c(male=list(1, 1, 1, 1),
@@ -80,3 +93,18 @@ optim(par = c(param[["group1:group2"]]),
       ##      method = "L-BFGS-B",
       data = fakedata,
       name="group1:group2")
+
+
+all.optim <- lapply(names(param), function (x){
+    optim(par = c(param[[x]]),
+          fn = LikelihoodFunction, ## function to be maximized
+          control = list(fnscale=-1),
+          data = fakedata,
+          name=x)
+})
+
+names(all.optim) <- names(param)
+
+all.optim
+
+
