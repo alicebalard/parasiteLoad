@@ -43,7 +43,7 @@ names(param) <- c("group1", "group2", "group1:group2")
 param[[1]] <- c(k=0.5, alpha=0.1, int.male=0.1,
                        int.female=0.2, growth.male=0.1, growth.female=0.2)
 
-param[[2]] <- c(k=0.5, alpha=0.1, int.group2.young=0.02,
+param[[2]] <- c(k=0.5, alpha=0.1, int.young=0.02,
                        int.old=0.02, growth.young=0.1, growth.old=0.2)
 
 param[[3]] <- c(k=0.5, alpha=0.1,
@@ -69,7 +69,7 @@ LikelihoodFunction(fakedata,
 LikelihoodFunction(fakedata,
                    ugly.param=param[[3]], name=names(param[3]))
 
-optim(par = c(param[["group2"]]),
+optim(par = c(param[["group1:group2"]]),
       fn = LikelihoodFunction, ## function to be maximized
 ##      upper=c(male=list(1, 1, 1, 1),
 ##              female=list(1, 1, 1, 1)),
@@ -79,4 +79,4 @@ optim(par = c(param[["group2"]]),
                                   ##maximizer
       ##      method = "L-BFGS-B",
       data = fakedata,
-      name="group2")
+      name="group1:group2")

@@ -45,13 +45,23 @@ PrLoadbyRow <- function (data, sub.param) {
 ## The likelihood function over a set of inds
 ## param: k, alpha, mM, mF, slapeM, slapeF
 LikelihoodFunction <- function(data, ugly.param, name) { 
-    lev <- levels(data[, name])
+    ## ugly: get the name back as two strings 
+    gname <- strsplit(name, ":")[[1]]
+    ## ugly: get the levels for it again
+    lev <- levels(interaction(data[, gname], sep=":"))
+##    print(paste("levels:", print(lev)))
     param <- lapply(lev, function(lval){
         ## still a bit (too) complicated parsings the parameters by names 
         par.string <- paste0("^k$|alpha|\\.", lval)
         ugly.param[grepl(par.string, names(ugly.param))]
     })
-    split.L<- by(data, data[, name], function(x)  {
-        ## selecting the right parameters for this row
-        PrLoadbyRow(x, param[[unique(x[, name])]])}) ### now hardcoded for group1
+    names(param) <- lev
+##    print(param)
+    split.L<- by(data, data[, gname], function(x)  {
+        ## same ugly shit backwards
+        param.pattern <- unique(interaction(x[, gname], sep=":"))
+        this.param <- param[[param.pattern]]
+##        print(this.param[[3]])
+        PrLoadbyRow(x, this.param)
+    })
     sum(log(unlist(split.L)))}
