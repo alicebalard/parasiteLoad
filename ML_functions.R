@@ -44,14 +44,14 @@ PrLoadbyRow <- function (data, sub.param) {
 
 ## The likelihood function over a set of inds
 ## param: k, alpha, mM, mF, slapeM, slapeF
-LikelihoodFunction <- function(data, ugly.param, name="group2") { 
-    param <- list()
-    param[["old"]] <-  ugly.param[grepl("^k$|alpha|\\.old", names(ugly.param))]
-    param[["young"]] <-  ugly.param[grepl("^k$|alpha|\\.young", names(ugly.param))]
-    ## We consider so far 1 independant variable: sex, with 2 levels (TO IMPROVE)
-    ## levels(group1)
+LikelihoodFunction <- function(data, ugly.param, name) { 
+    lev <- levels(data[, name])
+    param <- lapply(lev, function(lval){
+        ## still a bit (too) complicated parsings the parameters by names 
+        par.string <- paste0("^k$|alpha|\\.", lval)
+        ugly.param[grepl(par.string, names(ugly.param))]
+    })
     split.L<- by(data, data[, name], function(x)  {
         ## selecting the right parameters for this row
         PrLoadbyRow(x, param[[unique(x[, name])]])}) ### now hardcoded for group1
-##    print(split.L)
     sum(log(unlist(split.L)))}

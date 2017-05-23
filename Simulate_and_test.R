@@ -57,16 +57,18 @@ PrLoadbyRow(fakedata, sub.param=param[["group1"]])
 
 PrLoadbyRow(fakedata, sub.param=param[["group1:group2"]])
 
-## works because hardcoded old/young
+## works for non-ineraction effects
 LikelihoodFunction(fakedata,
                    ugly.param=param[[2]], name=names(param[2]))
 
-## doesn't work because still half hard coded for old/young
+## works for non-ineraction effects
 LikelihoodFunction(fakedata,
                    ugly.param=param[[1]], name=names(param[1]))
 
+## does not work for ineraction effects
+LikelihoodFunction(fakedata,
+                   ugly.param=param[[3]], name=names(param[3]))
 
-## obviously cant work :-(
 optim(par = c(param[["group2"]]),
       fn = LikelihoodFunction, ## function to be maximized
 ##      upper=c(male=list(1, 1, 1, 1),
@@ -76,4 +78,5 @@ optim(par = c(param[["group2"]]),
       control = list(fnscale=-1), ##turn the default minimizer into
                                   ##maximizer
       ##      method = "L-BFGS-B",
-      data = fakedata)
+      data = fakedata,
+      name="group2")
