@@ -1,0 +1,277 @@
+---
+title: "Stats seminar IZW : Maximum likelihood in hybrid zone"
+author: "Alice Balard"
+date: "24 May 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Context
+
+```{r, out.width = "800px", echo=FALSE}
+knitr::include_graphics("1.png")
+```
+ 
+## Context
+
+```{r, out.width = "800", echo=FALSE}
+knitr::include_graphics("2.png")
+```
+
+## MeanLoad model: How does the mean load vary depending on the parameters?
+
+```{r}
+MeanLoad <- function(intersect, growth, alpha, HI){
+    (intersect + growth*HI)*(1 - alpha*2*HI*(1 - HI))
+}
+```
+
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("meanload.png")
+```
+
+## Simulated data
+
+```{r}
+SimulatedData <- function(N, groupname, intersect, growth, alpha, k){
+    ##    set.seed(5)
+    IndHIs<- round(runif(N), 2)
+    data.frame(HI = IndHIs,
+               loads= rnbinom(N,
+                              size=k,
+                              mu= MeanLoad(intersect, growth, alpha, IndHIs)),
+               group = groupname)
+}
+
+alpha.expe <- 1.2 ; k.expe <- 2
+alicedata <- rbind(SimulatedData(N = 80, groupname = "male", intersect = 10, growth=2, alpha=alpha.expe, k=k.expe),
+                   SimulatedData(N = 85, groupname = "female", intersect = 13, growth=4, alpha=alpha.expe, k=k.expe))
+
+head(alicedata)
+```
+
+## Log likelihood calculation for a data set:
+```{r}
+sub.loglik <- function(param, group.name, data){
+  sub.param <- param[names(param) %in% c("k", "alpha", 
+                                         paste0("intersect.", group.name), paste0("growth.", group.name))]
+  sub.data <- data[data$group %in% group.name,]
+  names(sub.param) <- gsub("\\..*","",names(sub.param)) ## rename the parameters universaly
+  sum(dnbinom(sub.data$loads,
+            size=abs(sub.param[names(sub.param) %in% "k"]),
+            mu=abs(MeanLoad(alpha=sub.param[names(sub.param) %in% "alpha"],
+                            intersect=sub.param[names(sub.param) %in% "intersect"],
+                            growth=sub.param[names(sub.param) %in% "growth"],
+                            HI=sub.data$HI)),
+            log = TRUE))
+}
+
+full.loglik <- function(param, data, groups){
+  sum(sapply(groups, function(i) sum(sub.loglik(param, i, data))))
+}
+  
+## Example:
+full.loglik(param = c(k=5, alpha=0.1, intersect.male=10, intersect.female=15, growth.male=1, growth.female=2),
+             data = alicedata,
+             groups = c("male","female"))
+```
+
+## Optimisation of the parameters to find the Maximum log likelihood:
+```{r}
+mymle <- function(data, lower, upper, start, groups){
+    optim(par = start, ## initial values for the parameters
+          fn = full.loglik, ## function to be maximized
+          lower = lower, ## lower bounds for the parameters
+          upper = upper, ## upper bounds for the parameters
+          control = list(fnscale=-1), ##turn the default minimizer into maximizer
+          method = "L-BFGS-B",
+          data = data,
+          groups = groups)
+}
+
+# Example:
+mymle(data = alicedata, 
+      lower = c(k=0, alpha=-2, intersect.male=0.001, intersect.female=0.001, growth.male=0.001, growth.female=0.001) , 
+      upper = c(k=8, alpha=2, intersect.male=30, intersect.female=30, growth.male=10, growth.female=10), 
+      start = c(k=1, alpha=0, intersect.male=10, intersect.female=10, growth.male=0, growth.female=0),
+      groups = c("male","female"))
+```
+
+## Maximize/minimize the parameters in MLE+/- 2:
+```{r}
+## MLEbounds : optim function with constraint on the search
+UpperBoundsFunction <- function(data, lower, upper, start, groups, MYMLE){
+  sapply(names(start), function(j){ ## Functional constraint on search (L > MLE-2) + max&min each param
+  ######
+    maxpar.function <- function(param){
+      LK <- full.loglik(param, data, groups) ## LikelihoodFunction(param, data, multi)
+      if (LK <= MYMLE$value - 2){
+        param[j] <- -100
+      }
+      return(param[j])}
+  ######
+    maxopt <- optim(par = MYMLE$par, ## initial values for the parameters
+                         fn = maxpar.function, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B",
+                         control = list(fnscale=-1)) ##turn the default minimizer into maximizer
+    maxopt$value
+  })
+}
+
+LowerBoundsFunction <- function(data, lower, upper, start, groups, MYMLE){
+  sapply(names(start), function(j){ ## Functional constraint on search (L > MLE-2) + max&min each param
+  ######
+    maxpar.function <- function(param){
+      LK <- full.loglik(param, data, groups) ## LikelihoodFunction(param, data, multi)
+      if (LK <= MYMLE$value - 2){
+        param[j] <- 100
+      }
+      return(param[j])}
+  ######
+    minopt <- optim(par = MYMLE$par, ## initial values for the parameters
+                         fn = maxpar.function, ## function to be maximized
+                         lower = lower, ## lower bounds for the parameters
+                         upper = upper, ## upper bounds for the parameters
+                         method = "L-BFGS-B")
+    minopt$value
+  })
+}
+```
+
+
+## Function to run the optimisation:
+```{r}
+RunOptim <- function(data, lower, upper, start, groups) {
+    MyMLE <- mymle(data, lower, upper, start, groups)
+    LB <- LowerBoundsFunction(data, lower, upper, start, groups, MyMLE)
+    UB <- UpperBoundsFunction(data, lower, upper, start, groups, MyMLE)
+    return(list(ML.value = MyMLE$value, 
+                ML.estimated.parameters = MyMLE$par, 
+                ML.lower.parameters = LB, 
+                ML.upper.parameters = UB))
+}
+
+# Example:
+Results <- RunOptim(data = alicedata, 
+      lower = c(k=0, alpha=-2, intersect.male=0.001, intersect.female=0.001, growth.male=0.001, growth.female=0.001) , 
+      upper = c(k=8, alpha=2, intersect.male=30, intersect.female=30, growth.male=10, growth.female=10), 
+      start = c(k=1, alpha=0, intersect.male=10, intersect.female=10, growth.male=0, growth.female=0),
+      groups = c("male","female"))
+Results
+```
+
+## Coverage:
+```{r}
+if (alpha.expe > Results$ML.lower.parameters[[2]] & alpha.expe < Results$ML.upper.parameters[[2]]){
+  answer <- ("YES!!")
+} else {
+    answer <- ("NO: it failed...")
+}
+```
+
+Is our alpha picked for simulation (alpha.expe = `r alpha.expe`) found back after optimisation of the model? 
+The answer is `r answer`.
+
+## Hypotheses testing:
+
+```{r, out.width = "800px", echo=FALSE}
+knitr::include_graphics("hyp.png")
+```
+
+```{r}
+neutraldata <- alicedata; neutraldata$group <- "all"
+H0 <- RunOptim(data = neutraldata, 
+      lower = c(k=0, alpha=-2, intersect.all=0.001, growth.all=-0.001) , 
+      upper = c(k=8, alpha=2, intersect.all=30, growth.all=0.001), 
+      start = c(k=1, alpha=0, intersect.all=10, growth.all=0),
+      groups = "all")
+H0
+
+H1 <- RunOptim(data = neutraldata, 
+      lower = c(k=0, alpha=-2, intersect.all=0.001, growth.all=-10) , 
+      upper = c(k=8, alpha=2, intersect.all=30, growth.all=10), 
+      start = c(k=1, alpha=0, intersect.all=10, growth.all=0),
+      groups = "all")
+H1
+
+H2 <- RunOptim(data = alicedata, 
+      lower = c(k=0, alpha=-2, intersect.male=0.001, intersect.female=0.001, growth.male=-0.001, growth.female=-0.001) , 
+      upper = c(k=8, alpha=2, intersect.male=30, intersect.female=30, growth.male=0.001, growth.female=0.001), 
+      start = c(k=1, alpha=0, intersect.male=10, intersect.female=10, growth.male=0, growth.female=0),
+      groups = c("male","female"))
+H2
+
+H3 <- RunOptim(data = alicedata, 
+      lower = c(k=0, alpha=-2, intersect.male=0.001, intersect.female=0.001, growth.male=-10, growth.female=-10) , 
+      upper = c(k=8, alpha=2, intersect.male=30, intersect.female=30, growth.male=10, growth.female=10), 
+      start = c(k=1, alpha=0, intersect.male=10, intersect.female=10, growth.male=0, growth.female=0),
+      groups = c("male","female"))
+H3
+```
+
+## It's plotting time!!
+# Plot the mean load model along the hybrid zone, according to the hyp.
+```{r}
+HIplot <- seq(0, 1, 0.01)
+## extract the parameters for plotting
+dfplot.func <- function(hypo, gpe){
+  k.estim <- hypo$ML.estimated.parameters[names(hypo$ML.estimated.parameters) == "k"]
+  alpha.estim <- hypo$ML.estimated.parameters[names(hypo$ML.estimated.parameters) == "alpha"]
+  extract.fun <- function(x, char, lev){
+  a <- x[grep(char, names(x))]
+  names(a) <- gsub(paste0(char,"."),"",names(a))
+  a[names(a)==lev]}
+## create dataframe:
+DF <- data.frame(est=MeanLoad(intersect= extract.fun(hypo$ML.estimated.parameters, "intersect", gpe),
+                       growth = extract.fun(hypo$ML.estimated.parameters, "growth", gpe),
+                       alpha = hypo$ML.estimated.parameters[names(hypo$ML.estimated.parameters) == "alpha"],                                    HI = HIplot),
+           LB=MeanLoad(intersect= extract.fun(hypo$ML.lower.parameters, "intersect", gpe),
+                       growth = extract.fun(hypo$ML.lower.parameters, "growth", gpe),
+                       alpha = hypo$ML.lower.parameters[names(hypo$ML.lower.parameters) == "alpha"],                                    HI = HIplot),
+           UB=MeanLoad(intersect= extract.fun(hypo$ML.upper.parameters, "intersect", gpe),
+                       growth = extract.fun(hypo$ML.upper.parameters, "growth", gpe),
+                       alpha = hypo$ML.upper.parameters[names(hypo$ML.upper.parameters) == "alpha"],                                    HI = HIplot))
+names(DF) <- paste0(names(DF), ".", gpe)
+DF
+}
+
+M <- cbind(dfplot.func(H3, "male"), dfplot.func(H3, "female"), HIplot)
+library(ggplot2)
+ggplot(M)+
+        geom_line(aes(x=HIplot, y=est.male), color="blue")+
+        geom_line(aes(x=HIplot, y=est.female), color="red")+
+        geom_ribbon(aes(x=HIplot, ymax=UB.male, ymin=LB.male), fill= "blue", alpha=.3)+
+        geom_ribbon(aes(x=HIplot, ymax=UB.female, ymin=LB.female), fill= "red", alpha=.3)+
+        geom_point(data = alicedata[alicedata$group == "male",], aes(x=HI, y=loads), color="blue", size=0.5)+
+        geom_point(data = alicedata[alicedata$group == "female",], aes(x=HI, y=loads), color="red", size=0.5)+
+  theme_bw()+ theme(legend.position="none")
+```
+
+## Test if the difference between 2 likelihood is significant
+```{r}
+LRtest <- function(dLL, dDF){
+        1 - pchisq(2*dLL, df=dDF) 
+}
+LRtestOnNestedMLEs <- function(HA, dfa, HB, dfb){
+  dLL <- abs(HA$ML.value - HB$ML.value)
+  dDF <- abs(dfa - dfb)
+  p <- LRtest(dLL, dDF)
+  c(dLL= dLL, dDF= dDF, p= p)
+}
+
+LRtestOnNestedMLEs(H1,4, H0,3)
+LRtestOnNestedMLEs(H2,4, H0,3)
+LRtestOnNestedMLEs(H3,6, H1,4)
+LRtestOnNestedMLEs(H3,6, H2,4)
+LRtestOnNestedMLEs(H3,6, H0,3)
+```
+
+
+
