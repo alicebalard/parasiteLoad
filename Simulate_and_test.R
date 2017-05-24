@@ -1,110 +1,120 @@
-
-
 ### source or load package once done with packaging
 source("ML_functions.R")
 
-#########################    
-## Simulate data for 1 independant variable (male/female)
-## NB: add later "age", and generalise...
-SimulatedData <- function(NindsM, NindsF, interceptM, interceptF, growthM, growthF, alpha, k){
-    ##    set.seed(5)
-    IndHIsM<- round(runif(NindsM), 2)
-    IndHIsF <- round(runif(NindsF), 2)
-    MalLoads  <- data.frame(HI = IndHIsM,
-                            loads= rnbinom(NindsM, size=k,
-                                           mu= MeanLoad(interceptM, growthM, alpha, IndHIsM)),
-                            group1 = "male")
-    FemLoads  <- data.frame(HI = IndHIsF,
-                            loads= rnbinom(NindsF, size=k,
-                                           mu= MeanLoad(interceptF, growthF, alpha, IndHIsF)),
-                            group1 = "female")
-    ## Bind the dataframes:
-    return(rbind(MalLoads, FemLoads))
-}
 
-## Example:
-## 1.Choose our parameters for the simulation:
-NindsF_exp <- 80; NindsM_exp <- 85; interceptF_exp <- 15; interceptM_exp <- 10
-growthF_exp <- 2; growthM_exp <- 0; alpha_exp <- 2; k_exp <- 4
-## And simulate data:
-alicedata <- SimulatedData(NindsM_exp, NindsF_exp, interceptM_exp, interceptF_exp,
-                              growthM_exp, growthF_exp, alpha_exp, k_exp)
-
-
-## Trial
-fakedata <- cbind(rbind(head(alicedata),tail(alicedata)),
-                  group2 = c(rep("old", 3), rep("young", 9)))
-
-
+### This should come from input script... ###########################
 param <- vector(mode="list", length=3)
 names(param) <- c("group1", "group2", "group1:group2")
 
+## parameters as starting values
+param[[1]] <- c(k=0.5, alpha=0.1,
+                int.male=0.1,
+                int.female=0.2,
+                growth.male=0.1,
+                growth.female=0.2)
 
-param[[1]] <- c(k=0.5, alpha=0.1, int.male=0.1,
-                       int.female=0.2, growth.male=0.1, growth.female=0.2)
+## parameters as starting values
+param[[2]] <- c(k=0.5, alpha=0.1,
+                int.baby=0.2,
+                int.young=0.02,
+                int.old=0.02,
+                growth.baby=0.1,
+                growth.young=0.1,
+                growth.old=0.2)
 
-param[[2]] <- c(k=0.5, alpha=0.1, int.young=0.02,
-                       int.old=0.02, growth.young=0.1, growth.old=0.2)
+## parameters as starting values
+param[[3]] <- c(k = 0.01, alpha = 0.01,
+                "int.male:old" = 0.01,
+                "int.male:young" = 0.01,
+                "int.male:baby" = 0.01,
+                "int.female:old" = 0.01,
+                "int.female:young" = 0.01,
+                "int.female:baby" = 0.01,
+                "growth.male:old" = 0.01,
+                "growth.male:young" = 0.01,
+                "growth.male:baby" = 0.01,
+                "growth.female:old" = 0.01,
+                "growth.female:young" = 0.01,
+                "growth.female:baby" = 0.01)
 
-param[[3]] <- c(k=0.5, alpha=0.1,
-                rep(0.01, length(with(fakedata, levels(group1:group2)))*2))
+## parameters for simulation
+simpara <- c(k = 2, alpha = 1.64,
+             "int.male:old" = 1,
+             "int.male:young" = 12,
+             "int.male:baby" = 22,
+             "int.female:old" = 2,
+             "int.female:young" = 23,
+             "int.female:baby" = 32,
+             "growth.male:old" = 2,
+             "growth.male:young" = 1,
+             "growth.male:baby" = -4,
+             "growth.female:old" = 6,
+             "growth.female:young" = 0,
+             "growth.female:baby" = -8)
 
-names(param[[3]]) <- c("k", "alpha", 
-                       paste0("int.", with(fakedata, levels(group1:group2))),
-                       paste0("growth.", with(fakedata, levels(group1:group2))))
+################### input end ###################################
 
-PrLoadbyRow(fakedata, sub.param=param[["group1"]])
+#########################    
+SimulatedData <- function(param, n){
+    gdata <- data.frame(group1 = rep(c("male", "female"), each=n/2),
+                        group2 = sample(c("old", "young", "baby"),
+                                        n, replace=TRUE))
+    gdata$HI<- round(runif(n), 2)
+    xloads <- by(gdata, gdata$group1:gdata$group2, function (x) {
+        pattern <- paste0("\\.", unique(x$group1), ":", unique(x$group2))
+        this.param <- param[grepl(pattern, names(param))]
+        loads <- rnbinom(n = nrow(x), size = param["k"],
+                         mu = MeanLoad(intercept=this.param[grepl("int",
+                                                                  names(this.param))],
+                                       growth=this.param[grepl("growth",
+                                                               names(this.param))],
+                                       alpha=param["alpha"],
+                                       HI=x$HI))
+        cbind(x, loads)
+    })
+    as.data.frame(do.call("rbind", xloads))
+}
 
-PrLoadbyRow(fakedata, sub.param=param[["group1:group2"]])
+set.seed(5)
+simdata <- SimulatedData(simpara, 1000)
 
-## works for non-ineraction effects
-LikelihoodFunction(fakedata,
-                   ugly.param=param[[2]], name=names(param[2]))
+LogLik(simdata, param=param[["group1"]],
+       group.name=names(param["group1"]))
 
-## works for non-ineraction effects
-LikelihoodFunction(fakedata,
-                   ugly.param=param[[1]], name=names(param[1]))
+LogLik(simdata, param=param[["group2"]],
+       group.name=names(param["group2"]))
 
-## does not work for ineraction effects
-LikelihoodFunction(fakedata,
-                   ugly.param=param[[3]], name=names(param[3]))
-
-optim(par = c(param[["group1"]]),
-      fn = LikelihoodFunction, ## function to be maximized
-##      upper=c(male=list(1, 1, 1, 1),
-##              female=list(1, 1, 1, 1)),
-##      lower=c(male=list(-0.1, -0.1, 0.001, 0.0001),
-##              female=list(-0.1, -0.1, 0.001, 0.0001)),
-      control = list(fnscale=-1), ##turn the default minimizer into
-                                  ##maximizer
-      ##      method = "L-BFGS-B",
-      data = fakedata,
-      name="group1")
-
-
-optim(par = c(param[["group1:group2"]]),
-      fn = LikelihoodFunction, ## function to be maximized
-##      upper=c(male=list(1, 1, 1, 1),
-##              female=list(1, 1, 1, 1)),
-##      lower=c(male=list(-0.1, -0.1, 0.001, 0.0001),
-##              female=list(-0.1, -0.1, 0.001, 0.0001)),
-      control = list(fnscale=-1), ##turn the default minimizer into
-                                  ##maximizer
-      ##      method = "L-BFGS-B",
-      data = fakedata,
-      name="group1:group2")
-
+LogLik(simdata, param=param[["group1:group2"]],
+       group.name=names(param["group1:group2"]))
 
 all.optim <- lapply(names(param), function (x){
     optim(par = c(param[[x]]),
-          fn = LikelihoodFunction, ## function to be maximized
+          fn = LogLik, ## function to be maximized
           control = list(fnscale=-1),
-          data = fakedata,
-          name=x)
+          data = simdata,
+          group.name=x)
 })
 
 names(all.optim) <- names(param)
 
 all.optim
 
+### looks like it find the starting paramters quite well when starting
+### with good parameters
+opt.para <- optim(par = c(simpara),
+                  fn = LogLik, ## function to be maximized
+                  control = list(fnscale=-1),
+                  data = simdata,
+                  group.name="group1:group2")$par
 
+cbind(simpara, opt.para)
+
+### really bad when starting paramters just close to zero
+### parameters
+opt.para <- optim(par = c(param[[3]]),
+                  fn = LogLik, ## function to be maximized
+                  control = list(fnscale=-1),
+                  data = simdata,
+                  group.name="group1:group2")$par
+
+cbind(simpara, opt.para)
