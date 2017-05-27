@@ -49,6 +49,7 @@ ML_bounds <- function(data, group.name, startpara, threshold){
     sapply(1:length(startpara), myfun)
 }
 
+
 ## Example (NB takes +/- 15min to run):
 source("Simulate_and_test.R")
 
