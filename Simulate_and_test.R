@@ -1,43 +1,9 @@
 ### source or load package once done with packaging
 source("ML_functions.R")
 
-### This should come from input script... ###########################
-param <- vector(mode="list", length=3)
-names(param) <- c("group1", "group2", "group1:group2")
+source("UserInput.R")
 
-## parameters as starting values
-param[[1]] <- c(k=0.5, alpha=0.1,
-                male.inter=0.1,
-                female.inter=0.2,
-                male.growth=0.1,
-                female.growth=0.2)
-
-## parameters as starting values
-param[[2]] <- c(k=0.5, alpha=0.1,
-                baby.inter=0.2,
-                young.inter=0.02,
-                old.inter=0.02,
-                baby.growth=0.1,
-                young.growth=0.1,
-                old.growth=0.2)
-
-## parameters as starting values
-param[[3]] <- c(k = 0.01, alpha = 0.01,
-                "male:old.inter" = 0.01,
-                "male:young.inter" = 0.01,
-                "male:baby.inter" = 0.01,
-                "female:old.inter" = 0.01,
-                "female:young.inter" = 0.01,
-                "female:baby.inter" = 0.01,
-                "male:old.growth" = 0.01,
-                "male:young.growth" = 0.01,
-                "male:baby.growth" = 0.01,
-                "female:old.growth" = 0.01,
-                "female:young.growth" = 0.01,
-                "female:baby.growth" = 0.01)
-
-## parameters for simulation
-simpara <- c(k = 2, alpha = 0.64,
+simpara <- c(k = 2, alpha = 1.92,
              "male:old.inter" = 14,
              "male:young.inter" = 12,
              "male:baby.inter" = 22,
@@ -77,83 +43,41 @@ SimulatedData <- function(param, n){
 set.seed(5)
 simdata <- SimulatedData(simpara, 1000)
 
-library(MASS)
-## nb <- glm.nb(loads~group2*HI+group1*HI, simdata)
-nb <- glm.nb(loads~group2*HI*group1, simdata)
-
-library(effects)
-
-nb.e  <- allEffects(nb, xlevels=2)
-
-### plot the effects if needed ## for now steal code from it
-## effects:::plot.efflist(nb.effects)
-
-get.params.from.glm.nb <- function (x){
-    var.names <- sort(names(x[["variables"]]))
-    original.inverse <- x$transformation$inverse
-    y <- as.data.frame(x, transform = original.inverse)
-    nb.param <- y[, "fit"]
-    names(nb.param) <- apply(y[,var.names], 1,
-                             paste, collapse=":")
-    nb.param[grepl("\\:1", names(nb.param))] <-
-        nb.param[grepl("\\:1", names(nb.param))] - 
-        nb.param[grepl("\\:0", names(nb.param))]
-    names(nb.param) <- gsub("\\:1", "\\.growth", names(nb.param))
-    names(nb.param) <- gsub("\\:0", "\\.inter", names(nb.param))
-    nb.param
-}
-
-nb.effects <- get.params.from.glm.nb(nb.e[[1]])
-
-nb.param <- c(k=nb$theta, alpha=0.1, nb.effects)
-
-## the glm paramter estimates
-merge(nb.param, simpara, by=0)
-
-LogLik(simdata, param=nb.param,
-       group.name="group1:group2")
-                                  
-LogLik(simdata, param=simpara,
-       group.name="group2:group1")
-                                  
-
-LogLik(simdata, param=param[["group1:group2"]],
-       group.name=names(param["group1:group2"]))
-
-LogLik(simdata, param=param[["group1"]],
-       group.name=names(param["group1"]))
-
-LogLik(simdata, param=param[["group2"]],
-       group.name=names(param["group2"]))
-
-all.optim <- lapply(names(param), function (x){
-    optim(par = c(param[[x]]),
-          fn = LogLik, ## function to be maximized
-          control = list(fnscale=-1),
-          data = simdata,
-          group.name=x)
-})
-
-names(all.optim) <- names(param)
-
-all.optim
-
 ### looks like it find the starting paramters quite well when starting
 ### with good parameters
-opt.para <- optim(par = c(simpara),
+opt.para <- optim(par = simpara,
                   fn = LogLik, ## function to be maximized
                   control = list(fnscale=-1),
                   data = simdata,
-                  group.name="group1:group2")$par
+                  group.name=c("group1", "group2"))
 
 ### really bad when starting paramters just close to zero
 ### parameters
-opt.para.nb <- optim(par = nb.param,
-                  fn = LogLik, ## function to be maximized
-                  control = list(fnscale=-1),
-                  data = simdata,
-                  group.name="group2:group1")$par
+glm.h1 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1)
 
-cbind(simpara,
-      opt.sim = opt.para[names(simpara)],
-      opt.nb = opt.para.nb[names(simpara)])
+glm.h2 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1.5)
+
+glm.h3 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1.9)
+
+
+para.table <- cbind(simpara,
+                    opt.sim = opt.para$par[names(simpara)],
+                    opt.nb1 = glm.h1$par[names(simpara)],
+                    opt.nb1.5 = glm.h2$par[names(simpara)],
+                    opt.nb1.9 = glm.h3$par[names(simpara)])
+
+
+pairs(para.table)
+
+
+glm.hybrid(formula=loads~group2*HI, data=simdata, "HI")$value
+
+glm.hybrid(formula=loads~group1*HI, data=simdata, "HI")$value
+
+## should give error because it is not implemented
+glm.hybrid(formula=loads~(group2+HI+group1)^2, data=simdata, "HI")
+
+
