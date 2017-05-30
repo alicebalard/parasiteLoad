@@ -21,7 +21,7 @@ MeanLoad <- function(intercept, growth, alpha, HI){
 ## By row
 LogLik <- function(data, param, group.name){
     ## split the name into two
-    gname <- sort(strsplit(group.name, ":")[[1]] )
+    gname <- sort(group.name)
     split.L<- by(data, data[, gname], function(x)  {
         ## by makes sure we get all levels: get the name of the paramter
         ## from the values within the by "loop"
