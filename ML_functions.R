@@ -21,23 +21,23 @@ MeanLoad <- function(intercept, growth, alpha, HI){
 ## By row
 LogLik <- function(data, param, group.name){
     ## split the name into two
-    gname <- strsplit(group.name, ":")[[1]] 
+    gname <- sort(strsplit(group.name, ":")[[1]] )
     split.L<- by(data, data[, gname], function(x)  {
         ## by makes sure we get all levels: get the name of the paramter
         ## from the values within the by "loop"
         param.pattern <- unique(interaction(x[, gname], sep=":"))
         ## construct a regex with it
-        par.regex <- paste0("^k$|alpha|\\.", param.pattern)
+        par.regex <- paste0("^k$|alpha|^", param.pattern)
         ## select from our ugly paramter collection
         sub.param <- param[grepl(par.regex, names(param))]
         sum(dnbinom(x$loads,
                     size=abs(sub.param[names(sub.param) %in% "k"]),
                     mu=abs(MeanLoad(alpha=sub.param[names(sub.param) %in% "alpha"],
-                                    intercept=sub.param[grepl("int\\.", names(sub.param))],
-                                    growth=sub.param[grepl("growth\\.", names(sub.param))],
+                                    intercept=sub.param[grepl("inter", names(sub.param))],
+                                    growth=sub.param[grepl("growth", names(sub.param))],
                                     HI=x$HI)),
                     log = TRUE), na.rm=TRUE) ## NA removal needed if group has no data
-        })
-        sum(unlist(split.L), na.rm=TRUE) ## NA removal needed if group has no data
+    })
+    sum(unlist(split.L), na.rm=TRUE) ## NA removal needed if group has no data
 }
 
