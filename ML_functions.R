@@ -30,14 +30,29 @@ LogLik <- function(data, param, group.name){
         par.regex <- paste0("^k$|alpha|^", param.pattern)
         ## select from our ugly paramter collection
         sub.param <- param[grepl(par.regex, names(param))]
-        sum(dnbinom(x$loads,
-                    size=abs(sub.param[names(sub.param) %in% "k"]),
-                    mu=abs(MeanLoad(alpha=sub.param[names(sub.param) %in% "alpha"],
-                                    intercept=sub.param[grepl("inter", names(sub.param))],
-                                    growth=sub.param[grepl("growth", names(sub.param))],
-                                    HI=x$HI)),
-                    log = TRUE), na.rm=TRUE) ## NA removal needed if group has no data
+        l.lik <- dnbinom(x$loads,
+                         size=abs(sub.param[names(sub.param) %in% "k"]),
+                         mu=abs(MeanLoad(alpha=sub.param[names(sub.param) %in% "alpha"],
+                                         intercept=sub.param[grepl("inter",
+                                                                   names(sub.param))],
+                                         growth=sub.param[grepl("growth", names(sub.param))],
+                                         HI=x$HI)),
+                         log = TRUE)
+       l.lik
     })
-    sum(unlist(split.L), na.rm=TRUE) ## NA removal needed if group has no data
+    all.l.lik <- unlist(split.L)
+    if(length(all.l.lik)!=nrow(data)){
+        stop("Not all likelihoods considered, group/paramter matching problem")
+    } else{
+        sum(all.l.lik)
+    }
 }
 
+hybrid.maxim <- function (param, data, group.name){
+    optim(par = param, 
+          fn = LogLik, ## function to be maximized
+          control = list(fnscale=-1),
+          method = "L-BFGS-B",
+          data = data,
+          group.name = group.name)
+}
