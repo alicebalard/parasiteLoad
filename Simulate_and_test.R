@@ -6,10 +6,10 @@ source("UserInput.R")
 simpara <- c(k = 2, alpha = 1.92,
              "male:old.inter" = 14,
              "male:young.inter" = 12,
-             "male:baby.inter" = 22,
-             "female:old.inter" = 12,
-             "female:young.inter" = 23,
-             "female:baby.inter" = 32,
+             "male:baby.inter" = 10,
+             "female:old.inter" = 20,
+             "female:young.inter" = 18,
+             "female:baby.inter" = 11,
              "male:old.growth" = 2,
              "male:young.growth" = 1,
              "male:baby.growth" = -4,
@@ -43,11 +43,14 @@ SimulatedData <- function(param, n){
 set.seed(5)
 simdata <- SimulatedData(simpara, 1000)
 
+LogLik(simdata, simpara, c("group1", "group2"))
+
 ### looks like it find the starting paramters quite well when starting
 ### with good parameters
 opt.para <- optim(par = simpara,
                   fn = LogLik, ## function to be maximized
                   control = list(fnscale=-1),
+                  method = "L-BFGS-B",
                   data = simdata,
                   group.name=c("group1", "group2"))
 
@@ -56,26 +59,36 @@ opt.para <- optim(par = simpara,
 glm.h1 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
                      alpha.start=1)
 
-glm.h2 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+glm.h1.5 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
                      alpha.start=1.5)
 
-glm.h3 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+glm.h1.9 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
                      alpha.start=1.9)
 
+glm.h2.5 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=2.5)
 
 para.table <- cbind(simpara,
                     opt.sim = opt.para$par[names(simpara)],
-                    opt.nb1 = glm.h1$par[names(simpara)],
-                    opt.nb1.5 = glm.h2$par[names(simpara)],
-                    opt.nb1.9 = glm.h3$par[names(simpara)])
+                    opt.nb1 = glm.h1$opt.param[names(simpara)],
+                    opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
+                    opt.nb1.9 = glm.h1.9[[1]]$opt.param[names(simpara)],
+                    opt.nb2.5 = glm.h2.5[[1]]$opt.param[names(simpara)])
 
+opt.para$value
+glm.h1$twologlik/2
+glm.h1.5$twologlik/2
+glm.h1.9$twologlik/2
+glm.h2.5$twologlik/2
 
-pairs(para.table)
+## pairs(para.table)
 
+glm.hybrid(formula=loads~group2*HI, data=simdata, "HI")$twologlik/2
 
-glm.hybrid(formula=loads~group2*HI, data=simdata, "HI")$value
+glm.hybrid(formula=loads~group1*HI, data=simdata, "HI")$twologlik/2
 
-glm.hybrid(formula=loads~group1*HI, data=simdata, "HI")$value
+NBglm <- glm.nb(formula=loads~group1*group2*HI, data=simdata)
+NBglm$twologlik/2
 
 ## should give error because it is not implemented
 glm.hybrid(formula=loads~(group2+HI+group1)^2, data=simdata, "HI")
