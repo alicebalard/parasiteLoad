@@ -72,8 +72,8 @@ para.table <- cbind(simpara,
                     opt.sim = opt.para$par[names(simpara)],
                     opt.nb1 = glm.h1$opt.param[names(simpara)],
                     opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
-                    opt.nb1.9 = glm.h1.9[[1]]$opt.param[names(simpara)],
-                    opt.nb2.5 = glm.h2.5[[1]]$opt.param[names(simpara)])
+                    opt.nb1.9 = glm.h1.9$opt.param[names(simpara)],
+                    opt.nb2.5 = glm.h2.5$opt.param[names(simpara)])
 
 opt.para$value
 glm.h1$twologlik/2
@@ -91,6 +91,6 @@ NBglm <- glm.nb(formula=loads~group1*group2*HI, data=simdata)
 NBglm$twologlik/2
 
 ## should give error because it is not implemented
-glm.hybrid(formula=loads~(group2+HI+group1)^2, data=simdata, "HI")
+## glm.hybrid(formula=loads~(group2+HI+group1)^2, data=simdata, "HI")
 
 
