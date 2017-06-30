@@ -1,24 +1,63 @@
-
-
+library(MASS)
+library(effects)
 
 ## Get it somehow from the formula
-fo <- loads~ HI + group1*group2
-
-## the holy grail of how to set this up
-MMat <- model.matrix(object=fo, data=fakedata)
-
-## This will get difficult
-full.MMat <- model.matrix(fo, data=fakedata,
-                          contrasts.arg=
-                              list(group1=diag(nlevels(fakedata$group1)),
-                                   group2=diag(nlevels(fakedata$group2))))
-
-
-## or we could extract something from here
-terms(fo, data=fakedata)
-
-## this does not seem helpful
-get_all_vars(fo, fakedata)
-
-## why does this not help?
-with(fakedata, levels(group1:group2))
+glm.hybrid <- function(formula, data, 
+                       alpha.along,
+                       alpha.start = 0.1, 
+                       start.mod = MASS::glm.nb, 
+                       start.values = NA){
+    ## create the formula in the environment of our function
+    formula <- formula(substitute(formula))
+    if(!class(start.mod)%in%"function"){
+        stop("supply a function to estimate starting parameters, even if you supply parameters verbatim (via start.values) use this for structure")
+    }
+    nb <- start.mod(formula, data=data)
+    nb.e  <- allEffects(nb, xlevels=2)
+    if(length(nb.e) > 1){
+        stop("glm.hybrid not only currently only implements models with all potential interactions defined")
+    } else {
+        nb.e <- nb.e[[1]]
+        var <- nb.e[["variables"]]
+        is.factor.var <- sapply(var, function (x) x[["is.factor"]])
+        factor.var <- sort(names(is.factor.var[is.factor.var]))
+        alpha.var <- names(is.factor.var[!is.factor.var])
+        if (length(alpha.var) != 1 ||
+            !all(alpha.var %in% alpha.along) ||
+            max(data[, alpha.var])!=1 ||
+            min(data[, alpha.var])!=0){
+            stop("glm.hybrid is currently only implemented for one continuous variable scaled between 0 and 1, along which a non-linar effect (of intensity alpha) is tested")
+        } else {
+            original.inverse <- nb.e$transformation$inverse
+            nb.t <- as.data.frame(nb.e, transform = original.inverse)
+            start.param <- nb.t[, "fit"]
+            names(start.param) <-
+                apply(nb.t[, c(factor.var, alpha.var)], 1,
+                      paste, collapse=":")
+            ## this works because our maximal value of alpha.along is 1
+            ## get the growth relative to zero
+            start.param[grepl("\\:1$", names(start.param))] <-
+                start.param[grepl("\\:1$", names(start.param))] - 
+                start.param[grepl("\\:0$", names(start.param))]
+            ## rename
+            names(start.param) <- gsub("\\:1$", "\\.growth",
+                                       names(start.param))
+            names(start.param) <- gsub("\\:0$", "\\.inter",
+                                       names(start.param))
+            
+            param <- c(k=nb$theta, alpha=alpha.start, start.param)
+            param[names(start.values)] <- start.values
+            opt <- hybrid.maxim(param=param, data=data,
+                                group.name=factor.var)
+            out <- list(twologlik = opt$value*2,
+                        start.mod = substitute(start.mod),
+                        start.param = param[names(opt$par)],
+                        override.start.values = start.values[names(opt$par)], 
+                        opt.param = opt$par,
+                        df.residual = nb$df.residual-1,
+                        converged = as.logical(opt.para$convergence))
+            class(out) <- append(class(out),"hybrid.glm")
+            return(out)
+        }
+    }
+}

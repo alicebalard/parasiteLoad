@@ -1,56 +1,21 @@
 ### source or load package once done with packaging
 source("ML_functions.R")
 
+source("UserInput.R")
 
-### This should come from input script... ###########################
-param <- vector(mode="list", length=3)
-names(param) <- c("group1", "group2", "group1:group2")
-
-## parameters as starting values
-param[[1]] <- c(k=0.5, alpha=0.1,
-                int.male=0.1,
-                int.female=0.2,
-                growth.male=0.1,
-                growth.female=0.2)
-
-## parameters as starting values
-param[[2]] <- c(k=0.5, alpha=0.1,
-                int.baby=0.2,
-                int.young=0.02,
-                int.old=0.02,
-                growth.baby=0.1,
-                growth.young=0.1,
-                growth.old=0.2)
-
-## parameters as starting values
-param[[3]] <- c(k = 0.01, alpha = 0.01,
-                "int.male:old" = 0.01,
-                "int.male:young" = 0.01,
-                "int.male:baby" = 0.01,
-                "int.female:old" = 0.01,
-                "int.female:young" = 0.01,
-                "int.female:baby" = 0.01,
-                "growth.male:old" = 0.01,
-                "growth.male:young" = 0.01,
-                "growth.male:baby" = 0.01,
-                "growth.female:old" = 0.01,
-                "growth.female:young" = 0.01,
-                "growth.female:baby" = 0.01)
-
-## parameters for simulation
-simpara <- c(k = 2, alpha = 1.64,
-             "int.male:old" = 1,
-             "int.male:young" = 12,
-             "int.male:baby" = 22,
-             "int.female:old" = 2,
-             "int.female:young" = 23,
-             "int.female:baby" = 32,
-             "growth.male:old" = 2,
-             "growth.male:young" = 1,
-             "growth.male:baby" = -4,
-             "growth.female:old" = 6,
-             "growth.female:young" = 0,
-             "growth.female:baby" = -8)
+simpara <- c(k = 2, alpha = 1.92,
+             "male:old.inter" = 14,
+             "male:young.inter" = 12,
+             "male:baby.inter" = 10,
+             "female:old.inter" = 20,
+             "female:young.inter" = 18,
+             "female:baby.inter" = 11,
+             "male:old.growth" = 2,
+             "male:young.growth" = 1,
+             "male:baby.growth" = -4,
+             "female:old.growth" = 2,
+             "female:young.growth" = 0,
+             "female:baby.growth" = -1)
 
 ################### input end ###################################
 
@@ -61,12 +26,12 @@ SimulatedData <- function(param, n){
                                         n, replace=TRUE))
     gdata$HI<- round(runif(n), 2)
     xloads <- by(gdata, gdata$group1:gdata$group2, function (x) {
-        pattern <- paste0("\\.", unique(x$group1), ":", unique(x$group2))
+        pattern <- paste0("^", unique(x$group1), ":", unique(x$group2))
         this.param <- param[grepl(pattern, names(param))]
         loads <- rnbinom(n = nrow(x), size = param["k"],
-                         mu = MeanLoad(intercept=this.param[grepl("int",
+                         mu = MeanLoad(intercept=this.param[grepl("\\.inter",
                                                                   names(this.param))],
-                                       growth=this.param[grepl("growth",
+                                       growth=this.param[grepl("\\.growth",
                                                                names(this.param))],
                                        alpha=param["alpha"],
                                        HI=x$HI))
@@ -78,43 +43,57 @@ SimulatedData <- function(param, n){
 set.seed(5)
 simdata <- SimulatedData(simpara, 1000)
 
-LogLik(simdata, param=param[["group1"]],
-       group.name=names(param["group1"]))
-
-LogLik(simdata, param=param[["group2"]],
-       group.name=names(param["group2"]))
-
-LogLik(simdata, param=param[["group1:group2"]],
-       group.name=names(param["group1:group2"]))
-
-all.optim <- lapply(names(param), function (x){
-    optim(par = c(param[[x]]),
-          fn = LogLik, ## function to be maximized
-          control = list(fnscale=-1),
-          data = simdata,
-          group.name=x)
-})
-
-names(all.optim) <- names(param)
-
-all.optim
-
-### looks like it find the starting paramters quite well when starting
-### with good parameters
-opt.para <- optim(par = c(simpara),
-                  fn = LogLik, ## function to be maximized
-                  control = list(fnscale=-1),
-                  data = simdata,
-                  group.name="group1:group2")$par
-
-cbind(simpara, opt.para)
+LogLik(simdata, simpara, c("group1", "group2"))
 
 ### really bad when starting paramters just close to zero
 ### parameters
-opt.para <- optim(par = c(param[[3]]),
-                  fn = LogLik, ## function to be maximized
-                  control = list(fnscale=-1),
-                  data = simdata,
-                  group.name="group1:group2")$par
+opt.para <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1, start.values=simpara)
 
-cbind(simpara, opt.para)
+glm.h1 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1)
+
+glm.h1.5 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1.5)
+
+glm.h1.9 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1.9)
+
+glm.h2.5 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=2.5)
+
+## replace some of the parameters to not come via glm.nb (start.mod)
+## but being entered manually (in a named vector, names have to be
+## same as the model would assign)
+glm.try <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                      alpha.start=2.5, start.values=simpara[5:8])
+
+non.nb <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1.5, start.mod=glm.nb)
+
+para.table <- cbind(simpara,
+                    opt.sim = opt.para$par[names(simpara)],
+                    opt.nb1 = glm.h1$opt.param[names(simpara)],
+                    opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
+                    opt.nb1.9 = glm.h1.9$opt.param[names(simpara)],
+                    opt.nb2.5 = glm.h2.5$opt.param[names(simpara)])
+
+opt.para$value
+glm.h1$twologlik/2
+glm.h1.5$twologlik/2
+glm.h1.9$twologlik/2
+glm.h2.5$twologlik/2
+
+## pairs(para.table)
+
+glm.hybrid(formula=loads~group2*HI, data=simdata, "HI")$twologlik/2
+
+glm.hybrid(formula=loads~group1*HI, data=simdata, "HI")$twologlik/2
+
+NBglm <- glm.nb(formula=loads~group1*group2*HI, data=simdata)
+NBglm$twologlik/2
+
+## should give error because it is not implemented
+## glm.hybrid(formula=loads~(group2+HI+group1)^2, data=simdata, "HI")
+
+
