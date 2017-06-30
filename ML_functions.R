@@ -56,3 +56,49 @@ hybrid.maxim <- function (param, data, group.name){
           data = data,
           group.name = group.name)
 }
+
+
+library(parallel)
+
+ML_bounds <- function(data, maxL,group.name, opt.param,
+                      threshold = qchisq(p = 0.95, df = 1) / 2){
+    ## maxL given by twologlik/2 from the model
+    myfun <- function(par.name){
+        sinP = opt.param[par.name]
+        allbut1P = opt.param[!opt.param%in%par.name]
+        ## Distance between likelihood and max likelihood:
+        distance.L.ML.oneparfixed <- function(sinP, allbut1P, data, group.name, maxL){
+            L <- LogLik(data = data, param = c(sinP, allbut1P), group.name = group.name)
+            abs(L - (maxL - threshold))
+        }
+        ## Find the parameters (but one) that minimize the distance L - maxL:
+        optim_at_threshold <- function(sinP, allbut1P, data, group.name, maxL){
+            ## consider changing an algorithm that actually works on our problem
+            myOpt <- optim(par = allbut1P,
+                           fn = distance.L.ML.oneparfixed,
+                           sinP = sinP,
+                           data = data,
+                           group.name = group.name,
+                           maxL = maxL)
+            myOpt$par[sinP]
+        }
+    ## Upper bound
+    ## optim instead of optimize to avoid censoring??
+        UB <- optim(f = optim_at_threshold,
+                    interval = c(opt.param[[par.name]],
+                                 opt.param[[par.name]] + 
+                                 abs(opt.param[[par.name]]*100)),
+                    maximum=TRUE)
+        ## Lower bounds
+        LB <- optimise(f = optim_at_threshold,
+                       interval = c(opt.param[[par.name]]-
+                                    abs(opt.param[[par.name]]*100),
+                                    opt.param[[par.name]]),
+                       maximum=FALSE)
+        result <- list(c(LB = LB[1], UB = UB[1]))
+        return(result)
+    }
+    ## Run over parameters:
+    mclapply(names(opt.param), myfun, mc.cores=20)
+}
+
