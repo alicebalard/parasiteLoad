@@ -45,17 +45,11 @@ simdata <- SimulatedData(simpara, 1000)
 
 LogLik(simdata, simpara, c("group1", "group2"))
 
-### looks like it find the starting paramters quite well when starting
-### with good parameters
-opt.para <- optim(par = simpara,
-                  fn = LogLik, ## function to be maximized
-                  control = list(fnscale=-1),
-                  method = "L-BFGS-B",
-                  data = simdata,
-                  group.name=c("group1", "group2"))
-
 ### really bad when starting paramters just close to zero
 ### parameters
+opt.para <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1, start.values=simpara)
+
 glm.h1 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
                      alpha.start=1)
 
@@ -67,6 +61,15 @@ glm.h1.9 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
 
 glm.h2.5 <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
                      alpha.start=2.5)
+
+## replace some of the parameters to not come via glm.nb (start.mod)
+## but being entered manually (in a named vector, names have to be
+## same as the model would assign)
+glm.try <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                      alpha.start=2.5, start.values=simpara[5:8])
+
+non.nb <- glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+                     alpha.start=1.5, start.mod=glm.nb)
 
 para.table <- cbind(simpara,
                     opt.sim = opt.para$par[names(simpara)],
