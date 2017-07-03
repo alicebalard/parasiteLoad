@@ -97,3 +97,11 @@ NBglm$twologlik/2
 ## glm.hybrid(formula=loads~(group2+HI+group1)^2, data=simdata, "HI")
 
 
+## Alice trying to fix MLbounds:
+
+ML_bounds_2(data = simdata, maxL = glm.h1$twologlik / 2, 
+            group.name = c("group1", "group2"),
+            opt.param = glm.h1$opt.param, 
+            threshold = qchisq(p = 0.95, df = 1) / 2)
+
+
