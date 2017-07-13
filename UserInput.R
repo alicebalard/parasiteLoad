@@ -55,7 +55,7 @@ glm.hybrid <- function(formula, data,
                         override.start.values = start.values[names(opt$par)], 
                         opt.param = opt$par,
                         df.residual = nb$df.residual-1,
-                        converged = as.logical(opt.para$convergence))
+                        converged = as.logical(opt$convergence))
             class(out) <- append(class(out),"hybrid.glm")
             return(out)
         }
