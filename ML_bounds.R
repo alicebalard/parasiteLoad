@@ -161,6 +161,8 @@ ML_bounds_2 <- function(data, maxL, group.name, opt.param,
 # Wald test (cf "Max Lik estimation and Inference book) p46:
 
 
+### PLEASE DON'T DUPLICATE CODE! TRY it, REALLY!
+
 # use start values inferred from glm.nb:
 parasite.fit <- optim(par = simpara, 
                       fn = nLogLik, ## function to be maximized
