@@ -1,7 +1,18 @@
-library(MASS)
-library(effects)
-
 ## Get it somehow from the formula
+##' Here we describe our main formula interface
+##'
+##' And here we put all the details
+##' @title glm.hybrid
+##' @param formula 
+##' @param data 
+##' @param alpha.along 
+##' @param alpha.start 
+##' @param start.mod 
+##' @param start.values 
+##' @return an object of class glm.hybrid
+##' @author Emanuel Heitlinger
+##' @export
+
 glm.hybrid <- function(formula, data, 
                        alpha.along,
                        alpha.start = 0.1, 
@@ -13,7 +24,7 @@ glm.hybrid <- function(formula, data,
         stop("supply a function to estimate starting parameters, even if you supply parameters verbatim (via start.values) use this for structure")
     }
     nb <- start.mod(formula, data=data)
-    nb.e  <- allEffects(nb, xlevels=2)
+    nb.e  <- effects::allEffects(nb, xlevels=2)
     if(length(nb.e) > 1){
         stop("glm.hybrid not only currently only implements models with all potential interactions defined")
     } else {

@@ -7,5 +7,8 @@ Author: Who wrote it
 Maintainer: Alice Balard <alice.balard@fu-berlin.de>
 Description: Currently count (negative binomial) models are implemented to
     access the influence of heterozygosity .
-License: GPLv3
+Depends: R (>= 3.1.0)
+Imports: MASS,
+         effects
+License: GPL (> = 2)
 RoxygenNote: 5.0.1
