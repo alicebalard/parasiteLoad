@@ -19,7 +19,7 @@ MeanLoad <- function(intercept, growth, alpha, HI){
 }
 
 ## By row
-LogLik <- function(data, param, group.name){
+LogLik <- function(data, param, group.name, response){
   ## split the name into two
   gname <- sort(group.name)
   split.L<- by(data, data[, gname], function(x)  {
@@ -30,7 +30,7 @@ LogLik <- function(data, param, group.name){
     par.regex <- paste0("^k$|alpha|^", param.pattern)
     ## select from our ugly paramter collection
     sub.param <- param[grepl(par.regex, names(param))]
-    l.lik <- dnbinom(x$loads,
+    l.lik <- dnbinom(x[, response],
                      size=abs(sub.param[names(sub.param) %in% "k"]),
                      mu=abs(MeanLoad(alpha=sub.param[names(sub.param) %in% "alpha"],
                                      intercept=sub.param[grepl("inter",
@@ -48,13 +48,15 @@ LogLik <- function(data, param, group.name){
   }
 }
 
-hybrid.maxim <- function (param, data, group.name, hessian=FALSE){
+hybrid.maxim <- function (param, data, group.name, response = response,
+                          hessian=FALSE){
   optim(par = param, 
         fn = LogLik, ## function to be maximized
         control = list(fnscale=-1),
         method = "L-BFGS-B",
         data = data,
         group.name = group.name,
+        response = response,
         hessian = hessian)
 }
 

@@ -20,6 +20,7 @@ glm.hybrid <- function(formula, data,
                        start.values = NA){
     ## create the formula in the environment of our function
     formula <- formula(substitute(formula))
+    response <- all.vars(formula)[1]
     if(!class(start.mod)%in%"function"){
         stop("supply a function to estimate starting parameters, even if you supply parameters verbatim (via start.values) use this for structure")
     }
@@ -58,8 +59,9 @@ glm.hybrid <- function(formula, data,
             
             param <- c(k=nb$theta, alpha=alpha.start, start.param)
             param[names(start.values)] <- start.values
-            opt <- hybrid.maxim(param=param, data=data,
-                                group.name=factor.var)
+            opt <- hybrid.maxim(param = param, data = data,
+                                group.name = factor.var,
+                                response = response )
             out <- list(twologlik = opt$value*2,
                         start.mod = substitute(start.mod),
                         start.param = param[names(opt$par)],
