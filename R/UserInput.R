@@ -61,7 +61,8 @@ glm.hybrid <- function(formula, data,
             param[names(start.values)] <- start.values
             opt <- hybrid.maxim(param = param, data = data,
                                 group.name = factor.var,
-                                response = response )
+                                response = response,
+                                alpha.along = alpha.along)
             out <- list(twologlik = opt$value*2,
                         start.mod = substitute(start.mod),
                         start.param = param[names(opt$par)],
