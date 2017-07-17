@@ -1,6 +1,38 @@
-##Calculate upper and lower bounds of each parameters
-source("ML_functions.R")
+### PLEASE DON'T DUPLICATE CODE! TRY it, REALLY!
+### Genius or lame?
+# Wald test (cf "Max Lik estimation and Inference book) p46:
 
+ML_bounds_Wald <- function(param, data, group.name){
+  # use start values inferred from glm.nb:
+  fit.include.hessian <- hybrid.maxim(param, data, group.name, hessian=TRUE)
+  MLE <- fit.include.hessian$par
+  ObsInfo <- fit.include.hessian$hessian # observed Fisher information matrix
+  Vhat <- solve(ObsInfo) # inverse of observed Fisher information matrix
+  Std.errors <- sqrt(diag(Vhat))
+  # obtain the MLEs, estimated std errors, and approx Wald 95% CIs
+  Wald.table <- cbind(MLE,
+                      Std.errors,
+                      LowerBounds = MLE - qnorm(0.975)*Std.errors,
+                      UpperBounds = MLE + qnorm(0.975)*Std.errors)
+  round(Wald.table, 4)
+  
+  Vhat
+}
+
+ML_bounds_Wald(param = simpara, data = simdata,
+               group.name =  c("group1", "group2"))
+  
+#parnames <- names(opt.para$opt.param)
+#rownames(Wald.table) <- parnames
+
+
+
+
+
+
+######################################## JUNK
+
+##Calculate upper and lower bounds of each parameters
 ML_bounds <- function(data, group.name, startpara, threshold){
     maxL <- optim(par = startpara,
                   fn = LogLik, ## function to be maximized
@@ -107,7 +139,7 @@ ML_bounds <- function(data, maxL, group.name, opt.param,
                    interval = c(opt.param[[par.name]]-
                                   abs(opt.param[[par.name]]*100),
                                 opt.param[[par.name]]),
-                   maximum=F83;40500;0cALSE)
+                   maximum=FALSE)
     result <- list(c(LB = LB[1], UB = UB[1]))
     return(result)
   }
@@ -157,29 +189,4 @@ ML_bounds_2 <- function(data, maxL, group.name, opt.param,
    #                               threshold = qchisq(p = 0.95, df = 1) / 2))
 
 
-### Genius or lame?
-# Wald test (cf "Max Lik estimation and Inference book) p46:
 
-
-### PLEASE DON'T DUPLICATE CODE! TRY it, REALLY!
-
-# use start values inferred from glm.nb:
-parasite.fit <- optim(par = simpara, 
-                      fn = nLogLik, ## function to be maximized
-                      method = "L-BFGS-B",
-                      data = simdata,
-                      group.name =  c("group1", "group2"),
-                      hessian = TRUE)
-
-MLE <- parasite.fit$par
-ObsInfo <- parasite.fit$hessian # observed Fisher information matrix
-Vhat <- solve(ObsInfo) # inverse of observed Fisher information matrix
-Std.errors <- sqrt(diag(Vhat))
-# obtain the MLEs, estimated std errors, and approx Wald 95% CIs
-Wald.table <- cbind(MLE,
-                    Std.errors,
-                    LowerBounds = MLE - qnorm(0.975)*Std.errors,
-                    UpperBounds = MLE + qnorm(0.975)*Std.errors)
-parnames <- names(opt.para$opt.param)
-rownames(Wald.table) <- parnames
-round(Wald.table, 4)
