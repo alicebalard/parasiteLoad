@@ -94,15 +94,14 @@ NBglm$twologlik/2
 
 ######################################################################################
 ## ML_bounds tests:
-source("ML_functions.R")
-source("ML_bounds.R")
+glm.hybrid(formula=loads~group1*HI*group2, data=simdata, "HI")
 
 # Generate random simdata:  (based on Phoung's oocysts counting)
 simdata_generator <- function(){
-  I <- round(runif(6, 0, 4), 2)
-  S <- round(runif(6, -I, 1), 2)
+  I <- round(runif(6, 0, 4*10^6), 2)
+  S <- round(runif(6, -I, 10^6), 2)
   simparaBS <- c(k = round(abs(runif(1, 1, 8)), 2),
-                 alpha = round(runif(1, -3, 3), 2),
+                 alpha = round(runif(1, -2, 2), 2),
                  "male:old.inter" = I[1],
                  "male:young.inter" = I[2],
                  "male:baby.inter" = I[3],
@@ -128,7 +127,8 @@ myBS <- function(){
   # Calculate bounds 95%CI:
   bounds <- ML_bounds_Wald(param = simpara, data = simdata,
                            group.name =  c("group1", "group2"))
-    # Check if the simpara are indeed in the good CI:
+  
+  # Check if the simpara are indeed in the good CI:
   bounds <- as.data.frame(bounds)
   bounds$actualpara <- simpara
   (sum(bounds$LowerBounds <= bounds$actualpara) + sum(bounds$UpperBounds >= bounds$actualpara)) /28*100
@@ -140,5 +140,6 @@ myBS_secured <- function(){
 } 
 
 # Big BS:
-result <- replicate(100, myBS_secured())
+result <- replicate(1000, myBS_secured())
 mean(na.omit(result))
+## 97.32

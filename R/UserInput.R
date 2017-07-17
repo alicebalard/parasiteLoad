@@ -60,11 +60,16 @@ glm.hybrid <- function(formula, data,
             param[names(start.values)] <- start.values
             opt <- hybrid.maxim(param=param, data=data,
                                 group.name=factor.var)
+            ## add proxy of 95%CI
+            bounds <- ML_bounds_Wald(param = param, data = data,
+                                     group.name = factor.var)
             out <- list(twologlik = opt$value*2,
                         start.mod = substitute(start.mod),
                         start.param = param[names(opt$par)],
                         override.start.values = start.values[names(opt$par)], 
                         opt.param = opt$par,
+                        opt.lower = bounds[,"LowerBounds"],
+                        opt.upper = bounds[,"UpperBounds"],
                         df.residual = nb$df.residual-1,
                         converged = as.logical(opt$convergence))
             class(out) <- append(class(out),"hybrid.glm")
