@@ -92,54 +92,5 @@ glm.hybrid::glm.hybrid(formula=loads~group1*HI, data=simdata, "HI")$twologlik/2
 NBglm <- glm.hybrid::glm.nb(formula=loads~group1*group2*HI, data=simdata)
 NBglm$twologlik/2
 
-######################################################################################
-## ML_bounds tests:
-glm.hybrid(formula=loads~group1*HI*group2, data=simdata, "HI")
-
-# Generate random simdata:  (based on Phoung's oocysts counting)
-simdata_generator <- function(){
-  I <- round(runif(6, 0, 4*10^6), 2)
-  S <- round(runif(6, -I, 10^6), 2)
-  simparaBS <- c(k = round(abs(runif(1, 1, 8)), 2),
-                 alpha = round(runif(1, -2, 2), 2),
-                 "male:old.inter" = I[1],
-                 "male:young.inter" = I[2],
-                 "male:baby.inter" = I[3],
-                 "female:old.inter" = I[4],
-                 "female:young.inter" = I[5],
-                 "female:baby.inter" = I[6],
-                 "male:old.growth" = S[1],
-                 "male:young.growth" = S[2],
-                 "male:baby.growth" = S[3],
-                 "female:old.growth" = S[4],
-                 "female:young.growth" = S[5],
-                 "female:baby.growth" = S[6])
-  simdataBS <- SimulatedData(simparaBS, 1000)
-  # output:
-  list(simparaBS, simdataBS)
-}
-
-# Bootstrap the CI:
-myBS <- function(){
-  simBS <- simdata_generator()
-  simpara <- simBS[[1]]
-  simdata <- simBS[[2]]
-  # Calculate bounds 95%CI:
-  bounds <- ML_bounds_Wald(param = simpara, data = simdata,
-                           group.name =  c("group1", "group2"))
-  
-  # Check if the simpara are indeed in the good CI:
-  bounds <- as.data.frame(bounds)
-  bounds$actualpara <- simpara
-  (sum(bounds$LowerBounds <= bounds$actualpara) + sum(bounds$UpperBounds >= bounds$actualpara)) /28*100
-}
-
-# Give NA instead of error:
-myBS_secured <- function(){
-  tryCatch(myBS(), error=function(err) NA)
-} 
-
-# Big BS:
-result <- replicate(1000, myBS_secured())
-mean(na.omit(result))
-## 97.32
+## After adding ML_bounds:
+glm.hybrid::glm.hybrid(formula=loads~group1*HI*group2, data=simdata, "HI")

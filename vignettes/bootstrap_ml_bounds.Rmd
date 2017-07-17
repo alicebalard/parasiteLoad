@@ -1,0 +1,102 @@
+---
+title: "Bootstrap ML_bounds"
+author: "Alice Balard"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Generate random simdata:  
+Based on similarity with our oocysts counting, we want to generate random parameters, and associated random data:
+
+```{r simulation}
+SimulatedData <- function(param, n){
+  gdata <- data.frame(group1 = rep(c("male", "female"), each=n/2),
+                      group2 = sample(c("old", "young", "baby"),
+                                      n, replace=TRUE))
+  gdata$HI<- round(runif(n), 2)
+  xloads <- by(gdata, gdata$group1:gdata$group2, function (x) {
+    pattern <- paste0("^", unique(x$group1), ":", unique(x$group2))
+    this.param <- param[grepl(pattern, names(param))]
+    loads <- rnbinom(n = nrow(x), size = param["k"],
+                     mu = glm.hybrid:::MeanLoad(intercept=this.param[grepl("\\.inter",
+                                                                           names(this.param))],
+                                                growth=this.param[grepl("\\.growth",
+                                                                        names(this.param))],
+                                                alpha=param["alpha"],
+                                                HI=x$HI))
+    cbind(x, loads)
+  })
+  as.data.frame(do.call("rbind", xloads))
+}
+
+simdata_generator <- function(){
+  I <- round(runif(6, 0, 4*10^6), 2)
+  S <- round(runif(6, -I, 10^6), 2)
+  simparaBS <- c(k = round(abs(runif(1, 1, 8)), 2),
+                 alpha = round(runif(1, -2, 2), 2),
+                 "male:old.inter" = I[1],
+                 "male:young.inter" = I[2],
+                 "male:baby.inter" = I[3],
+                 "female:old.inter" = I[4],
+                 "female:young.inter" = I[5],
+                 "female:baby.inter" = I[6],
+                 "male:old.growth" = S[1],
+                 "male:young.growth" = S[2],
+                 "male:baby.growth" = S[3],
+                 "female:old.growth" = S[4],
+                 "female:young.growth" = S[5],
+                 "female:baby.growth" = S[6])
+  simdataBS <- SimulatedData(simparaBS, 1000)
+  # output:
+  list(simparaBS = simparaBS, simdataBS = simdataBS)
+}
+
+mysimu <- simdata_generator()
+```
+
+The simulated data look like:
+```{r, echo=FALSE, results='asis'}
+knitr::kable(head(mysimu$simdataBS, 10))
+```
+
+With the simulated parameters:
+```{r, echo=FALSE}
+knitr::kable(mysimu$simparaBS)
+```
+
+
+## Bootstrap the confidence interval:
+```{r BS}
+myBS <- function(){
+  simBS <- simdata_generator()
+  simpara <- simBS[[1]]
+  simdata <- simBS[[2]]
+  # Calculate bounds 95%CI:
+  bounds <- ML_bounds_Wald(param = simpara, data = simdata,
+                           group.name =  c("group1", "group2"))
+  # Check if the simpara are indeed in the good CI:
+  bounds <- as.data.frame(bounds)
+  bounds$actualpara <- simpara
+  (sum(bounds$LowerBounds <= bounds$actualpara) + sum(bounds$UpperBounds >= bounds$actualpara)) /28*100
+}
+
+# Give NA instead of error:
+myBS_secured <- function(){
+  tryCatch(myBS(), error=function(err) NA)
+} 
+```
+
+## Then we run the bootstrap (can take a couple of hours):
+```{r, cache = TRUE, eval = FALSE}
+result <- replicate(1000, myBS_secured())
+mean(na.omit(result))
+
+## After 1h30, I got:
+97.32
+```
+
+97% of the time, the simulated parameters were indeed within the confidence interval found.
