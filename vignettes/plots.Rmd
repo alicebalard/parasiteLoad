@@ -1,0 +1,78 @@
+---
+title: "Plot our model"
+author: "Alice Balard"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+To keep all plot with the same theme:
+```{r}
+library(ggplot2)
+theme_alice <-  theme(plot.title = element_text(size = 20, face = "bold"),
+                      plot.subtitle = element_text(size = 20),
+                      legend.text = element_text(size=20),
+                      legend.title = element_blank(),
+                      text = element_text(size = 20))
+```
+
+We simulate data:
+```{r, simulation}
+simpara <- c(k = 2, alpha = 1.92,
+             "male:old.inter" = 14,
+             "male:young.inter" = 12,
+             "male:baby.inter" = 10,
+             "female:old.inter" = 20,
+             "female:young.inter" = 18,
+             "female:baby.inter" = 11,
+             "male:old.growth" = 2,
+             "male:young.growth" = 1,
+             "male:baby.growth" = -4,
+             "female:old.growth" = 2,
+             "female:young.growth" = 0,
+             "female:baby.growth" = -1)
+
+SimulatedData <- function(param, n){
+  gdata <- data.frame(group1 = rep(c("male", "female"), each=n/2),
+                      group2 = sample(c("old", "young", "baby"),
+                                      n, replace=TRUE))
+  gdata$HI<- round(runif(n), 2)
+  xloads <- by(gdata, gdata$group1:gdata$group2, function (x) {
+    pattern <- paste0("^", unique(x$group1), ":", unique(x$group2))
+    this.param <- param[grepl(pattern, names(param))]
+    loads <- rnbinom(n = nrow(x), size = param["k"],
+                     mu = glm.hybrid:::MeanLoad(intercept=this.param[grepl("\\.inter",
+                                                                           names(this.param))],
+                                                growth=this.param[grepl("\\.growth",
+                                                                        names(this.param))],
+                                                alpha=param["alpha"],
+                                                HI=x$HI))
+    cbind(x, loads)
+  })
+  as.data.frame(do.call("rbind", xloads))
+}
+set.seed(5)
+simdata <- SimulatedData(simpara, 1000)
+```
+
+The simulated data look like:
+```{r, echo=FALSE, results='asis'}
+knitr::kable(head(simdata, 10))
+```
+
+Then extracting our parameters we can plot our data.
+```{r, cache=TRUE, eval=F}
+myfit <- glm.hybrid::glm.hybrid(formula=loads~group1*HI*group2, data=simdata, "HI")
+myfit$opt.param
+```
+
+## Plot:
+```{r, fig.show='hold'}
+ggplot(simdata, aes(x = HI, y = loads)) +
+  geom_point() +
+  theme_alice +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
