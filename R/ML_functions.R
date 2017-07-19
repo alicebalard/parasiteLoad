@@ -62,3 +62,24 @@ hybrid.maxim <- function (param, data, group.name, response = response,
         whichsign =  whichsign,
         hessian = hessian)
 }
+
+##Approximation of the CI by hessian matrix
+# Wald test (cf "Max Lik estimation and Inference book) p46:
+ML_bounds_Wald <- function(param, data, group.name, response = response,
+                           alpha.along = alpha.along){
+  # use start values inferred from glm.nb:
+  fit.include.hessian <- hybrid.maxim(param, data, group.name, hessian=TRUE,
+                                      whichsign = -1, control = list(),
+                                      response = response, alpha.along = alpha.along)
+  MLE <- fit.include.hessian$par
+  ObsInfo <- fit.include.hessian$hessian # observed Fisher information matrix
+  Vhat <- solve(ObsInfo) # inverse of observed Fisher information matrix
+  Std.errors <- sqrt(diag(Vhat))
+  # obtain the MLEs, estimated std errors, and approx Wald 95% CIs
+  Wald.table <- cbind(MLE,
+                      Std.errors,
+                      LowerBounds = MLE - qnorm(0.975)*Std.errors,
+                      UpperBounds = MLE + qnorm(0.975)*Std.errors)
+  round(Wald.table, 4)
+  Vhat
+}
