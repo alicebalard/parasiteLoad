@@ -1,4 +1,7 @@
 ### source or load package once done with packaging
+library(devtools)
+install_github("alicebalard/Parasite_Load")
+
 simpara <- c(k = 2, alpha = 1.92,
              "male:old.inter" = 14,
              "male:young.inter" = 12,
@@ -39,7 +42,7 @@ SimulatedData <- function(param, n){
 set.seed(5)
 simdata <- SimulatedData(simpara, 1000)
 
-glm.hybrid:::LogLik(simdata, simpara, c("group1", "group2"))
+## glm.hybrid:::LogLik(simdata, simpara, c("group1", "group2")) can't work if we don't give environment (formula + response)
 
 ### really bad when starting paramters just close to zero
 ### parameters
@@ -89,4 +92,7 @@ glm.hybrid::glm.hybrid(formula=loads~group1*HI, data=simdata, "HI")$twologlik/2
 NBglm <- glm.hybrid::glm.nb(formula=loads~group1*group2*HI, data=simdata)
 NBglm$twologlik/2
 
-
+## After adding ML_bounds:
+glm.hybrid::glm.hybrid(formula = loads ~ group1 * HI * group2, data = simdata, "HI",
+             alpha.start = 1)
+  
