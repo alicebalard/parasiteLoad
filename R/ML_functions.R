@@ -19,7 +19,7 @@ MeanLoad <- function(intercept, growth, alpha, HI){
 }
 
 ## By row
-LogLik <- function(data, param, group.name, response, alpha.along){
+LogLik <- function(data, param, group.name, response, alpha.along, whichsign = 1){
   ## split the name into two
   gname <- sort(group.name)
   split.L<- by(data, data[, gname], function(x)  {
@@ -44,21 +44,21 @@ LogLik <- function(data, param, group.name, response, alpha.along){
   if(length(all.l.lik)!=nrow(data)){
     stop("Not all likelihoods considered, group/parameter matching problem")
   } else{
-    sum(all.l.lik)
+    sum(all.l.lik) * whichsign
   }
 }
 
 hybrid.maxim <- function (param, data, group.name, response = response,
-                          alpha.along, hessian=FALSE){
+                          alpha.along, hessian=FALSE, control = list(fnscale=-1),
+                          whichsign = 1){
   optim(par = param, 
         fn = LogLik, ## function to be maximized
-        control = list(fnscale=-1),
+        control = control, ## maximise by default
         method = "L-BFGS-B",
         data = data,
         group.name = group.name,
         response = response,
         alpha.along = alpha.along, 
+        whichsign =  whichsign,
         hessian = hessian)
 }
-
-
