@@ -2,34 +2,51 @@
 % Please edit documentation in R/UserInput.R
 \name{glm.hybrid}
 \alias{glm.hybrid}
-\title{glm.hybrid}
+\title{Fit a Negative Binomial Generalized Linear Model along a gradient between 0 and 1}
 \usage{
 glm.hybrid(formula, data, alpha.along, alpha.start = 0.1,
   start.mod = MASS::glm.nb, start.values = NA)
 }
 \arguments{
-\item{formula}{}
+\item{formula}{an object of class "formula" (or one that can be coerced to that class): a symbolic description of the model to be fitted.}
 
-\item{data}{}
+\item{data}{an optional data frame, list or environment (or object coercible by as.data.frame to a data frame) containing the variables in the model. If not found in data, the variables are taken from environment(formula), typically the environment from which glm.hybrid is called.}
 
-\item{alpha.along}{}
+\item{alpha.along}{an object of class character defining along which gradient the response is estimated}
 
-\item{alpha.start}{}
+\item{alpha.start}{optional starting value for alpha. By default 0.1.}
 
-\item{start.mod}{}
+\item{start.mod}{optional function used to calculate the starting values before optimisation. By default, glm.nb() from the package MASS.}
 
-\item{start.values}{}
+\item{start.values}{optional values for the parameters. By default, NA.}
 }
 \value{
-an object of class glm.hybrid
+An object of class "glm.hybrid", a list (see \code{details})
 }
 \description{
-Here we describe our main formula interface
+glm.hybrid is used to  fit a generalised linear model, using a negative binomial distribution 
+for which the parameter mu is defined by the function "MeanLoad".
 }
 \details{
-And here we put all the details
+The list returned contains:
+\itemize{
+\item twologlik. Twice the maximum likelihood calculated
+\item start.mod. The start.mod that were given as argument
+\item start.param. blabla
+\item override.start.values. The equivalent start.values, when given as argument (otherwise, returns NA)
+\item opt.param. The optimised parameters
+\item opt.lower. Lower bounds calculated thanks to the hessian matrix genereated by 
+\code{optim} function. So far, extremely approximative...
+\item opt.upper. Upper bounds calculated thanks to the hessian matrix genereated by 
+\code{optim} function. So far, extremely approximative...
+\item df.residual. nb$df.residual-1 [...]
+\item converged. ogical. \code{TRUE} if converged
+}
+}
+\references{
+Baird, S. J. E., Ribas A., Macholán M., Albrecht T., Pialek J. and Goüy de Bellocq J. (2012) 
+\emph{Where are the wormy mice? Reexamination of hybrid parasitism in the European House Mouse Hybrid Zone}
 }
 \author{
-Emanuel Heitlinger
+Emanuel Heitlinger, Alice Balard
 }
-

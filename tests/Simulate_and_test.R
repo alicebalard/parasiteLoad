@@ -1,6 +1,6 @@
 ### source or load package once done with packaging
 library(devtools)
-install_github("alicebalard/Parasite_Load")
+# install_github("alicebalard/Parasite_Load")
 
 simpara <- c(k = 2, alpha = 1.92,
              "male:old.inter" = 14,
@@ -52,14 +52,14 @@ opt.para <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata,
 glm.h1 <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
                                  alpha.start=1)
 
-glm.h1.5 <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
-                                   alpha.start=1.5)
+# glm.h1.5 <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+#                                  alpha.start=1.5)
 
-glm.h1.9 <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
-                                   alpha.start=1.9)
+#glm.h1.9 <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+#                                   alpha.start=1.9)
 
-glm.h2.5 <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
-                                   alpha.start=2.5)
+#glm.h2.5 <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
+#                                   alpha.start=2.5)
 
 ## replace some of the parameters to not come via glm.nb (start.mod)
 ## but being entered manually (in a named vector, names have to be
@@ -68,29 +68,27 @@ glm.try <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, 
                                   alpha.start=2.5, start.values=simpara[5:8])
 
 non.nb <- glm.hybrid::glm.hybrid(formula=loads~group2*HI*group1, data=simdata, "HI",
-                                 alpha.start=1.5, start.mod=glm.nb)
+                                 alpha.start=1.5, start.mod = MASS::glm.nb)
 
-para.table <- cbind(simpara,
-                    opt.sim = opt.para$par[names(simpara)],
-                    opt.nb1 = glm.h1$opt.param[names(simpara)],
-                    opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
-                    opt.nb1.9 = glm.h1.9$opt.param[names(simpara)],
-                    opt.nb2.5 = glm.h2.5$opt.param[names(simpara)])
+# para.table <- cbind(simpara,
+#                    opt.sim = opt.para$par[names(simpara)],
+#                    opt.nb1 = glm.h1$opt.param[names(simpara)],
+#                    opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
+#                    opt.nb1.9 = glm.h1.9$opt.param[names(simpara)],
+#                    opt.nb2.5 = glm.h2.5$opt.param[names(simpara)])
 
 opt.para$value
 glm.h1$twologlik/2
-glm.h1.5$twologlik/2
-glm.h1.9$twologlik/2
-glm.h2.5$twologlik/2
+#glm.h1.5$twologlik/2
+#glm.h1.9$twologlik/2
+#glm.h2.5$twologlik/2
 
 ## pairs(para.table)
 
 glm.hybrid::glm.hybrid(formula=loads~group2*HI, data=simdata, "HI")$twologlik/2
 
-glm.hybrid::glm.hybrid(formula=loads~group1*HI, data=simdata, "HI")$twologlik/2
-
-NBglm <- glm.hybrid::glm.nb(formula=loads~group1*group2*HI, data=simdata)
-NBglm$twologlik/2
+# NBglm <- glm.hybrid::glm.nb(formula=loads~group1*group2*HI, data=simdata)
+# NBglm$twologlik/2
 
 ## After adding ML_bounds:
 glm.hybrid::glm.hybrid(formula = loads ~ group1 * HI * group2, data = simdata, "HI",
