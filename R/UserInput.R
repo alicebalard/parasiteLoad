@@ -59,20 +59,15 @@ glm.hybrid <- function(formula, data,
       original.inverse <- nb.e$transformation$inverse
       nb.t <- as.data.frame(nb.e, transform = original.inverse)
       start.param <- nb.t[, "fit"]
-      names(start.param) <-
-        apply(nb.t[, c(factor.var, alpha.var)], 1,
-              paste, collapse=":")
-      ## this works because our maximal value of alpha.along is 1
-      ## get the growth relative to zero
-      start.param[grepl("\\:1$", names(start.param))] <-
-        start.param[grepl("\\:1$", names(start.param))] - 
-        start.param[grepl("\\:0$", names(start.param))]
-      ## rename
-      names(start.param) <- gsub("\\:1$", "\\.growth",
-                                 names(start.param))
-      names(start.param) <- gsub("\\:0$", "\\.inter",
-                                 names(start.param))
-      
+      names(start.param) <- nb.t[, factor.var]
+      names(start.param) <- paste0(names(start.param), 
+                                   rep(c(".inter", ".growth"), 
+                                       times=length(start.param)/2))
+      ## we could reduce this by simply using ever even number parameter as intercept uneven as growth
+      ## same in the ML loglik function
+      start.param[grepl("growth$", names(start.param))] <-
+        start.param[grepl("growth$", names(start.param))] - 
+        start.param[grepl("inter$", names(start.param))]
       param <- c(k=nb$theta, alpha=alpha.start, start.param)
       param[names(start.values)] <- start.values
       opt <- hybrid.maxim(param = param, data = data,
@@ -84,7 +79,7 @@ glm.hybrid <- function(formula, data,
                                group.name = factor.var,
                                response = response,
                                alpha.along = alpha.along)
-            out <- list(twologlik = opt$value*2,
+      out <- list(twologlik = opt$value*2,
                   start.mod = substitute(start.mod),
                   start.param = param[names(opt$par)],
                   override.start.values = start.values[names(opt$par)], 
