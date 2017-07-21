@@ -11,43 +11,20 @@
 
 #Arguments
 
-#object	
+#m1
 #Fitted model object of class "glm.hybrid", the output of glm.hybrid().
 
-# formula
-# give the formula used
+#m2
+#Fitted model object of class "glm.hybrid", the output of glm.hybrid().
 
-anova.hybrid <- function(object, formula){
+anova.hybrid <- function(m1, m2){
   ## Test if the difference between 2 likelihood is significant
-  Gtest <- function(dLL, dDF){
-    1 - pchisq(2*dLL, df = dDF) 
-  }
-  
-  formula <- loads ~ group1 * HI * group2
-  object <- glm.hybrid::glm.hybrid(formula = loads ~ group1 * HI * group2, data = simdata, "HI",
-                                   alpha.start = 1)
-  
-  glm.hybrid::glm.hybrid(formula = loads ~ HI * group1, data = simdata, "HI",
-                         alpha.start = 1)
-  
-  #  nullmodel <-
-  
-  
-  2*dLL <- object$twologlik - nullmodel$twologlik
-  dDF <- length(object$opt.param) - length(submodel$opt.param)
-  p <- round(Gtest(dLL, dDF),4)
-  ##
-  out <- data.frame(Model = mds, theta = ths, Resid.df = dfs,
-                    "2 x log-lik." = lls, Test = tss, df = df, LRtest = x2,
-                    Prob = pr)
-  names(out) <- c("Model", "theta", "Resid. df",
-                  "   2 x log-lik.", "Test", "   df", "LR stat.", "Pr(Chi)")
-  class(out) <- c("Anova", "data.frame")
-  attr(out, "heading") <-
-    c("Likelihood ratio tests of Negative Binomial Models\n",
-      paste("Response:", rsp))
-  out
+dLL = abs(m1$twologlik/2 - m2$twologlik/2)
+dDF = length(m1$opt.param) - length(m2$opt.param)
+p = 1 - pchisq(2*dLL, df = dDF) # G-test
 }
+
+## Get df from each model!
 
 
 print.anova.hybrid <- function(){}
