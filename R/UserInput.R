@@ -52,8 +52,8 @@ glm.hybrid <- function(formula, data,
     alpha.var <- names(is.factor.var[!is.factor.var])
     if (length(alpha.var) != 1 ||
         !all(alpha.var %in% alpha.along) ||
-        max(data[, alpha.var])!=1 ||
-        min(data[, alpha.var])!=0){
+        max(data[, alpha.var]) > 1 ||
+        min(data[, alpha.var]) < 0){
       stop("glm.hybrid is currently only implemented for one continuous variable scaled between 0 and 1, along which a non-linar effect (of intensity alpha) is tested")
     } else {
       original.inverse <- nb.e$transformation$inverse
