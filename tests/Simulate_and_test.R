@@ -1,6 +1,6 @@
 ### source or load package once done with packaging
 library(devtools)
-# install_github("alicebalard/Parasite_Load")
+install_github("alicebalard/Parasite_Load")
 
 simpara <- c(k = 2, alpha = 1.92,
              "male:old.inter" = 14,
@@ -93,4 +93,23 @@ glm.hybrid::glm.hybrid(formula=loads~group2*HI, data=simdata, "HI")$twologlik/2
 ## After adding ML_bounds:
 glm.hybrid::glm.hybrid(formula = loads ~ group1 * HI * group2, data = simdata, "HI",
              alpha.start = 1)
-  
+
+#######################
+## Test on worms data (local alice dev test) :
+Joelle_data <- read.csv("../../EvolutionFinalData.csv")
+
+## NB!! na.omit!!!
+Joelle_data <- na.omit(Joelle_data)
+
+glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI")
+## ok
+
+glm.hybrid::glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
+## Error in glm.hybrid::glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data,  : 
+## glm.hybrid is currently only implemented for one continuous variable scaled between 0 and 1,
+## along which a non-linar effect (of intensity alpha) is tested
+
+## On dev branch:
+source("../R/ML_functions.R")
+source("../R/UserInput.R")
+glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
