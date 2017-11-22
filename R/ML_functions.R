@@ -65,6 +65,7 @@ hybrid.maxim <- function (param, data, group.name, response = response,
 
 ##Approximation of the CI by hessian matrix
 # Wald test (cf "Max Lik estimation and Inference book) p46:
+
 ML_bounds_Wald <- function(param, data, group.name,
                            response, alpha.along){
   # use start values inferred from glm.nb:

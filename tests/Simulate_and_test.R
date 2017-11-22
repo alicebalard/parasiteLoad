@@ -1,5 +1,8 @@
-library(devtools)
-install_github("alicebalard/Parasite_Load")
+# library(devtools)
+# install_github("alicebalard/Parasite_Load")
+
+source("UserInput.R")
+source("ML_functions.R")
 
 simpara <- c(k = 2, alpha = 1.92,
              "male:old.inter" = 14,
@@ -47,18 +50,18 @@ simdata <- SimulatedData(simpara, 1000)
 
 ################## Test : one discrete group ##################
 
-glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI", alpha.start = 1)
+glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI", alpha.start = 1)
 ## ok
 
-glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI")
+glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI")
 ## ok
 
-glm.hybrid::glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
+glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
 # ok
 
 ################## Test : two discrete groups ERROR ##################
 
-glm.hybrid::glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
+glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
 # Error in fn(par, ...) : 
 # Not all likelihoods considered, group/parameter matching problem
 
@@ -81,12 +84,15 @@ glm.h2.5 <- glm.hybrid::glm.hybrid(formula=loads~HI*group1, data=simdata, "HI",
                                    alpha.start=2.5)
 
 para.table <- cbind(simpara,
-                    opt.sim = opt.para$par[names(simpara)],
-                    opt.nb1 = glm.h1$opt.param[names(simpara)],
+                    opt.sim = opt.para$opt.param[names(simpara)],
+                      opt.nb1 = glm.h1$opt.param[names(simpara)],
                     opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
                     opt.nb1.9 = glm.h1.9$opt.param[names(simpara)],
                     opt.nb2.5 = glm.h2.5$opt.param[names(simpara)])
 
+glm.h1$opt.param
+opt.para
+names(simpara)
 para.table
 
 opt.para$value
