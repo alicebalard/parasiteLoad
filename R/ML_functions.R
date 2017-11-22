@@ -86,3 +86,12 @@ ML_bounds_Wald <- function(param, data, group.name,
                       UpperBounds = MLE + qnorm(0.975)*Std.errors)
   round(Wald.table, 4)
 }
+
+#  Likelihood Ratio Test NB think abou the dDF definition in this case...
+anova.hybrid <- function(m1, m2){
+  ## Test if the difference between 2 likelihood is significant
+  dLL = abs(m1$twologlik/2 - m2$twologlik/2)
+  dDF = length(m1$opt.param) - length(m2$opt.param)
+  p = 1 - pchisq(2*dLL, df = dDF) # G-test
+  print(list(c(dLL = dLL, dDF = dDF, p = p)))
+}

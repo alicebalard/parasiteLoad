@@ -105,4 +105,10 @@ glm.try <- glm.hybrid(formula=loads~HI*group1, data=simdata, "HI",
 non.nb <- glm.hybrid(formula=loads~HI*group1, data=simdata, "HI",
                      alpha.start=1.5, start.mod = MASS::glm.nb)
 
+## Compare models
+glm.h0 <- glm.hybrid(formula=loads~HI*group1, data=simdata, alpha.along = "HI",
+                     alpha.start=1)
+
+anova.hybrid(m1 = glm.h1, m2 = glm.h0)
+
 
