@@ -30,7 +30,7 @@ LogLik <- function(data, param, group.name, response, alpha.along, whichsign = 1
     par.regex <- paste0("^k$|alpha|^", param.pattern)
     ## select from our ugly paramter collection
     sub.param <- param[grepl(par.regex, names(param))]
-    l.lik <- dnbinom(x[, response],
+    l.lik <- stats::dnbinom(x[, response],
                      size=abs(sub.param[names(sub.param) %in% "k"]),
                      mu=abs(MeanLoad(alpha=sub.param[names(sub.param) %in% "alpha"],
                                      intercept=sub.param[grepl("inter",
@@ -51,7 +51,7 @@ LogLik <- function(data, param, group.name, response, alpha.along, whichsign = 1
 hybrid.maxim <- function (param, data, group.name, response = response,
                           alpha.along, hessian=FALSE, control = list(fnscale=-1),
                           whichsign = 1){
-  optim(par = param, 
+  stats::optim(par = param, 
         fn = LogLik, ## function to be maximized
         control = control, ## maximise by default
         method = "L-BFGS-B",
@@ -82,8 +82,8 @@ ML_bounds_Wald <- function(param, data, group.name,
   # obtain the MLEs, estimated std errors, and approx Wald 95% CIs
   Wald.table <- cbind(MLE,
                       Std.errors,
-                      LowerBounds = MLE - qnorm(0.975)*Std.errors,
-                      UpperBounds = MLE + qnorm(0.975)*Std.errors)
+                      LowerBounds = MLE - stats::qnorm(0.975)*Std.errors,
+                      UpperBounds = MLE + stats::qnorm(0.975)*Std.errors)
   round(Wald.table, 4)
 }
 
@@ -92,6 +92,6 @@ anova.hybrid <- function(m1, m2){
   ## Test if the difference between 2 likelihood is significant
   dLL = abs(m1$twologlik/2 - m2$twologlik/2)
   dDF = length(m1$opt.param) - length(m2$opt.param)
-  p = 1 - pchisq(2*dLL, df = dDF) # G-test
+  p = 1 - stats::pchisq(2*dLL, df = dDF) # G-test
   print(list(c(dLL = dLL, dDF = dDF, p = p)))
 }
