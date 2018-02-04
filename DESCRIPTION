@@ -8,6 +8,7 @@ Maintainer: Alice Balard <alice.balard@fu-berlin.de>
 Description: Currently count (negative binomial) models are implemented to
     access the influence of heterozygosity .
 Depends: R (>= 3.1.0)
+License: GPL-3
 Imports: MASS,
          effects
 RoxygenNote: 6.0.1
