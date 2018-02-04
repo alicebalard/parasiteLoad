@@ -1,8 +1,8 @@
 # library(devtools)
 # install_github("alicebalard/Parasite_Load")
 
-source("../R/UserInput.R")
-source("../R/ML_functions.R")
+# source("../R/UserInput.R")
+# source("../R/ML_functions.R")
 
 # simpara <- c(k = 2, alpha = 1.92,
 #              "male:old.inter" = 14,
