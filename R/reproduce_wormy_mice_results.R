@@ -7,13 +7,13 @@
 # # parasite prevalence (proportion of infected hosts among all the hosts 
 # # examined) and mean load (the mean number of parasites in all hosts, including
 # # the zero values of uninfected hosts) with 95% confidence limits over the
-# # complete dataset (Rózsa et al. 2000). Confidence intervals for prevalence and 
+# # complete dataset (Rozsa et al. 2000). Confidence intervals for prevalence and 
 # # load were estimated using Sterne's Exact method (Reiczigel 2003) and bootstrap
 # # (1000 replicates), respectively.
 # 
 # # Using QP3.0, we modeled the aggregation of parasites within hosts using the 
 # # negative binomial distribution, calculating maximum likelihood estimates 
-# # (MLEs) of parameter k (Bliss and Fisher 1953). QP3.0 also calculates a χ2 
+# # (MLEs) of parameter k (Bliss and Fisher 1953). QP3.0 also calculates a chisq 
 # # goodness of fit between expected and observed frequencies under the negative
 # # binomial model. 
 # 

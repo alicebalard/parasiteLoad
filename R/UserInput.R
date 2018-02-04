@@ -24,7 +24,7 @@
 ##' \item df.residual. nb$df.residual-1 [...]
 ##' \item converged. ogical. \code{TRUE} if converged
 ##' }
-##' @references Baird, S. J. E., Ribas A., Macholán M., Albrecht T., Pialek J. and Goüy de Bellocq J. (2012) 
+##' @references Baird, S. J. E., Ribas A., Macholan M., Albrecht T., Pialek J. and Gouy de Bellocq J. (2012) 
 
 ##' \emph{Where are the wormy mice? Reexamination of hybrid parasitism in the European House Mouse Hybrid Zone}
 ##' @author Emanuel Heitlinger, Alice Balard
