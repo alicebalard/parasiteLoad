@@ -18,6 +18,11 @@ Joelle_data <- read.csv("../../../EvolutionFinalData.csv")
 # binomial model. 
 
 library(exactci)
+library(MASS)
+
+graphics.off()
+par("mar")
+par(mar=c(1,1,1,1))
 
 fit_neg_bin <- function(x) {
   x = as.vector(na.omit(x))
@@ -33,7 +38,7 @@ fit_neg_bin <- function(x) {
                       alternative = c("two.sided", "less", "greater"),
                       tsmethod = c("minlike"),
                       conf.level = 0.95)$conf.int[2]*100
-  fit = fitdistr(x, densfun = "negative binomial")
+  fit = MASS::fitdistr(x, densfun = "negative binomial")
   # Goodness of fit with the chi squared test  
   df = as.data.frame(table(x))
   names(df) = c("values", "observed_freq")
