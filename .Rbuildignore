@@ -2,3 +2,4 @@
 ^.*\.Rproj$         # Automatically added by RStudio,
 
 ^\.travis\.yml$
+^\.Rproj\.user$
