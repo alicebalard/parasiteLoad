@@ -10,5 +10,6 @@ Description: Currently count (negative binomial) models are implemented to
 Depends: R (>= 3.1.0)
 License: GPL-3
 Imports: MASS,
-         effects
+         effects,
+         devtools
 RoxygenNote: 6.0.1

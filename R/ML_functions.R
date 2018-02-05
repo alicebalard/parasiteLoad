@@ -18,12 +18,12 @@ MeanLoad <- function(intercept, growth, alpha, HI){
     (intercept + growth*HI)*(1 - alpha*2*HI*(1 - HI))
 }
 
-## By row
+## The likelihood function over a set of inds
 LogLik <- function(data, param, group.name, response, alpha.along, whichsign = 1){
   ## split the name into two
   gname <- sort(group.name)
   split.L<- by(data, data[, gname], function(x)  {
-    ## by makes sure we get all levels: get the name of the paramter
+    ## by makes sure we get all levels: get the name of the parameter
     ## from the values within the by "loop"
     param.pattern <- unique(interaction(x[, gname], sep=":"))
     ## construct a regex with it
@@ -48,6 +48,7 @@ LogLik <- function(data, param, group.name, response, alpha.along, whichsign = 1
   }
 }
 
+# The likelihood analysis
 hybrid.maxim <- function (param, data, group.name, response = response,
                           alpha.along, hessian=FALSE, control = list(fnscale=-1),
                           whichsign = 1){
@@ -87,7 +88,7 @@ ML_bounds_Wald <- function(param, data, group.name,
   round(Wald.table, 4)
 }
 
-#  Likelihood Ratio Test NB think abou the dDF definition in this case...
+#  Likelihood Ratio Test NB think about the dDF definition in this case...
 anova.hybrid <- function(m1, m2){
   ## Test if the difference between 2 likelihood is significant
   dLL = abs(m1$twologlik/2 - m2$twologlik/2)
