@@ -52,7 +52,7 @@ G2 <- glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = 
 
 ################## Test : two discrete groups OK ##################
 
-glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
+glm.hybrid::glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
 
 G4 <- glm.hybrid::glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
 
