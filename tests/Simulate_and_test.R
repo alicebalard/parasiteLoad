@@ -44,12 +44,15 @@ simdata <- SimulatedData(simpara, 1000)
 ################## Test : one discrete group OK ##################
 
 G1 <- glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI", alpha.start = 1)
+G1
 
 G2 <- glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI")
 
 #G3 <- glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
 
 ################## Test : two discrete groups OK ##################
+
+glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
 
 G4 <- glm.hybrid::glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
 

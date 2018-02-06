@@ -4,7 +4,7 @@
 \alias{glm.hybrid}
 \title{Fit a Negative Binomial Generalized Linear Model along a gradient between 0 and 1}
 \usage{
-glm.hybrid(formula, data, alpha.along, alpha.start = 0.1,
+glm.hybrid(formula, data, alpha.along, alpha.start = 0, Z.start = 0,
   start.mod = MASS::glm.nb, start.values = NA)
 }
 \arguments{
@@ -14,7 +14,9 @@ glm.hybrid(formula, data, alpha.along, alpha.start = 0.1,
 
 \item{alpha.along}{an object of class character defining along which gradient the response is estimated}
 
-\item{alpha.start}{optional starting value for alpha. By default 0.1.}
+\item{alpha.start}{optional starting value for alpha. By default 0.}
+
+\item{Z.start}{optional starting value for Z. By default 0.}
 
 \item{start.mod}{optional function used to calculate the starting values before optimisation. By default, glm.nb() from the package MASS.}
 

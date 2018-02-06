@@ -6,7 +6,8 @@
 ##' @param formula an object of class "formula" (or one that can be coerced to that class): a symbolic description of the model to be fitted.
 ##' @param data an optional data frame, list or environment (or object coercible by as.data.frame to a data frame) containing the variables in the model. If not found in data, the variables are taken from environment(formula), typically the environment from which glm.hybrid is called.
 ##' @param alpha.along an object of class character defining along which gradient the response is estimated
-##' @param alpha.start optional starting value for alpha. By default 0.1.
+##' @param alpha.start optional starting value for alpha. By default 0.
+##' @param Z.start optional starting value for Z. By default 0.
 ##' @param start.mod optional function used to calculate the starting values before optimisation. By default, glm.nb() from the package MASS.
 ##' @param start.values optional values for the parameters. By default, NA.
 ##' @return An object of class "glm.hybrid", a list (see \code{details})
@@ -32,7 +33,8 @@
 
 glm.hybrid <- function(formula, data, 
                        alpha.along,
-                       alpha.start = 0.1, 
+                       alpha.start = 0, 
+                       Z.start = 0,
                        start.mod = MASS::glm.nb, 
                        start.values = NA){
   ## create the formula in the environment of our function
@@ -61,24 +63,42 @@ glm.hybrid <- function(formula, data,
       original.inverse <- nb.e$transformation$inverse
       nb.t <- as.data.frame(nb.e, transform = original.inverse)
       start.param <- nb.t[, "fit"]
- 
+
       ## if > 1 group, then nb.t[ , factor.var] is a data.frame
-      if (length(factor.var) == 1){ 
-        names(start.param) <- nb.t[, factor.var] 
-      } else { 
+      if (length(factor.var) == 1){
+        names(start.param) <- nb.t[, factor.var]
+      } else {
         names(start.param) <- apply(nb.t[, factor.var], 1, paste, collapse=":")
       }
-      names(start.param) <- paste0(names(start.param),
+
+      ## save group names
+      groupnames <- names(start.param)
+      
+      names(start.param) <- paste0(groupnames,
                                    rep(c(".inter", ".growth"),
-                                       times=length(start.param)/2))
-      ## we could reduce this by simply using ever even number parameter as intercept uneven as growth
-      ## same in the ML loglik function
+                                       times = length(start.param)/2))
+      
+      # ## we could reduce this by simply using ever even number parameter as intercept uneven as growth
+      # ## same in the ML loglik function
       start.param[grepl("growth$", names(start.param))] <-
         start.param[grepl("growth$", names(start.param))] -
         start.param[grepl("inter$", names(start.param))]
-      param <- c(k=nb$theta, alpha=alpha.start, start.param)
-      param[names(start.values)] <- start.values
       
+      start.param.Agg <- rep(c(initialAgg = 1/nb$theta, growthAgg = 0), 
+                             length(groupnames)/2)
+      
+      names(start.param.Agg) <- paste0(groupnames,
+                                       rep(c(".interAgg", ".growthAgg"),
+                                           times = length(start.param.Agg)/2))
+      
+      start.param <- c(start.param.Agg, start.param)
+      
+      param <- c(Z = Z.start,
+                 alpha = alpha.start, 
+                 start.param)
+      
+      param[names(start.values)] <- start.values
+
       opt <- hybrid.maxim(param = param, data = data,
                           group.name = factor.var,
                           response = response,
