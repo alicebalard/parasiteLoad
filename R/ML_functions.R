@@ -15,58 +15,68 @@
 #########################
 ## MeanLoad model: How does the mean load vary depending on the parameters?
 MeanLoad <- function(intercept, growth, alpha, HI){
-    (intercept + growth*HI)*(1 - alpha*2*HI*(1 - HI))
+    max((intercept + growth*HI)*(1 - alpha*2*HI*(1 - HI)), 0.01)
 }
 
 ## The likelihood function over a set of inds
-LogLik <- function(data, param, group.name, response, alpha.along, whichsign = 1){
-  ## split the name into two
-  gname <- sort(group.name)
-  split.L<- by(data, data[, gname], function(x)  {
-    ## by makes sure we get all levels: get the name of the parameter
-    ## from the values within the by "loop"
-    param.pattern <- unique(interaction(x[, gname], sep=":"))
-    ## construct a regex with it
-    par.regex <- paste0("^k$|alpha|^", param.pattern)
-    ## select from our ugly paramter collection
-    sub.param <- param[grepl(par.regex, names(param))]
-    l.lik <- stats::dnbinom(x[, response],
-                     size=abs(sub.param[names(sub.param) %in% "k"]),
-                     mu=abs(MeanLoad(alpha=sub.param[names(sub.param) %in% "alpha"],
-                                     intercept=sub.param[grepl("inter",
-                                                               names(sub.param))],
-                                     growth=sub.param[grepl("growth", names(sub.param))],
-                                     HI=x[, alpha.along])),
-                     log = TRUE)
-    l.lik
-  })
-  all.l.lik <- unlist(split.L)
-  if(length(all.l.lik)!=nrow(data)){
-    stop("Not all likelihoods considered, group/parameter matching problem")
-  } else{
-    sum(all.l.lik) * whichsign
-  }
+LogLik <- function(sub.data.by.group, param.for.sub.data, response, alpha.along){
+  # Here data is already splitted by groups
+  l.lik <- stats::dnbinom(
+    sub.data.by.group[, response],
+    size = abs(param.for.sub.data[names(param.for.sub.data) %in% "k"]),
+    mu = MeanLoad(
+      alpha = param.for.sub.data[names(param.for.sub.data) %in% "alpha"],
+      intercept = param.for.sub.data[grepl("inter", names(param.for.sub.data))],
+      growth = param.for.sub.data[grepl("growth", names(param.for.sub.data))],
+      HI = sub.data.by.group[, alpha.along]
+    ),
+    log = TRUE
+  )
+  sum(l.lik)
+}
+
+get.param.for.sub.data <- function(param, sub.data.by.group, sorted.group.name) {
+  ## by makes sure we get all levels: get the name of the parameter
+  ## from the values within the by "loop"
+  param.pattern <- unique(
+    interaction(
+      sub.data.by.group[, sorted.group.name], 
+      sep=":"
+      )
+    )
+  ## construct a regex with it
+  param.regex <- paste0("^k$|alpha|^", param.pattern)
+  ## select from our ugly paramter collection
+  param.for.sub.data <- param[grepl(param.regex, names(param))]
+  param.for.sub.data
 }
 
 # The likelihood analysis
 hybrid.maxim <- function (param, data, group.name, response = response,
-                          alpha.along, hessian=FALSE, control = list(fnscale=-1),
-                          whichsign = 1){
-  stats::optim(par = param, 
-        fn = LogLik, ## function to be maximized
-        control = control, ## maximise by default
-        method = "L-BFGS-B",
-        data = data,
-        group.name = group.name,
-        response = response,
-        alpha.along = alpha.along, 
-        whichsign =  whichsign,
-        hessian = hessian)
+                          alpha.along, hessian=FALSE, control = list(fnscale=-1)){
+  ## split the name into two
+  sorted.group.name <- sort(group.name)
+  splitted.optimResults <- by(data, data[, sorted.group.name], function(sub.data.by.group)  {
+    ## we now have the data splitted by groups
+    ## we are still missing the params splitted by groups
+    param.for.sub.data <- get.param.for.sub.data(param, sub.data.by.group, sorted.group.name)
+    print(param.for.sub.data)
+    stats::optim(par = param.for.sub.data,
+                 fn = LogLik, ## function to be maximized
+                 control = control, ## maximise by default
+                 method = "L-BFGS-B",
+                 sub.data.by.group = sub.data.by.group,
+                 response = response,
+                 alpha.along = alpha.along,
+                 hessian = hessian)
+  })
+  print(splitted.optimResults)
 }
 
 ##Approximation of the CI by hessian matrix
 # Wald test (cf "Max Lik estimation and Inference book) p46:
 
+## Give marginal CI, = for this parameters, without considering the correlations with the others!
 ML_bounds_Wald <- function(param, data, group.name,
                            response, alpha.along){
   # use start values inferred from glm.nb:

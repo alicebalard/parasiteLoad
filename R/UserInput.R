@@ -30,17 +30,26 @@
 ##' @author Emanuel Heitlinger, Alice Balard
 ##' @export
 
+
+breakFormula <- function(formula){
+  response <- all.vars(formula)[1]
+  response
+}
+
 glm.hybrid <- function(formula, data, 
                        alpha.along,
-                       alpha.start = 0.1, 
+                       alpha.start = 0, 
                        start.mod = MASS::glm.nb, 
                        start.values = NA){
+  
   ## create the formula in the environment of our function
   formula <- formula(substitute(formula))
-  response <- all.vars(formula)[1]
+  response <- breakFormula(formula)
+  
   if(!class(start.mod)%in%"function"){
     stop("supply a function to estimate starting parameters, even if you supply parameters verbatim (via start.values) use this for structure")
   }
+
   nb <- start.mod(formula, data=data)
   nb.e  <- effects::allEffects(nb, xlevels=2)
   if(length(nb.e) > 1){
@@ -49,7 +58,7 @@ glm.hybrid <- function(formula, data,
     nb.e <- nb.e[[1]]
     var <- nb.e[["variables"]]
     is.factor.var <- sapply(var, function (x) x[["is.factor"]])
-    factor.var <- sort(names(is.factor.var[is.factor.var]))
+    factor.var <- sort(names(is.factor.var[is.factor.var])) # this is just to delete HI from the groups
     alpha.var <- names(is.factor.var[!is.factor.var])
     
     if (length(alpha.var) != 1 ||
@@ -76,13 +85,16 @@ glm.hybrid <- function(formula, data,
       start.param[grepl("growth$", names(start.param))] <-
         start.param[grepl("growth$", names(start.param))] -
         start.param[grepl("inter$", names(start.param))]
-      param <- c(k=nb$theta, alpha=alpha.start, start.param)
+      param <- c(k = nb$theta, alpha=alpha.start, start.param)
       param[names(start.values)] <- start.values
       
+      ## All we did is prepare the parameters and groups
+      ## What is missing is to split the data and parameters by groups
       opt <- hybrid.maxim(param = param, data = data,
                           group.name = factor.var,
                           response = response,
                           alpha.along = alpha.along)
+      
       ## add proxy of 95%CI
       # bounds <- ML_bounds_Wald(param = param, data = data,
       #                         group.name = factor.var,

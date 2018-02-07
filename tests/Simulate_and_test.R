@@ -25,7 +25,7 @@ SimulatedData <- function(param, n){
     pattern <- paste0("^", unique(x$group1), ":", unique(x$group2))
     this.param <- param[grepl(pattern, names(param))]
     loads <- rnbinom(n = nrow(x), size = param["k"],
-                     mu = glm.hybrid:::MeanLoad(intercept=this.param[grepl("\\.inter",
+                     mu = MeanLoad(intercept=this.param[grepl("\\.inter",
                                                                            names(this.param))],
                                                 growth=this.param[grepl("\\.growth",
                                                                         names(this.param))],
@@ -43,32 +43,41 @@ simdata <- SimulatedData(simpara, 1000)
 
 ################## Test : one discrete group OK ##################
 
-G1 <- glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI", alpha.start = 1)
+glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI", alpha.start = 1)
 
-G2 <- glm.hybrid::glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI")
+G2 <- glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI")
 
-#G3 <- glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
+
+Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
+Joelle_data[is.na(Joelle_data)] <- 0
+is.na(Joelle_data)
+
+G3 <- glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
+
+glm.hybrid(Aspiculuris.Syphacia ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
+
+glm.hybrid(Taenia ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
 
 ################## Test : two discrete groups OK ##################
 
-G4 <- glm.hybrid::glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
+G4 <- glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
 
 ################## Test : starting parameters OK ##################
 
 # really bad when starting parameters just close to zero
-opt.para <- glm.hybrid::glm.hybrid(formula=loads ~ HI*group1*group2, data=simdata, alpha.along = "HI",
+opt.para <- glm.hybrid(formula=loads ~ HI*group1*group2, data=simdata, alpha.along = "HI",
                                    alpha.start=1, start.values=simpara)
 
-glm.h1 <- glm.hybrid::glm.hybrid(formula=loads~HI*group1*group2, data=simdata, alpha.along = "HI",
+glm.h1 <- glm.hybrid(formula=loads~HI*group1*group2, data=simdata, alpha.along = "HI",
                                  alpha.start=1)
 
-glm.h1.5 <- glm.hybrid::glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
+glm.h1.5 <- glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
                                    alpha.start=1.5)
 
-glm.h1.9 <- glm.hybrid::glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
+glm.h1.9 <- glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
                                    alpha.start=1.9)
 
-glm.h2.5 <- glm.hybrid::glm.hybrid(formula=loads~HI*group1*group2, data=simdata, "HI",
+glm.h2.5 <- glm.hybrid(formula=loads~HI*group1*group2, data=simdata, "HI",
                                    alpha.start=2.5)
 
 para.table <- cbind(simpara,
@@ -92,17 +101,17 @@ glm.h2.5$twologlik/2
 ## replace some of the parameters to not come via glm.nb (start.mod)
 ## but being entered manually (in a named vector, names have to be
 ## same as the model would assign)
-# glm.try <- glm.hybrid::glm.hybrid(formula=loads~HI*group1, data=simdata, "HI",
+# glm.try <- glm.hybrid(formula=loads~HI*group1, data=simdata, "HI",
 #                                               alpha.start=2.5, start.values=simpara[5:8])
 # 
-# non.nb <- glm.hybrid::glm.hybrid(formula=loads~HI*group1, data=simdata, "HI",
+# non.nb <- glm.hybrid(formula=loads~HI*group1, data=simdata, "HI",
 #                                  alpha.start=1.5, start.mod = MASS::glm.nb)
 # 
 # # Compare models
-# glm.h0 <- glm.hybrid::glm.hybrid(formula=loads~HI*group1, data=simdata, alpha.along = "HI",
+# glm.h0 <- glm.hybrid(formula=loads~HI*group1, data=simdata, alpha.along = "HI",
 #                      alpha.start=1)
 # 
-# glm.hybrid::anova.hybrid(m1 = glm.h1, m2 = glm.h0)
+# anova.hybrid(m1 = glm.h1, m2 = glm.h0)
 
 # ## Plot results for one group
 # HI = seq(0,1,0.001)
