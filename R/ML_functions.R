@@ -70,11 +70,12 @@ MaximumLikelihood <- function (params, data, groupNames, response,
       ## we now have the data splitted by groups
       ## we are still missing the paramss splitted by groups
       paramsForGroup <- GetParamsForGroup(params, dataForGroup, sortedGroupNames)
+      # TODO test nloptr optimzer (bobyK ?)
       stats::optim(par = paramsForGroup,
                    fn = LogLikelihood, ## function to be maximized
                    control = control, ## maximise by default
                    hessian = hessian,
-                   method = "L-BFGS-B",
+                  # method = "L-BFGS-B",
                    dataForGroup = dataForGroup,
                    response = response,
                    hybridIndexName = hybridIndexName)
