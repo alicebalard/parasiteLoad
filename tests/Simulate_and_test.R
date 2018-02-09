@@ -1,6 +1,12 @@
 devtools::install_github("alicebalard/Parasite_Load")
 
-simpara <- c(k = 2, alpha = 1.92,
+simpara <- c(k = 2,
+             "male:old.alpha" = 1.4,
+             "male:young.alpha" = 1.2,
+             "male:baby.alpha" = 1.0,
+             "female:old.alpha" = 2.0,
+             "female:young.alpha" = -1.8,
+             "female:baby.alpha" = 1.1,
              "male:old.inter" = 14,
              "male:young.inter" = 12,
              "male:baby.inter" = 10,
@@ -17,22 +23,30 @@ simpara <- c(k = 2, alpha = 1.92,
 ################## input end ##################
 
 SimulatedData <- function(param, n){
-  gdata <- data.frame(group1 = rep(c("male", "female"), each=n/2),
-                      group2 = sample(c("old", "young", "baby"),
-                                      n, replace=TRUE))
+  gdata <- data.frame(
+    group1 = rep(c("male", "female"), each=n/2),
+    group2 = sample(c("old", "young", "baby"), n, replace=TRUE)
+  )
   gdata$HI<- round(runif(n), 2)
-  xloads <- by(gdata, gdata$group1:gdata$group2, function (x) {
-    pattern <- paste0("^", unique(x$group1), ":", unique(x$group2))
-    this.param <- param[grepl(pattern, names(param))]
-    loads <- rnbinom(n = nrow(x), size = param["k"],
-                     mu = MeanLoad(intercept=this.param[grepl("\\.inter",
-                                                                           names(this.param))],
-                                                growth=this.param[grepl("\\.growth",
-                                                                        names(this.param))],
-                                                alpha=param["alpha"],
-                                                hybridIndex=x$HI))
-    cbind(x, loads)
-  })
+  xloads <- by(
+    gdata, 
+    gdata$group1:gdata$group2, 
+    function (x) {
+      pattern <- paste0("^", unique(x$group1), ":", unique(x$group2))
+      this.param <- param[grepl(pattern, names(param))]
+      loads <- rnbinom(
+        n = nrow(x), 
+        size = param["k"],
+        mu = MeanLoad(
+          intercept = this.param[grepl("\\.inter", names(this.param))],
+          growth = this.param[grepl("\\.growth", names(this.param))],
+          alpha = this.param[grepl("\\.alpha", names(this.param))],
+          hybridIndex = x$HI
+        )
+      )
+      cbind(x, loads)
+    }
+  )
   as.data.frame(do.call("rbind", xloads))
 }
 
@@ -45,8 +59,7 @@ simdata <- SimulatedData(simpara, 1000)
 
 G1 <- glm.hybrid(loads ~ HI * group1, data = simdata)
 
-G2 <- glm.hybrid(loads ~ HI * group1, data = simdata)
-
+G2 <- glm.hybrid(loads ~ HI * group1 * group2, data = simdata)
 
 Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
 Joelle_data[is.na(Joelle_data)] <- 0
