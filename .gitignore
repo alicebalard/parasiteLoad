@@ -6,7 +6,7 @@
 .Rproj.user
 
 # History files
-.Rhistory
+R/.Rhistory
 .Rapp.history
 
 # Session Data files
