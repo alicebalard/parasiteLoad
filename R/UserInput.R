@@ -36,13 +36,21 @@ breakFormula <- function(formula){
   response
 }
 
-glm.hybrid <- function(formula, data, hybridIndexName, startValues){
+glm.hybrid <- function(formula, data, 
+                       alpha.along,
+                       alpha.start = 0, 
+                       start.mod = MASS::glm.nb, 
+                       start.values = NA){
   
   ## create the formula in the environment of our function
   formula <- formula(substitute(formula))
   response <- breakFormula(formula)
-
-  nb <- MASS::glm.nb(formula, data=data) # should be computed by the model
+  
+  if(!class(start.mod)%in%"function"){
+    stop("supply a function to estimate starting parameters, even if you supply parameters verbatim (via start.values) use this for structure")
+  }
+  
+  nb <- start.mod(formula, data=data)
   nb.e  <- effects::allEffects(nb, xlevels=2)
   if(length(nb.e) > 1){
     stop("glm.hybrid not only currently only implements models with all potential interactions defined")
@@ -54,7 +62,7 @@ glm.hybrid <- function(formula, data, hybridIndexName, startValues){
     alpha.var <- names(is.factor.var[!is.factor.var])
     
     if (length(alpha.var) != 1 ||
-        !all(alpha.var %in% "HI") ||
+        !all(alpha.var %in% alpha.along) ||
         max(data[, alpha.var]) > 1 ||
         min(data[, alpha.var]) < 0){
       stop("glm.hybrid is currently only implemented for one continuous variable scaled between 0 and 1, along which a non-linar effect (of intensity alpha) is tested")
@@ -62,7 +70,7 @@ glm.hybrid <- function(formula, data, hybridIndexName, startValues){
       original.inverse <- nb.e$transformation$inverse
       nb.t <- as.data.frame(nb.e, transform = original.inverse)
       start.param <- nb.t[, "fit"]
- 
+      
       ## if > 1 group, then nb.t[ , factor.var] is a data.frame
       if (length(factor.var) == 1){ 
         names(start.param) <- nb.t[, factor.var] 
@@ -77,14 +85,18 @@ glm.hybrid <- function(formula, data, hybridIndexName, startValues){
       start.param[grepl("growth$", names(start.param))] <-
         start.param[grepl("growth$", names(start.param))] -
         start.param[grepl("inter$", names(start.param))]
-      param <- c(k = nb$theta, alpha = 0, start.param)
+      param <- c(k = nb$theta, alpha=alpha.start, start.param)
+      param[names(start.values)] <- start.values
       
       ## All we did is prepare the parameters and groups
       ## What is missing is to split the data and parameters by groups
-      opt <- MaximumLikelihood(params = param, data = data,
-                          groupNames = factor.var,
-                          response = response,
-                          hybridIndexName = "HI")
+      opt <- MaximumLikelihood(
+        params = param, 
+        data = data, 
+        groupNames = factor.var, 
+        response = response, 
+        gradient = alpha.along
+      )
       
       ## add proxy of 95%CI
       # bounds <- ML_bounds_Wald(param = param, data = data,

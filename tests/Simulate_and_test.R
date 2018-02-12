@@ -22,6 +22,7 @@ simpara <- c(k = 2,
 
 ################## input end ##################
 
+
 SimulatedData <- function(param, n){
   gdata <- data.frame(
     group1 = rep(c("male", "female"), each=n/2),
@@ -57,60 +58,60 @@ simdata <- SimulatedData(simpara, 1000)
 
 ################## Test : one discrete group OK ##################
 
-G1 <- glm.hybrid(loads ~ HI * group1, data = simdata)
+glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI", alpha.start = 1)
 
-G2 <- glm.hybrid(loads ~ HI * group1 * group2, data = simdata)
+G2 <- glm.hybrid(loads ~ HI * group1, data = simdata, alpha.along = "HI")
+
 
 Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
 Joelle_data[is.na(Joelle_data)] <- 0
 is.na(Joelle_data)
 
-G3 <- glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data)
+G3 <- glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
 
-glm.hybrid(Aspiculuris.Syphacia ~ HI * Sex, data = Joelle_data)
+glm.hybrid(Aspiculuris.Syphacia ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
 
-glm.hybrid(Taenia ~ HI * Sex, data = Joelle_data)
+glm.hybrid(Taenia ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
 
 ################## Test : two discrete groups OK ##################
 
-G4 <- glm.hybrid(loads ~ HI * group1 * group2, data = simdata)
+G4 <- glm.hybrid(loads ~ HI * group1 * group2, data = simdata, alpha.along = "HI")
 
 ################## Test : starting parameters OK ##################
 
 # really bad when starting parameters just close to zero
-opt.para <- glm.hybrid(formula=loads ~ HI*group1*group2, data=simdata,startValues=simpara)
+opt.para <- glm.hybrid(formula=loads ~ HI*group1*group2, data=simdata, alpha.along = "HI",
+                       alpha.start=1, start.values=simpara)
 
-# ADD AGAIN WHEN / IF ALPHA.START IS ADDED BACK
-# glm.h1 <- glm.hybrid(formula=loads~HI*group1*group2, data=simdata, alpha.along = "HI",
-#                                  alpha.start=1)
-# 
-# glm.h1.5 <- glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
-#                                    alpha.start=1.5)
-# 
-# glm.h1.9 <- glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
-#                                    alpha.start=1.9)
-# 
-# glm.h2.5 <- glm.hybrid(formula=loads~HI*group1*group2, data=simdata, "HI",
-#                                    alpha.start=2.5)
+glm.h1 <- glm.hybrid(formula=loads~HI*group1*group2, data=simdata, alpha.along = "HI",
+                     alpha.start=1)
 
-# para.table <- cbind(simpara,
-#                     opt.sim = opt.para$opt.param[names(simpara)],
-#                     opt.nb1 = glm.h1$opt.param[names(simpara)],
-#                     opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
-#                     opt.nb1.9 = glm.h1.9$opt.param[names(simpara)],
-#                     opt.nb2.5 = glm.h2.5$opt.param[names(simpara)])
-# 
-# glm.h1$opt.param
-# opt.para
-# names(simpara)
-# para.table
-# 
-# opt.para$value
-# glm.h1$twologlik/2
-# glm.h1.5$twologlik/2
-# glm.h1.9$twologlik/2
-# glm.h2.5$twologlik/2
-# ADD AGAIN WHEN / IF ALPHA.START IS ADDED BACK
+glm.h1.5 <- glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
+                       alpha.start=1.5)
+
+glm.h1.9 <- glm.hybrid(formula=loads~ HI*group1*group2, data=simdata, alpha.along = "HI",
+                       alpha.start=1.9)
+
+glm.h2.5 <- glm.hybrid(formula=loads~HI*group1*group2, data=simdata, "HI",
+                       alpha.start=2.5)
+
+para.table <- cbind(simpara,
+                    opt.sim = opt.para$opt.param[names(simpara)],
+                    opt.nb1 = glm.h1$opt.param[names(simpara)],
+                    opt.nb1.5 = glm.h1.5$opt.param[names(simpara)],
+                    opt.nb1.9 = glm.h1.9$opt.param[names(simpara)],
+                    opt.nb2.5 = glm.h2.5$opt.param[names(simpara)])
+
+glm.h1$opt.param
+opt.para
+names(simpara)
+para.table
+
+opt.para$value
+glm.h1$twologlik/2
+glm.h1.5$twologlik/2
+glm.h1.9$twologlik/2
+glm.h2.5$twologlik/2
 
 ## replace some of the parameters to not come via glm.nb (start.mod)
 ## but being entered manually (in a named vector, names have to be

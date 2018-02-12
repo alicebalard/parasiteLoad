@@ -12,21 +12,28 @@
 ##                                    ML estimate
 
 
-#########################
-## MeanLoad model: How does the mean load vary depending on the paramseters?
+# We calculate the expected load as follow (see WATWM paper)
+# He(HI) = 2 * HI * (1 - HI)
+# L(HI) = L1 + (L2 - L1) * HI
+# L(HI, alpha) = max(L(HI) * (1 - alpha * He), delta) // delta fixed at 0.01
 MeanLoad <- function(intercept, growth, alpha, hybridIndex){
+  # print(intercept)
+  # print(growth)
+  print(alpha)
+  # print(hybridIndex)
   heterozygoty <- 2 * hybridIndex * (1 - hybridIndex)
   mean <- (intercept + growth * hybridIndex) * (1 - alpha * heterozygoty)
   sapply(mean, function(x) {
     return(max(x, 0.01))
   })
+  # print(mean)
 }
 
 ## The likelihood function over a set of inds
-LogLikelihood <- function(dataForGroup, paramsForGroup, response, hybridIndexName){
+LogLikelihood <- function(dataForGroup, paramsForGroup, response, gradient){
   # TODO : we could return -Infinity if the paramseters are outside boundaries
   # Here data is already splitted by groups
-  hybridIndexesVector <- dataForGroup[, hybridIndexName]
+  hybridIndexesVector <- dataForGroup[, gradient]
   mu <- MeanLoad(
     alpha = paramsForGroup[names(paramsForGroup) %in% "alpha"],
     intercept = paramsForGroup[grepl("inter", names(paramsForGroup))],
@@ -60,12 +67,12 @@ GetParamsForGroup <- function(params, dataForGroup, sortedGroupNames) {
 
 # The likelihood analysis
 MaximumLikelihood <- function (params, data, groupNames, response,
-                          hybridIndexName, hessian=FALSE, control = list(fnscale=-1)){
+                          gradient, hessian = FALSE, control = list(fnscale=-1)){
   ## split the name into two
   sortedGroupNames <- sort(groupNames)
   OptimizationResultsByGroups <- by(
-    data, 
-    data[, sortedGroupNames], 
+    data,
+    data[, sortedGroupNames],
     function(dataForGroup)  {
       ## we now have the data splitted by groups
       ## we are still missing the paramss splitted by groups
@@ -78,7 +85,7 @@ MaximumLikelihood <- function (params, data, groupNames, response,
                   # method = "L-BFGS-B",
                    dataForGroup = dataForGroup,
                    response = response,
-                   hybridIndexName = hybridIndexName)
+                   gradient = gradient)
     }
   )
   print(OptimizationResultsByGroups)
