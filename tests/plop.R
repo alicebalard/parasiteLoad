@@ -1,58 +1,43 @@
-set.seed(1001)
-lymax <- c(0,2)
-lhalf <- 0
-
-install.packages("bbmle")
+# install.packages("bbmle")
 library(bbmle)
+library(ggplot2)
 
-x <- sort(runif(200))
-g <- factor(sample(c("a","b"),200,replace=TRUE))
-y <- rnbinom(200,mu=exp(lymax[g])/(1+x/exp(lhalf)),size=2)
-d2 <- data.frame(x,g,y)
-
-fit3 <- mle2(
-  y~dnbinom(
-    mu = exp(lymax) / (1+x/exp(lhalf)) ,
-    size = exp(logk)
-  ),
-  parameters = list(lymax~g),
-  data = d2,
-  start = list(lymax=0,lhalf=0,logk=0)
-)
-
-plop <- function (lymax, x, lhalf){
-  exp(lymax) / (1+x/exp(lhalf))
+MeanLoad <- function(L1, L2, alpha, hybridIndex){
+  heterozygoty <- 2 * hybridIndex * (1 - hybridIndex)
+  mean <- (L1 + (L2 - L1) * hybridIndex) * (1 - alpha * heterozygoty)
+  mean <- sapply(mean, function(x) {
+    return(max(x, 0.01))
+  })
+  return(mean)
 }
 
-fit3 <- mle2(y~dnbinom(mu=plop(lymax, x, lhalf),size=exp(logk)),
-             parameters=list(lymax~g),data=d2,
-             start=list(lymax=0,lhalf=0,logk=0))
+Aggregation <- function(A1, A2, Z, HI){
+  He <- 2 * HI * (1 - HI)
+  (A1 + (A2 - A1) * HI) + Z * He 
+} 
 
-summary(fit3)
+Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
+Joelle_data[is.na(Joelle_data)] <- 0
 
-
-simpara <- c(k = 2,
-             "male:old.alpha" = 1.4,
-             "male:young.alpha" = 1.2,
-             "male:baby.alpha" = 1.0,
-             "female:old.alpha" = 2.0,
-             "female:young.alpha" = -1.8,
-             "female:baby.alpha" = 1.1,
-             "male:old.inter" = 14,
-             "male:young.inter" = 12,
-             "male:baby.inter" = 10,
-             "female:old.inter" = 20,
-             "female:young.inter" = 18,
-             "female:baby.inter" = 11,
-             "male:old.growth" = 2,
-             "male:young.growth" = 1,
-             "male:baby.growth" = -4,
-             "female:old.growth" = 2,
-             "female:young.growth" = 0,
-             "female:baby.growth" = -1)
-
-################## input end ##################
-
+simparams <- c(k = 2,
+               "male:old.alpha" = 1.4,
+               "male:young.alpha" = 1.2,
+               "male:baby.alpha" = 1.0,
+               "female:old.alpha" = 2.0,
+               "female:young.alpha" = -1.8,
+               "female:baby.alpha" = 1.1,
+               "male:old.inter" = 14,
+               "male:young.inter" = 12,
+               "male:baby.inter" = 10,
+               "female:old.inter" = 20,
+               "female:young.inter" = 18,
+               "female:baby.inter" = 11,
+               "male:old.growth" = 2,
+               "male:young.growth" = 1,
+               "male:baby.growth" = -4,
+               "female:old.growth" = 2,
+               "female:young.growth" = 0,
+               "female:baby.growth" = -1)
 
 SimulatedData <- function(param, n){
   gdata <- data.frame(
@@ -83,20 +68,13 @@ SimulatedData <- function(param, n){
 }
 
 set.seed(5)
-simdata <- SimulatedData(simpara, 1000)
+simdata <- SimulatedData(simparams, 1000)
 
-MeanLoad <- function(L1, L2, alpha, hybridIndex){
-  heterozygoty <- 2 * hybridIndex * (1 - hybridIndex)
-  mean <- (L1 + (L2 - L1) * hybridIndex) * (1 - alpha * heterozygoty)
-  mean <- sapply(mean, function(x) {
-    return(max(x, 0.01))
-  })
-  return(mean)
-}
+##### Input end #####
 
 fit <- mle2(
-  loads ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI), size = abs(k)),
-  parameters = list(L1~group1*group2, L2~group1*group2, alpha~group1*group2, k~group1*group2),
+  loads ~ dnbinom(mu = MeanLoad(L1, L2, alpha, hybridIndex = HI), size = abs(k)),
+  parameters = list(L1~group1, L2~group1, alpha~group1, k~group1),
   data = simdata,
   start = list(L1 = 10, L2 = 10, alpha = 0, k = 1)
   # control = list(fnscale=-1)
@@ -104,14 +82,113 @@ fit <- mle2(
   # lower = c(L1 = 0, L2 = 0, k = 0.01),
   # upper = c(L1 = 200, L2 = 200, alpha = 10, k = 10)
 )
+fit
+mypred <- data.frame(prediction = predict(fit),
+                     HI = simdata$HI,
+                     group1 = simdata$group1)
 
-range(simdata$loads)
+ggplot() +
+  geom_point(aes(x = HI, y = loads, color = group1), data = simdata) +
+  geom_point(aes(x = HI, y = prediction, fill = group1), pch = 21, size = 3, data = mypred) +
+  scale_fill_manual(values = c("red", "darkblue")) +
+  theme_linedraw()
 
+##
+fitwormsA <- mle2(
+  Aspiculuris.Syphacia ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI), size = 1/abs(Aggregation(A1, A2, Z, HI))),
+  #  parameters = list(L1~Sex, L2~Sex, alpha~Sex, A1~Sex, A2~Sex, Z~Sex),
+  data = Joelle_data,
+  start = list(L1 = 10, L2 = 10, alpha = 0, A1 = 1, A2 = 1, Z = 0),
+  method="L-BFGS-B",
+  lower = c(L1 = 0, L2 = 0, A1 = 0, A2 = 0),
+  upper = c(L1 = 200, L2 = 200, A1 = 1000, A2 = 1000)
+)
+summary(fitwormsA)
+
+mypred <- data.frame(prediction = predict(fitwormsA),
+                     HI = Joelle_data$HI,
+                     Sex = Joelle_data$Sex)
+
+ggplot() +
+  scale_color_manual(values = c("red", "darkblue")) +
+  geom_point(aes(x = HI, y = Aspiculuris.Syphacia, color = Sex), 
+             data = Joelle_data) +
+  geom_line(aes(x = HI, y = prediction),
+            data = mypred) +
+  scale_y_continuous(trans='log10')+
+  theme_linedraw()
+
+##
+##
+fitwormsT <- mle2(
+  Taenia ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI), 
+                   size = 1/abs(Aggregation(A1, A2, Z, HI))),
+  #  parameters = list(L1~Sex, L2~Sex, alpha~Sex, A1~Sex, A2~Sex, Z~Sex),
+  data = Joelle_data,
+  start = list(L1 = 10, L2 = 10, alpha = 0, A1 = 1, A2 = 1, Z = 0),
+  method="L-BFGS-B",
+  lower = c(L1 = 0, L2 = 0, A1 = 0, A2 = 0),
+  upper = c(L1 = 200, L2 = 200, A1 = 1000, A2 = 1000)
+)
+summary(fitwormsT)
+
+mypred <- data.frame(prediction = predict(fitwormsT),
+                     HI = Joelle_data$HI,
+                     Sex = Joelle_data$Sex)
+
+ggplot() +
+  scale_color_manual(values = c("red", "darkblue")) +
+  geom_point(aes(x = HI, y = Taenia, color = Sex), 
+             data = Joelle_data) +
+  geom_line(aes(x = HI, y = prediction),
+            data = mypred) +
+  scale_y_continuous(trans='log10')+
+  theme_linedraw()
+
+
+
+########### TO CLEAN AFTER
+
+
+
+fitJ <- mle2(
+  loads ~ dnbinom(mu = MeanLoad(L1, L2, alpha, hybridIndex = HI), size = abs(k)),
+  parameters = list(L1~group1, L2~group1, alpha~group1, k~group1),
+  data = simdata,
+  start = list(L1 = 10, L2 = 10, alpha = 0, k = 1)
+  # control = list(fnscale=-1)
+  # method="L-BFGS-B",
+  # lower = c(L1 = 0, L2 = 0, k = 0.01),
+  # upper = c(L1 = 200, L2 = 200, alpha = 10, k = 10)
+)
+fit
+mypred <- data.frame(prediction = predict(fit),
+                     HI = simdata$HI,
+                     group1 = simdata$group1)
+
+ggplot() +
+  geom_point(aes(x = HI, y = loads, color = group1), data = simdata) +
+  geom_point(aes(x = HI, y = prediction, fill = group1), pch = 21, size = 3, data = mypred) +
+  scale_fill_manual(values = c("red", "darkblue")) +
+  theme_linedraw()
+
+
+
+plot(predict(fit))
 summary(fit)
-confint(fit)
+# confint(fit, parm = c("alpha.(Intercept)"))
 anova(fit)
 
+y <- predict(fit, list(L1= seq(0,1,0.01)), type = "response")
 
+
+fit
+
+
+plot(simdata$HI, simdata$loads, pch = 16, xlab = "HI", ylab = "loads")
+lines(y, seq(0,1,0.01))
+
+y
 ##############
 
 fit0 <- mle2(
@@ -146,15 +223,8 @@ summary(fit)
 confint(fit)
 anova(fit)
 
+############# Real data
 
-
-
-
-
-Aggregation <- function(A1, A2, Z, HI){
-  He <- 2 * HI * (1 - HI)
-  (A1 + (A2 - A1) * HI) + Z * He 
-} 
 
 fitworms <- mle2(
   Trichuris ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI), size = abs(k)),
@@ -163,11 +233,12 @@ fitworms <- mle2(
   start = list(L1 = 10, L2 = 10, alpha = 0, k = 1)
 )
 
+plot(fitworms)
+profileworms <- profile(fitworms)
 
-Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
-Joelle_data[is.na(Joelle_data)] <- 0
-Joelle_data$Aspiculuris.Syphacia
-#G3 <- glm.hybrid(Trichuris ~ HI * Sex, data = Joelle_data, alpha.along = "HI")
+
+class(fitworms)
+
 
 fitwormsA <- mle2(
   Aspiculuris.Syphacia ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI), size = 1/abs(Aggregation(A1, A2, Z, HI))),
