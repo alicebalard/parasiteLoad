@@ -26,132 +26,135 @@ Joelle_data[is.na(Joelle_data)] <- 0
 # Trichuris muris (whipworm)
 # Taenia taeniaeformis (tapeworm) 
 
-## Simulate data for more testing
-simparams <- c(k = 2,
-               "male:old.alpha" = 1.4,
-               "male:young.alpha" = 1.2,
-               "male:baby.alpha" = 1.0,
-               "female:old.alpha" = 2.0,
-               "female:young.alpha" = -1.8,
-               "female:baby.alpha" = 1.1,
-               "male:old.inter" = 14,
-               "male:young.inter" = 12,
-               "male:baby.inter" = 10,
-               "female:old.inter" = 20,
-               "female:young.inter" = 18,
-               "female:baby.inter" = 11,
-               "male:old.growth" = 2,
-               "male:young.growth" = 1,
-               "male:baby.growth" = -4,
-               "female:old.growth" = 2,
-               "female:young.growth" = 0,
-               "female:baby.growth" = -1)
-
-SimulatedData <- function(param, n){
-  gdata <- data.frame(
-    group1 = rep(c("male", "female"), each=n/2),
-    group2 = sample(c("old", "young", "baby"), n, replace=TRUE)
-  )
-  gdata$HI<- round(runif(n), 2)
-  xloads <- by(
-    gdata, 
-    gdata$group1:gdata$group2, 
-    function (x) {
-      pattern <- paste0("^", unique(x$group1), ":", unique(x$group2))
-      this.param <- param[grepl(pattern, names(param))]
-      loads <- rnbinom(
-        n = nrow(x), 
-        size = param["k"],
-        mu = MeanLoad(
-          L1 = this.param[grepl("\\.inter", names(this.param))],
-          L2 = this.param[grepl("\\.growth", names(this.param))],
-          alpha = this.param[grepl("\\.alpha", names(this.param))],
-          hybridIndex = x$HI
-        )
-      )
-      cbind(x, loads)
-    }
-  )
-  as.data.frame(do.call("rbind", xloads))
-}
-
-set.seed(5)
-simdata <- SimulatedData(simparams, 1000)
-
 ##### Input end #####
-
-myFun <- function(data, hybridIndex, response){
-  data$response <- response
-  ### H0 hypothesis
-  # ## WITH hybridization effect on the mean load
-  # myFitAlphaH0 <- mle2(
-  #   response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-  #                      size = 1/abs(Aggregation(A1, A2, Z, HI))),
-  #   data = data,
-  #   fixed = list(L2 = 0, A2 = 0),
-  #   start = list(L1 = 10, alpha = 0, A1 = 1, Z = 0),
-  #   method="L-BFGS-B",
-  #   lower = c(L1 = 0, A1 = 0),
-  #   upper = c(L1 = 200, A1 = 1000))
-  # ## WITHOUT Hybridization effect on the mean load
-  # myFitNoAlphaH0 <- mle2(
-  #   response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-  #                      size = 1/abs(Aggregation(A1, A2, Z, HI))),
-  #   data = data,
-  #   fixed = list(alpha = 0, L2 = 0, A2 = 0),
-  #   start = list(L1 = 10, alpha = 0, A1 = 1, Z = 0),
-  #   method="L-BFGS-B",
-  #   lower = c(L1 = 0, A1 = 0),
-  #   upper = c(L1 = 200, A1 = 1000))
-  # ##### TO DO H1,H2
-  ### H3 hypothesis
-  ## WITH hybridization effect on the mean load
+myFun <- function(data, hybridIndex, response, 
+                  L1start = 10, L1LB = 0, L1UB = 700, 
+                  L2start = 10, L2LB = 0, L2UB = 700, 
+                  alphaStart = 0, alphaLB = -5, alphaUB = 5,
+                  A1start = 10, A1LB = 0, A1UB = 1000, 
+                  A2start = 10, A2LB = 0, A2UB = 1000, 
+                  Zstart = 0, ZLB = -5, ZUB = 5){
+  data$response <- data[[response]] # little trick
+  ################## H1 ##################
+  startH1 <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
+                  A1 = A1start, A2 = A2start, Z = Zstart)
+  myFitAlphaH1 <- mle2(
+    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
+                       size = 1/abs(Aggregation(A1, A2, Z, HI))),
+    data = data, method = "L-BFGS-B",
+    start = startH1
+  )
+  myFitNoAlphaH1 <- mle2(
+    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
+                       size = 1/abs(Aggregation(A1, A2, Z, HI))),
+    data = data, method = "L-BFGS-B",
+    fixed = list(alpha = 0), start = startH1
+  )
+  ################## H3 ##################
+  startH3 <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
+                  A1 = A1start, A2 = A2start, Z = Zstart)
   myFitAlphaH3 <- mle2(
     response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
                        size = 1/abs(Aggregation(A1, A2, Z, HI))),
+    data = data, method = "L-BFGS-B",
     parameters = list(L1~Sex, L2~Sex, alpha~Sex, A1~Sex, A2~Sex, Z~Sex),
-    data = data,
-    start = list(L1 = 10, L2 = 10, alpha = 0, A1 = 1, A2 = 1, Z = 0),
-    method="L-BFGS-B",
-    lower = c(L1 = 0, L2 = 0, A1 = 0, A2 = 0),
-    upper = c(L1 = 200, L2 = 200, A1 = 1000, A2 = 1000))
-  ## WITHOUT Hybridization effect on the mean load
+    start = startH3
+  )
   myFitNoAlphaH3 <- mle2(
     response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
                        size = 1/abs(Aggregation(A1, A2, Z, HI))),
-    data = data,
-    fixed = list(alpha = 0),
+    data = data, method = "L-BFGS-B",
     parameters = list(L1~Sex, L2~Sex, A1~Sex, A2~Sex, Z~Sex),
-    start = list(L1 = 10, L2 = 10, alpha = 0, A1 = 1, A2 = 1, Z = 0),
-    method="L-BFGS-B",
-    lower = c(L1 = 0, L2 = 0, A1 = 0, A2 = 0),
-    upper = c(L1 = 200, L2 = 200, A1 = 1000, A2 = 1000))
-  return(list(H0 = list(fitNoAlpha = myFitNoAlphaH0,
-                        predictNoAlpha = predict(myFitNoAlphaH0),
-                        fitAlpha = myFitAlphaH0,
-                        predictAlpha = predict(myFitAlphaH0)),
-              H3 = list(fitNoAlpha = myFitNoAlphaH3,
-                        predictNoAlpha = predict(myFitNoAlphaH3),
-                        fitAlpha = myFitAlphaH3,
-                        predictAlpha = predict(myFitAlphaH3))))
+    fixed = list(alpha = 0), start = startH3
+  )
+  ################## Output ##################
+  return(list(
+    H1 = list(fitNoAlpha = myFitNoAlphaH1,
+              fitAlpha = myFitAlphaH1),
+    H3 = list(fitNoAlpha = myFitNoAlphaH3,
+              fitAlpha = myFitAlphaH3)))
 }
 
-system.time(ModelPinworm <- myFun(Joelle_data, HI, response = Aspiculuris.Syphacia))
+################## Data analysis ################## 
+system.time(ModelPinworm <- myFun(data = Joelle_data, 
+                                  hybridIndex = HI, 
+                                  response = "Aspiculuris.Syphacia"))
 
-ModelPinworm$fitAlpha
+system.time(ModelWhipworm <- myFun(data = Joelle_data, 
+                                  hybridIndex = HI, 
+                                  response = "Trichuris"))
 
-## Difference between with and without alpha?
-pValueAlpha <- anova(ModelPinworm$fitNoAlpha, ModelPinworm$fitAlpha)[10]
-LLdropIfNoAlpha <- as.numeric(logLik(ModelPinworm$fitNoAlpha) - logLik(ModelPinworm$fitAlpha))
+system.time(ModelTapeworm <- myFun(data = Joelle_data, 
+                                  hybridIndex = HI, 
+                                  response = "Taenia"))
 
-paste("The p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
-      "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2))
+system.time(ModelMasto <- myFun(data = Joelle_data, 
+                                  hybridIndex = HI, 
+                                  response = "Mastophorus"))
 
-## Plotting time!
+# For a given model, downstream analyses and plot
+finalFun <- function(model){
+  ## H1
+  ## Difference between with and without alpha?
+  pValueAlpha <- anova(model$H1$fitNoAlpha, model$H1$fitAlpha)[10]
+  LLdropIfNoAlpha <- as.numeric(logLik(model$H1$fitNoAlpha) - logLik(model$H1$fitAlpha))
+  print(paste("For H1, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
+              "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
+  ## H3
+  ## Difference between with and without alpha?
+  pValueAlpha <- anova(model$H3$fitNoAlpha, model$H3$fitAlpha)[10]
+  LLdropIfNoAlpha <- as.numeric(logLik(model$H3$fitNoAlpha) - logLik(model$H3$fitAlpha))
+  print(paste("For H3, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
+        "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
+  ## Difference H3-H1
+  p <- anova(model$H3$fitAlpha, ModelPinworm$H1$fitAlpha)[10]
+  print(paste("The anova between H0 and H3 has a p-value of", round(p,3)))
+  if(p >= 0.05){print(paste("Therefore we keep the model without sex"))
+  } else {
+    print(paste("Therefore we consider sex as a significant variable"))
+  }
+}
+
+finalFun(ModelPinworm)
+
+################## Plotting ################## 
+
+## profile investigates behavior of objective function near the MLE
+system.time(myProf <- profile(ModelPinworm$H1$fitAlpha))
+
+## Marginal confidence interval
+myConfInt <- confint(myProf)
+
+## Marginal confidence interval for alpha
+alphaCILB <- myConfInt[rownames(myConfInt) == "alpha"][1]
+alphaCIUB <- myConfInt[rownames(myConfInt) == "alpha"][2]
+
+## Draw the line for the parameters at their MLE, alpha varying
+DF <- data.frame(HI = seq(0,1,0.01),
+                 loadMLE = MeanLoad(L1 = coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "L1"],
+                                    L2 =  coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "L2"],
+                                    alpha =  coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "alpha"], 
+                                    hybridIndex = seq(0,1,0.01)),
+                 loadMLEnoAlpha = MeanLoad(L1 = coef(ModelPinworm$H1$fitNoAlpha)[names(coef(ModelPinworm$H1$fitNoAlpha)) == "L1"],
+                                           L2 =  coef(ModelPinworm$H1$fitNoAlpha)[names(coef(ModelPinworm$H1$fitNoAlpha)) == "L2"],
+                                           alpha =  coef(ModelPinworm$H1$fitNoAlpha)[names(coef(ModelPinworm$H1$fitNoAlpha)) == "alpha"], 
+                                           hybridIndex = seq(0,1,0.01)),
+                 loadMLEAlphaLB = MeanLoad(L1 = coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "L1"],
+                                           L2 =  coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "L2"],
+                                           alpha =  alphaCILB,
+                                           hybridIndex = seq(0,1,0.01)),
+                 loadMLEAlphaUB = MeanLoad(L1 = coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "L1"],
+                                           L2 =  coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "L2"],
+                                           alpha =  alphaCIUB,
+                                           hybridIndex = seq(0,1,0.01)))
+     
 ggplot() +
   geom_point(data = Joelle_data, aes(x = HI, y = log10(Aspiculuris.Syphacia + 1), color = Sex)) +
-  geom_line(aes(x = HI, y = log10(ModelPinworm$predictAlpha + 1), color = Sex)) +
-  geom_line(aes(x = HI, y = log10(ModelPinworm$predictNoAlpha +1), color = Sex), linetype="dotted") +
+  geom_ribbon(aes(x = DF$HI, 
+                  ymin = log10(DF$loadMLEAlphaUB + 1), 
+                  ymax = log10(DF$loadMLEAlphaLB + 1)),
+              fill = "grey", alpha = .5) +
+  geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
+  geom_line(aes(x = DF$HI, y = log10(DF$loadMLEnoAlpha + 1)), linetype="dotted") +
   scale_color_manual(values = c("red", "darkblue")) +
-  scale_y_continuous(trans='log10')+
   theme_linedraw()
