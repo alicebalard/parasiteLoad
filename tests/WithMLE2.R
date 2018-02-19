@@ -247,3 +247,82 @@ ggplot() +
   geom_line(aes(x = DF$HI, y = log10(DF$loadMLEnoAlpha + 1)), linetype="dotted") +
   scale_color_manual(values = c("red", "darkblue")) +
   theme_linedraw()
+
+
+
+### Test plots
+DF <- data.frame(HI = seq(0,1,0.01),
+                 loadMLE = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+                                    L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+                                    alpha =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "alpha"], 
+                                    hybridIndex = seq(0,1,0.01)),
+                 loadMLEnoAlpha = MeanLoad(L1 = coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "L1"],
+                                    L2 =  coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "L2"],
+                                    alpha =  coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "alpha"], 
+                                    hybridIndex = seq(0,1,0.01))
+)
+
+ggplot() +
+  geom_point(data = Joelle_data, aes(x = HI, y = log10(Trichuris + 1), color = Sex)) +
+  # geom_ribbon(aes(x = DF$HI, 
+  #                 ymin = log10(DF$loadMLEAlphaUB + 1), 
+  #                 ymax = log10(DF$loadMLEAlphaLB + 1)),
+  #             fill = "grey", alpha = .5) +
+  geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
+  geom_line(aes(x = DF$HI, y = log10(DF$loadMLEnoAlpha + 1)), linetype="dotted") +
+  scale_color_manual(values = c("red", "darkblue")) +
+  theme_linedraw()
+
+DF <- data.frame(HI = seq(0,1,0.01),
+                 loadMLE_M = MeanLoad(L1 = coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "L1.(Intercept)"] +
+                                        coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "L1.SexM"],
+                                      L2 = coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "L2.(Intercept)"] +
+                                        coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "L2.SexM"],
+                                      alpha =   coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "alpha.(Intercept)"] +
+                                        coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "alpha.SexM"],
+                                      hybridIndex = seq(0,1,0.01)),
+                 loadMLE_F = MeanLoad(L1 = coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "L1.(Intercept)"],
+                                      L2 = coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "L2.(Intercept)"], 
+                                      alpha =   coef(ModelWhipworm$H3$fitAlpha)[names(coef(ModelWhipworm$H3$fitAlpha)) == "alpha.(Intercept)"],
+                                      hybridIndex = seq(0,1,0.01)),
+                 loadMLE_M_noalpha = MeanLoad(L1 = coef(ModelWhipworm$H3$fitNoAlpha)[names(coef(ModelWhipworm$H3$fitNoAlpha)) == "L1.(Intercept)"] +
+                                                coef(ModelWhipworm$H3$fitNoAlpha)[names(coef(ModelWhipworm$H3$fitNoAlpha)) == "L1.SexM"],
+                                              L2 = coef(ModelWhipworm$H3$fitNoAlpha)[names(coef(ModelWhipworm$H3$fitNoAlpha)) == "L2.(Intercept)"] +
+                                                coef(ModelWhipworm$H3$fitNoAlpha)[names(coef(ModelWhipworm$H3$fitNoAlpha)) == "L2.SexM"],
+                                              alpha = 0,
+                                              hybridIndex = seq(0,1,0.01)),
+                 loadMLE_F_noalpha = MeanLoad(L1 = coef(ModelWhipworm$H3$fitNoAlpha)[names(coef(ModelWhipworm$H3$fitNoAlpha)) == "L1.(Intercept)"],
+                                              L2 = coef(ModelWhipworm$H3$fitNoAlpha)[names(coef(ModelWhipworm$H3$fitNoAlpha)) == "L2.(Intercept)"], 
+                                              alpha = 0,
+                                              hybridIndex = seq(0,1,0.01)))
+
+                 # loadMLEAlphaLB_M = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+                 #                             alpha =  alphaCIUB_M,
+                 #                             hybridIndex = seq(0,1,0.01)),
+                 # loadMLEAlphaLB_F = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+                 #                             alpha =  alphaCIUB_F,
+                 #                             hybridIndex = seq(0,1,0.01)),
+                 # loadMLEAlphaUB_M = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+                 #                             alpha =  alphaCILB_M,
+                 #                             hybridIndex = seq(0,1,0.01)),
+                 # loadMLEAlphaUB_F = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+                 #                             alpha =  alphaCILB_F,
+                 #                             hybridIndex = seq(0,1,0.01)))
+
+
+ggplot() +
+  geom_point(data = Joelle_data, aes(x = HI, y = log10(Trichuris + 1), color = Sex)) +
+  # geom_ribbon(aes(x = DF$HI, 
+  #                 ymin = log10(DF$loadMLEAlphaUB + 1), 
+  #                 ymax = log10(DF$loadMLEAlphaLB + 1)),
+  #             fill = "grey", alpha = .5) +
+  geom_line(aes(x = DF$HI, y = log10(DF$loadMLE_M + 1)), col = "blue") +
+  geom_line(aes(x = DF$HI, y = log10(DF$loadMLE_F + 1)), col = "red") +
+#  geom_line(aes(x = DF$HI, y = log10(DF$loadMLEnoAlpha + 1)), linetype="dotted") +
+  scale_color_manual(values = c("red", "darkblue")) +
+  theme_linedraw()
+
