@@ -1,6 +1,7 @@
 # install.packages("bbmle")
 library(bbmle)
 library(ggplot2)
+library(optimx)
 
 ## Functions defining the distribution of mu and 1/k of the Negative binomial distribution
 MeanLoad <- function(L1, L2, alpha, hybridIndex){
@@ -35,37 +36,56 @@ myFun <- function(data, hybridIndex, response,
                   A2start = 10, A2LB = 0, A2UB = 1000, 
                   Zstart = 0, ZLB = -5, ZUB = 5){
   data$response <- data[[response]] # little trick
+  ###
+  MaxLikelihoodFun <- function(start, data, fixed = NULL, parameters = NULL){
+    if (!is.null(fixed)) {
+      fit <- mle2(
+        response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
+                                     size = 1/abs(Aggregation(A1, A2, Z, HI))),
+        data = data, 
+        optimizer = "optimx",
+        method = "bobyqa",
+        start = start, 
+        fixed = fixed,
+        parameters = parameters
+      )
+    }
+    else {
+      fit <- mle2(
+        response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
+                           size = 1/abs(Aggregation(A1, A2, Z, HI))),
+        data = data, 
+        optimizer = "optimx",
+        method = "bobyqa",
+        start = start, 
+        parameters = parameters
+      ) 
+    }
+    convergence <- fit@details$convergence
+    print(ifelse(convergence == 0, "Did converge", "Did not converge"))
+    return(fit)
+  }
   ################## H1 ##################
+  print("H1 alpha")
   startH1 <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
                   A1 = A1start, A2 = A2start, Z = Zstart)
-  myFitAlphaH1 <- mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                       size = 1/abs(Aggregation(A1, A2, Z, HI))),
-    data = data, method = "L-BFGS-B",
-    start = startH1
-  )
-  myFitNoAlphaH1 <- mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                       size = 1/abs(Aggregation(A1, A2, Z, HI))),
-    data = data, method = "L-BFGS-B",
-    fixed = list(alpha = 0), start = startH1
-  )
+  myFitAlphaH1 <- MaxLikelihoodFun(startH1, data)
+  print("H1 no alpha")
+  myFitNoAlphaH1 <- MaxLikelihoodFun(startH1, data, fixed = list(alpha = 0))
   ################## H3 ##################
+  print("H3 alpha")
   startH3 <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
                   A1 = A1start, A2 = A2start, Z = Zstart)
-  myFitAlphaH3 <- mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                       size = 1/abs(Aggregation(A1, A2, Z, HI))),
-    data = data, method = "L-BFGS-B",
-    parameters = list(L1~Sex, L2~Sex, alpha~Sex, A1~Sex, A2~Sex, Z~Sex),
-    start = startH3
-  )
-  myFitNoAlphaH3 <- mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                       size = 1/abs(Aggregation(A1, A2, Z, HI))),
-    data = data, method = "L-BFGS-B",
+  myFitAlphaH3 <- MaxLikelihoodFun(
+    startH3, 
+    data, 
+    parameters = list(L1~Sex, L2~Sex, alpha~Sex, A1~Sex, A2~Sex, Z~Sex))
+  print("H3 no alpha")
+  myFitNoAlphaH3 <- MaxLikelihoodFun(
+    startH3,
+    data,
     parameters = list(L1~Sex, L2~Sex, A1~Sex, A2~Sex, Z~Sex),
-    fixed = list(alpha = 0), start = startH3
+    fixed = list(alpha = 0)
   )
   ################## Output ##################
   return(list(
