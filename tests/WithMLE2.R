@@ -113,29 +113,98 @@ system.time(ModelMasto <- myFun(data = Joelle_data,
                                   response = "Mastophorus"))
 
 # For a given model, downstream analyses and plot
-finalFun <- function(model){
+finalFun <- function(models){
+  extractpValue <- function(hypothesis){
+    myAnova <- anova(hypothesis$fitNoAlpha, hypothesis$fitAlpha)
+    mypValueAlpha <- myAnova[colnames(myAnova) == "Pr(>Chisq)"][2]
+  }
+  
+  LLIncreaseIfAlpha <- function(hypothesis){
+    as.numeric(logLik(hypothesis$fitAlpha) - logLik(hypothesis$fitNoAlpha))
+  }
+  
+  isAlphaSignificant <- function(hypothesis, name){
+    pValue <- extractpValue(hypothesis)
+    LLIncrease <- LLIncreaseIfAlpha(hypothesis)
+    print(
+      paste0(
+        "For ", name, " the p-value of the anova test when we add alpha is ", round(pValue, 3), 
+        ". It corresponds to an increase of likelihood of ", round(LLIncrease,2), "."
+      )
+    )
+    return(pValue < 0.05 & LLIncrease > 0)
+  }
+  
+  H1 <- models$H1
+  H3 <- models$H3
+  
+  isAlphaH1Significant <- isAlphaSignificant(H1, "H1")
+  isAlphaH3Significant <- isAlphaSignificant(H3, "H3")
+  
+  selectBestHypothesis <- function(H1, isAlphaH1Significant, H3, isAlphaH3Significant) {
+    if(isAlphaH1Significant) {
+      print("Using H1 with alpha")
+      H1ModelToTest <- H1$fitAlpha
+    } else {
+      print("Using H1 without alpha")
+      H1ModelToTest <- H1$fitNoAlpha
+    }
+    if(isAlphaH3Significant) {
+      print("Using H3 with alpha")
+      H3ModelToTest <- H3$fitAlpha
+    } else {
+      print("Using H3 without alpha")
+      H3ModelToTest <- H3$fitNoAlpha
+    }
+    H1toH3Anova <- anova(H1ModelToTest, H3ModelToTest)
+    pValue <- H1toH3Anova[colnames(H1toH3Anova) == "Pr(>Chisq)"][2]
+    LLIncrease <- as.numeric(logLik(H3ModelToTest) - logLik(H1ModelToTest))
+
+    print(paste("The anova between H1 and H3 has a p-value of", round(pValue, 3)))
+    print(paste("The likelihood increase between H1 and H3 is ", round(LLIncrease, 2)))
+    isH3Better <- pValue < 0.05 & LLIncrease > 0
+
+    if(isH3Better){
+      print("Therefore we consider sex as a significant variable")
+    } else {
+      print("Therefore we keep the model without sex.")
+    }
+  }
+
+  selectBestHypothesis(H1, isAlphaH1Significant, H3, isAlphaH3Significant)
+  
   ## H1
   ## Difference between with and without alpha?
-  pValueAlpha <- anova(model$H1$fitNoAlpha, model$H1$fitAlpha)[10]
-  LLdropIfNoAlpha <- as.numeric(logLik(model$H1$fitNoAlpha) - logLik(model$H1$fitAlpha))
-  print(paste("For H1, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
-              "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
-  ## H3
-  ## Difference between with and without alpha?
-  pValueAlpha <- anova(model$H3$fitNoAlpha, model$H3$fitAlpha)[10]
-  LLdropIfNoAlpha <- as.numeric(logLik(model$H3$fitNoAlpha) - logLik(model$H3$fitAlpha))
-  print(paste("For H3, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
-        "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
-  ## Difference H3-H1
-  p <- anova(model$H3$fitAlpha, ModelPinworm$H1$fitAlpha)[10]
-  print(paste("The anova between H0 and H3 has a p-value of", round(p,3)))
-  if(p >= 0.05){print(paste("Therefore we keep the model without sex"))
-  } else {
-    print(paste("Therefore we consider sex as a significant variable"))
-  }
+  
+  # print(paste("LLH1NoAlpha =", as.numeric(logLik(model$H1$fitNoAlpha))))
+  # print(paste("LLH1Alpha =", as.numeric(logLik(model$H1$fitAlpha))))
+  # LLdropIfNoAlpha <- as.numeric(logLik(model$H1$fitNoAlpha) - logLik(model$H1$fitAlpha))
+  # print(paste("For H1, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
+  #             "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
+  # ## H3
+  # ## Difference between with and without alpha?
+  # pValueH3 <- extractpValue(models$H3)
+  # logLikDropH3 <- LLdropIfNoAlpha(models$H3)
+  # 
+  # pValueAlpha <- anova(model$H3$fitNoAlpha, model$H3$fitAlpha)[10]
+  # print(paste("LLH3NoAlpha =", as.numeric(logLik(model$H3$fitNoAlpha))))
+  # print(paste("LLH3Alpha =", as.numeric(logLik(model$H3$fitAlpha))))
+  #   LLdropIfNoAlpha <- as.numeric(logLik(model$H3$fitNoAlpha) - logLik(model$H3$fitAlpha))
+  # print(paste("For H3, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
+  #       "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
+  # ## Difference H3-H1
+  # p <- anova(model$H3$fitAlpha, ModelPinworm$H1$fitAlpha)[10]
+  # print(paste("The anova between H1 and H3 has a p-value of", round(p,3)))
+  # if(p >= 0.05 ){print(paste("Therefore we keep the model without sex"))
+  # } else {
+  #   print(paste("Therefore we consider sex as a significant variable"))
+  # }
 }
 
 finalFun(ModelPinworm)
+finalFun(ModelWhipworm)
+finalFun(ModelTapeworm)
+finalFun(ModelMasto)
 
 ################## Plotting ################## 
 
