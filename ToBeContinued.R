@@ -8,7 +8,7 @@ MeanLoad <- function(L1, L2, alpha, hybridIndex){
   heterozygoty <- 2 * hybridIndex * (1 - hybridIndex)
   mean <- (L1 + (L2 - L1) * hybridIndex) * (1 - alpha * heterozygoty)
   mean <- sapply(mean, function(x) {
-    return(max(x, 0.01))
+   return(max(x, 0.01))
   })
   return(mean)
 }
@@ -19,10 +19,19 @@ Aggregation <- function(A1, A2, Z, hybridIndex){
   return(aggregation)
 } 
 
+SizeNegBin <- function(A1, A2, Z, hybridIndex){
+  aggregation <- Aggregation(A1, A2, Z, hybridIndex)
+  aggregation <- sapply(aggregation, function(x) {
+    return(max(x, 0.01))
+  })
+  size <- 1/aggregation
+  return(size)
+} 
+
 ## Import data WATWM
 Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
 # to check
-Joelle_data[is.na(Joelle_data)] <- 0
+Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
 # pinworms (A. tetraptera and S. obvelata)
 # Trichuris muris (whipworm)
 # Taenia taeniaeformis (tapeworm) 
@@ -41,7 +50,7 @@ myFun <- function(data, hybridIndex, response,
     if (!is.null(fixed)) {
       fit <- mle2(
         response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                                     size = 1/abs(Aggregation(A1, A2, Z, HI))),
+                           size = SizeNegBin(A1, A2, Z, HI)),
         data = data, 
         optimizer = "optimx",
         method = "bobyqa",
@@ -53,7 +62,7 @@ myFun <- function(data, hybridIndex, response,
     else {
       fit <- mle2(
         response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                           size = 1/abs(Aggregation(A1, A2, Z, HI))),
+                           size = SizeNegBin(A1, A2, Z, HI)),
         data = data, 
         optimizer = "optimx",
         method = "bobyqa",
@@ -66,57 +75,93 @@ myFun <- function(data, hybridIndex, response,
     return(fit)
   }
   ################## H1 ##################
-  print("H1 alpha")
-  startH1 <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
+  print("alpha")
+  start <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
                   A1 = A1start, A2 = A2start, Z = Zstart)
-  myFitAlphaH1 <- MaxLikelihoodFun(startH1, data)
-  print("H1 no alpha")
-  myFitNoAlphaH1 <- MaxLikelihoodFun(startH1, data, fixed = list(alpha = 0))
-  ################## H3 ##################
-  print("H3 alpha")
-  startH3 <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
-                  A1 = A1start, A2 = A2start, Z = Zstart)
-  myFitAlphaH3 <- MaxLikelihoodFun(
-    startH3, 
-    data, 
-    parameters = list(L1~Sex, L2~Sex, alpha~Sex, A1~Sex, A2~Sex, Z~Sex))
-  print("H3 no alpha")
-  myFitNoAlphaH3 <- MaxLikelihoodFun(
-    start = list(L1 = L1start, L2 = L2start, A1 = A1start, A2 = A2start, Z = Zstart, alpha = alphaStart),
-    data,
-    parameters = list(L1~Sex, L2~Sex, A1~Sex, A2~Sex, Z~Sex),
-    fixed = list(alpha = 0)
-  )
+  myFitAlpha <- MaxLikelihoodFun(start, data)
+  print("fixed alpha")
+  myFitNoAlpha <- MaxLikelihoodFun(start, data, fixed = list(alpha = 0))
   ################## Output ##################
-  return(list(
-    H1 = list(fitNoAlpha = myFitNoAlphaH1,
-              fitAlpha = myFitAlphaH1),
-    H3 = list(fitNoAlpha = myFitNoAlphaH3,
-              fitAlpha = myFitAlphaH3)))
+return(list(fitNoAlpha = myFitNoAlpha,
+            fitAlpha = myFitAlpha))
 }
 
 ################## Data analysis ################## 
+dataTrichuris <- Joelle_data[complete.cases(Joelle_data$Trichuris),]
+
+dataTrichuris_F <- dataTrichuris[dataTrichuris$Sex == "F",]
+dataTrichuris_F$Sex <- droplevels(dataTrichuris_F$Sex)
+
+system.time(ModelTestWhipworm <- myFun(data = dataTrichuris_F, 
+                                  hybridIndex = HI, 
+                                  response = "Trichuris"))
+
+anova(ModelTestWhipworm$fitNoAlpha, ModelTestWhipworm$fitAlpha)
+logLik(ModelTestWhipworm$fitNoAlpha)
+logLik(ModelTestWhipworm$fitAlpha)
+
+## Draw the line for the parameters at their MLE, alpha varying
+
+myPlot <- function(myFitAlpha, myFitNoAlpha, response, HI, Sex){
+DF <- data.frame(HI = seq(0,1,0.01),
+                 loadMLE = MeanLoad(L1 = coef(myFitAlpha)[names(coef(myFitAlpha)) == "L1"],
+                                    L2 =  coef(myFitAlpha)[names(coef(myFitAlpha)) == "L2"],
+                                    alpha =  coef(myFitAlpha)[names(coef(myFitAlpha)) == "alpha"], 
+                                    hybridIndex = seq(0,1,0.01)),
+                 loadMLEnoAlpha = MeanLoad(L1 = coef(myFitNoAlpha)[names(coef(myFitNoAlpha)) == "L1"],
+                                           L2 =  coef(myFitNoAlpha)[names(coef(myFitNoAlpha)) == "L2"],
+                                           alpha =  coef(myFitNoAlpha)[names(coef(myFitNoAlpha)) == "alpha"], 
+                                           hybridIndex = seq(0,1,0.01)),
+                 loadWATWM = MeanLoad(L1 = 1.19,
+                                      L2 = 8.45,
+                                      alpha = 0.54,
+                                      hybridIndex = seq(0,1,0.01)))
+ggplot() +
+  geom_point(aes(x = 1- HI, y = log10(response + 1), color = Sex)) +
+  geom_line(aes(x = 1- DF$HI, y = log10(DF$loadMLE + 1))) +
+  geom_line(aes(x = 1- DF$HI, y = log10(DF$loadMLEnoAlpha + 1)), linetype="dotted") +
+  geom_line(aes(x = 1- DF$HI, y = log10(DF$loadWATWM + 1)), color = "pink") +
+  scale_color_manual(values = c("red", "darkblue")) +
+  theme_linedraw()
+}
+
+myPlot(ModelTestWhipworm$fitAlpha, ModelTestWhipworm$fitNoAlpha, 
+       Joelle_data$Trichuris, Joelle_data$HI, Joelle_data$Sex)
+
+
+
+myprofle <- profile(ModelTestWhipworm$fitAlpha)
+
+
+
+
+
+
+
+
+plot(y = log10(dataTrichuris_F$Trichuris +1), 
+     x = 1 - dataTrichuris_F$HI)
+
+range(dataTrichuris_F$Trichuris[dataTrichuris_F$HI < 0.3])
+
 system.time(ModelPinworm <- myFun(data = Joelle_data, 
                                   hybridIndex = HI, 
                                   response = "Aspiculuris.Syphacia"))
 
+
 system.time(ModelWhipworm <- myFun(data = Joelle_data, 
-                                  hybridIndex = HI, 
-                                  response = "Trichuris"))
+                                   hybridIndex = HI, 
+                                   response = "Trichuris"))
 
 system.time(ModelTapeworm <- myFun(data = Joelle_data, 
-                                  hybridIndex = HI, 
-                                  response = "Taenia"))
+                                   hybridIndex = HI, 
+                                   response = "Taenia"))
 
 system.time(ModelMasto <- myFun(data = Joelle_data, 
-                                  hybridIndex = HI, 
-                                  response = "Mastophorus"))
+                                hybridIndex = HI, 
+                                response = "Mastophorus"))
 
 ## Present in table
-
-H3table$L1.SexF <- H3table$`L1.(Intercept)`
-H3table$L1.SexM <- H3table$`L1.(Intercept)` + H3table$L1.SexM
-
 printModelAsTable <- function(model, modelName, interceptGroupName){
   modelTable <- t(data.frame(model@fullcoef))
   rownames(modelTable) <- modelName
@@ -148,7 +193,7 @@ H3df <- gtools::smartbind(df3, df4)
 df1 <- printModelAsTable(ModelWhipworm$H1$fitNoAlpha, "noAlpha", "SexF")
 df2 <- printModelAsTable(ModelWhipworm$H1$fitAlpha, "alpha", "SexF")
 df3 <- printModelAsTable(ModelWhipworm$H3$fitNoAlpha, "noAlpha", "SexF")
-df4 <- printModelAsTable(ModelWhipworm$H3$fitAlpha, "alpha", "SexF")
+df4 <- printModelAsTable(ModelPinworm$H3$fitAlpha, "alpha", "SexF")
 
 H1df <- gtools::smartbind(df1, df2)
 H3df <- gtools::smartbind(df3, df4)
@@ -200,18 +245,18 @@ finalFun <- function(models){
     H1toH3Anova <- anova(H1ModelToTest, H3ModelToTest)
     pValue <- H1toH3Anova[colnames(H1toH3Anova) == "Pr(>Chisq)"][2]
     LLIncrease <- as.numeric(logLik(H3ModelToTest) - logLik(H1ModelToTest))
-
+    
     print(paste("The anova between H1 and H3 has a p-value of", round(pValue, 3)))
     print(paste("The likelihood increase between H1 and H3 is ", round(LLIncrease, 2)))
     isH3Better <- pValue < 0.05 & LLIncrease > 0
-
+    
     if(isH3Better){
       print("Therefore we consider sex as a significant variable")
     } else {
       print("Therefore we keep the model without sex.")
     }
   }
-
+  
   selectBestHypothesis(H1, isAlphaH1Significant, H3, isAlphaH3Significant)
 }
 
@@ -250,7 +295,7 @@ DF <- data.frame(HI = seq(0,1,0.01),
                                            L2 =  coef(ModelPinworm$H1$fitAlpha)[names(coef(ModelPinworm$H1$fitAlpha)) == "L2"],
                                            alpha =  alphaCIUB,
                                            hybridIndex = seq(0,1,0.01)))
-     
+
 ggplot() +
   geom_point(data = Joelle_data, aes(x = HI, y = log10(Aspiculuris.Syphacia + 1), color = Sex)) +
   geom_ribbon(aes(x = DF$HI, 
@@ -271,9 +316,9 @@ DF <- data.frame(HI = seq(0,1,0.01),
                                     alpha =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "alpha"], 
                                     hybridIndex = seq(0,1,0.01)),
                  loadMLEnoAlpha = MeanLoad(L1 = coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "L1"],
-                                    L2 =  coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "L2"],
-                                    alpha =  coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "alpha"], 
-                                    hybridIndex = seq(0,1,0.01))
+                                           L2 =  coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "L2"],
+                                           alpha =  coef(ModelWhipworm$H1$fitNoAlpha)[names(coef(ModelWhipworm$H1$fitNoAlpha)) == "alpha"], 
+                                           hybridIndex = seq(0,1,0.01))
 )
 
 ggplot() +
@@ -310,22 +355,22 @@ DF <- data.frame(HI = seq(0,1,0.01),
                                               alpha = 0,
                                               hybridIndex = seq(0,1,0.01)))
 
-                 # loadMLEAlphaLB_M = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
-                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
-                 #                             alpha =  alphaCIUB_M,
-                 #                             hybridIndex = seq(0,1,0.01)),
-                 # loadMLEAlphaLB_F = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
-                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
-                 #                             alpha =  alphaCIUB_F,
-                 #                             hybridIndex = seq(0,1,0.01)),
-                 # loadMLEAlphaUB_M = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
-                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
-                 #                             alpha =  alphaCILB_M,
-                 #                             hybridIndex = seq(0,1,0.01)),
-                 # loadMLEAlphaUB_F = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
-                 #                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
-                 #                             alpha =  alphaCILB_F,
-                 #                             hybridIndex = seq(0,1,0.01)))
+# loadMLEAlphaLB_M = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+#                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+#                             alpha =  alphaCIUB_M,
+#                             hybridIndex = seq(0,1,0.01)),
+# loadMLEAlphaLB_F = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+#                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+#                             alpha =  alphaCIUB_F,
+#                             hybridIndex = seq(0,1,0.01)),
+# loadMLEAlphaUB_M = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+#                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+#                             alpha =  alphaCILB_M,
+#                             hybridIndex = seq(0,1,0.01)),
+# loadMLEAlphaUB_F = MeanLoad(L1 = coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L1"],
+#                             L2 =  coef(ModelWhipworm$H1$fitAlpha)[names(coef(ModelWhipworm$H1$fitAlpha)) == "L2"],
+#                             alpha =  alphaCILB_F,
+#                             hybridIndex = seq(0,1,0.01)))
 
 
 ggplot() +
@@ -336,7 +381,7 @@ ggplot() +
   #             fill = "grey", alpha = .5) +
   geom_line(aes(x = DF$HI, y = log10(DF$loadMLE_M + 1)), col = "blue") +
   geom_line(aes(x = DF$HI, y = log10(DF$loadMLE_F + 1)), col = "red") +
-#  geom_line(aes(x = DF$HI, y = log10(DF$loadMLEnoAlpha + 1)), linetype="dotted") +
+  #  geom_line(aes(x = DF$HI, y = log10(DF$loadMLEnoAlpha + 1)), linetype="dotted") +
   scale_color_manual(values = c("red", "darkblue")) +
   theme_linedraw()
 
