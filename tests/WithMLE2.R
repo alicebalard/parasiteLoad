@@ -112,6 +112,39 @@ system.time(ModelMasto <- myFun(data = Joelle_data,
                                   hybridIndex = HI, 
                                   response = "Mastophorus"))
 
+## Present in table
+
+H3table$L1.SexF <- H3table$`L1.(Intercept)`
+H3table$L1.SexM <- H3table$`L1.(Intercept)` + H3table$L1.SexM
+
+printModelAsTable <- function(model, modelName, interceptGroupName){
+  modelTable <- t(data.frame(model@fullcoef))
+  rownames(modelTable) <- modelName
+  colNames <- colnames(modelTable)[grep("(Intercept)", colnames(modelTable))]
+  parNames <- gsub('\\(Intercept\\)', "", colNames)
+  for (parName in parNames){
+    oldInterceptColname <- paste0(parName, "(Intercept)")
+    newInterceptColname <- paste0(parName, interceptGroupName)
+    colnames(modelTable)[colnames(modelTable) == oldInterceptColname]  <- newInterceptColname 
+    interceptValue <- modelTable[,newInterceptColname]
+    otherColumnsPattern <- paste0(parName, '(?!', interceptGroupName, ')')
+    otherColumnsSelector <- grepl(otherColumnsPattern, colnames(modelTable), perl = TRUE)
+    otherColumns <- colnames(modelTable)[otherColumnsSelector]
+    for (columnToChange in otherColumns) {
+      modelTable[,columnToChange] <- modelTable[,columnToChange] + interceptValue
+    }
+  }
+  return(modelTable)
+}
+
+df1 <- printModelAsTable(ModelPinworm$H1$fitNoAlpha, "noAlpha", "SexF")
+df2 <- printModelAsTable(ModelPinworm$H1$fitAlpha, "alpha", "SexF")
+df3 <- printModelAsTable(ModelPinworm$H3$fitNoAlpha, "noAlpha", "SexF")
+df4 <- printModelAsTable(ModelPinworm$H3$fitAlpha, "alpha", "SexF")
+
+H1df <- gtools::smartbind(df1, df2)
+H3df <- gtools::smartbind(df3, df4)
+
 # For a given model, downstream analyses and plot
 finalFun <- function(models){
   extractpValue <- function(hypothesis){
