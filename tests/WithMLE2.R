@@ -205,33 +205,6 @@ finalFun <- function(models){
   }
 
   selectBestHypothesis(H1, isAlphaH1Significant, H3, isAlphaH3Significant)
-  
-  ## H1
-  ## Difference between with and without alpha?
-  
-  # print(paste("LLH1NoAlpha =", as.numeric(logLik(model$H1$fitNoAlpha))))
-  # print(paste("LLH1Alpha =", as.numeric(logLik(model$H1$fitAlpha))))
-  # LLdropIfNoAlpha <- as.numeric(logLik(model$H1$fitNoAlpha) - logLik(model$H1$fitAlpha))
-  # print(paste("For H1, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
-  #             "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
-  # ## H3
-  # ## Difference between with and without alpha?
-  # pValueH3 <- extractpValue(models$H3)
-  # logLikDropH3 <- LLdropIfNoAlpha(models$H3)
-  # 
-  # pValueAlpha <- anova(model$H3$fitNoAlpha, model$H3$fitAlpha)[10]
-  # print(paste("LLH3NoAlpha =", as.numeric(logLik(model$H3$fitNoAlpha))))
-  # print(paste("LLH3Alpha =", as.numeric(logLik(model$H3$fitAlpha))))
-  #   LLdropIfNoAlpha <- as.numeric(logLik(model$H3$fitNoAlpha) - logLik(model$H3$fitAlpha))
-  # print(paste("For H3, the p-value of the anova test when we remove alpha is", round(pValueAlpha, 5), 
-  #       "It corresponds to a drop of likelihood of", round(LLdropIfNoAlpha,2)))
-  # ## Difference H3-H1
-  # p <- anova(model$H3$fitAlpha, ModelPinworm$H1$fitAlpha)[10]
-  # print(paste("The anova between H1 and H3 has a p-value of", round(p,3)))
-  # if(p >= 0.05 ){print(paste("Therefore we keep the model without sex"))
-  # } else {
-  #   print(paste("Therefore we consider sex as a significant variable"))
-  # }
 }
 
 finalFun(ModelPinworm)
