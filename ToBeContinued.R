@@ -3,19 +3,33 @@ library(bbmle)
 library(ggplot2)
 library(optimx)
 
+## Import data WATWM
+Joelle_data <- read.csv("examples/Reproduction_WATWM/EvolutionFinalData.csv")
+# to check
+Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
+# pinworms (A. tetraptera and S. obvelata)
+# Trichuris muris (whipworm)
+dataTrichuris <- Joelle_data[complete.cases(Joelle_data$Trichuris),]
+dataTrichuris_F <- dataTrichuris[dataTrichuris$Sex == "F",]
+dataTrichuris_F$Sex <- droplevels(dataTrichuris_F$Sex)
+
+# Taenia taeniaeformis (tapeworm) 
+
+##### Input end #####
+
 ## Functions defining the distribution of mu and 1/k of the Negative binomial distribution
 MeanLoad <- function(L1, L2, alpha, hybridIndex){
   heterozygoty <- 2 * hybridIndex * (1 - hybridIndex)
   mean <- (L1 + (L2 - L1) * hybridIndex) * (1 - alpha * heterozygoty)
   mean <- sapply(mean, function(x) {
-   return(max(x, 0.01))
+    return(max(x, 0.01))
   })
   return(mean)
 }
 
 Aggregation <- function(A1, A2, Z, hybridIndex){
   heterozygoty <- 2 * hybridIndex * (1 - hybridIndex)
-  aggregation <- (A1 + (A2 - A1) * hybridIndex) * (1 - Z * heterozygoty) 
+  aggregation <- (A1 + (A2 - A1) * hybridIndex) + Z * heterozygoty 
   return(aggregation)
 } 
 
@@ -28,73 +42,122 @@ SizeNegBin <- function(A1, A2, Z, hybridIndex){
   return(size)
 } 
 
-## Import data WATWM
-Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
-# to check
-Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
-# pinworms (A. tetraptera and S. obvelata)
-# Trichuris muris (whipworm)
-# Taenia taeniaeformis (tapeworm) 
-
-##### Input end #####
-myFun <- function(data, hybridIndex, response, 
-                  L1start = 10, L1LB = 0, L1UB = 700, 
-                  L2start = 10, L2LB = 0, L2UB = 700, 
-                  alphaStart = 0, alphaLB = -5, alphaUB = 5,
-                  A1start = 10, A1LB = 0, A1UB = 1000, 
-                  A2start = 10, A2LB = 0, A2UB = 1000, 
-                  Zstart = 0, ZLB = -5, ZUB = 5){
+########## Function to fit all hypotheses
+fit <- function(data, response, hybridIndex, paramBounds){
   data$response <- data[[response]] # little trick
-  ###
-  MaxLikelihoodFun <- function(start, data, fixed = NULL, parameters = NULL){
+  optimizer = "optimx"
+  method = c("bobyqa", "L-BFGS-B")
+  control = list(follow.on = TRUE)
+  ## H0 and H2: considering just one L, just one A (no differences between subspecies)
+  MaxLikelihoodFunBasic <- function(start, data, fixed = NULL, parameters = NULL){
+    
     if (!is.null(fixed)) {
       fit <- mle2(
-        response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                           size = SizeNegBin(A1, A2, Z, HI)),
-        data = data, 
-        optimizer = "optimx",
-        method = "bobyqa",
-        start = start, 
+        response ~ dnbinom(mu = MeanLoad(L1, L1, alpha, HI),
+                           size = SizeNegBin(A1, A1, Z, HI)),
+        data = data, start = start, parameters = parameters,
+        lower = c(L1 = paramBounds[["L1LB"]],
+                  A1 = paramBounds[["A1LB"]],
+                  Z = paramBounds[["ZLB"]]),
+        upper = c(L1 = paramBounds[["L1UB"]],
+                  A1 = paramBounds[["A1UB"]],
+                  Z = paramBounds[["ZUB"]]),
         fixed = fixed,
-        parameters = parameters
+        optimizer = optimizer, method = method, control = control
       )
     }
     else {
       fit <- mle2(
-        response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                           size = SizeNegBin(A1, A2, Z, HI)),
-        data = data, 
-        optimizer = "optimx",
-        method = "bobyqa",
-        start = start, 
-        parameters = parameters
+        response ~ dnbinom(mu = MeanLoad(L1, L1, alpha, HI),
+                           size = SizeNegBin(A1, A1, Z, HI)),
+        data = data, start = start, parameters = parameters,
+        lower = c(L1 = paramBounds[["L1LB"]],
+                  A1 = paramBounds[["A1LB"]],
+                  alpha = paramBounds[["alphaLB"]],
+                  Z = paramBounds[["ZLB"]]),
+        upper = c(L1 = paramBounds[["L1UB"]],
+                  A1 = paramBounds[["A1UB"]],
+                  alpha = paramBounds[["alphaUB"]],
+                  Z = paramBounds[["ZUB"]]),
+        optimizer = optimizer, method = method, control = control
       ) 
     }
     convergence <- fit@details$convergence
     print(ifelse(convergence == 0, "Did converge", "Did not converge"))
     return(fit)
   }
-  ################## H1 ##################
   print("alpha")
-  start <- list(L1 = L1start, L2 = L2start, alpha = alphaStart,
-                  A1 = A1start, A2 = A2start, Z = Zstart)
-  myFitAlpha <- MaxLikelihoodFun(start, data)
+  start <-  list(L1 = paramBounds[["L1start"]],
+                 alpha = paramBounds[["alphaStart"]],
+                 A1 = paramBounds[["A1start"]],
+                 Z = paramBounds[["Zstart"]])
+  myFitAlphaBasic <- MaxLikelihoodFunBasic(start, data)
   print("fixed alpha")
-  myFitNoAlpha <- MaxLikelihoodFun(start, data, fixed = list(alpha = 0))
+  myFitNoAlphaBasic <- MaxLikelihoodFunBasic(start, data, fixed = list(alpha = 0))
+  ## H1 and H3: considering 2 L, 2 A ( differences between subspecies)
+  MaxLikelihoodFunAdvanced <- function(start, data, fixed = NULL, parameters = NULL){
+      if (!is.null(fixed)) {
+      fit <- mle2(
+        response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
+                           size = SizeNegBin(A1, A2, Z, HI)),
+        data = data, start = start, parameters = parameters,
+        lower = c(L1 = paramBounds[["L1LB"]], L2 = paramBounds[["L2LB"]],
+                  A1 = paramBounds[["A1LB"]], A2 = paramBounds[["A2LB"]],
+                  Z = paramBounds[["ZLB"]]),
+        upper = c(L1 = paramBounds[["L1UB"]], L2 = paramBounds[["L2UB"]],
+                  A1 = paramBounds[["A1UB"]], A2 = paramBounds[["A2UB"]],
+                  Z = paramBounds[["ZUB"]]),
+        fixed = fixed,
+        optimizer = optimizer, method = method, control = control
+      )
+    }
+    else {
+      fit <- mle2(
+        response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
+                           size = SizeNegBin(A1, A2, Z, HI)),
+        data = data, start = start, parameters = parameters,
+        lower = c(L1 = paramBounds[["L1LB"]], L2 = paramBounds[["L2LB"]],
+                  A1 = paramBounds[["A1LB"]], A2 = paramBounds[["A2LB"]],
+                  alpha = paramBounds[["alphaLB"]],
+                  Z = paramBounds[["ZLB"]]),
+        upper = c(L1 = paramBounds[["L1UB"]], L2 = paramBounds[["L2UB"]],
+                  A1 = paramBounds[["A1UB"]], A2 = paramBounds[["A2UB"]],
+                  alpha = paramBounds[["alphaUB"]],
+                  Z = paramBounds[["ZUB"]]),
+        optimizer = optimizer, method = method, control = control
+      ) 
+    }
+    convergence <- fit@details$convergence
+    print(ifelse(convergence == 0, "Did converge", "Did not converge"))
+    return(fit)
+  }
+  print("alpha")
+  start <-  list(L1 = paramBounds[["L1start"]], L2 = paramBounds[["L2start"]],
+                 alpha = paramBounds[["alphaStart"]],
+                 A1 = paramBounds[["A1start"]], A2 = paramBounds[["A2start"]],
+                 Z = paramBounds[["Zstart"]])
+  myFitAlphaAdvanced <- MaxLikelihoodFunAdvanced(start, data)
+  print("fixed alpha")
+  myFitNoAlphaAdvanced <- MaxLikelihoodFunAdvanced(start, data, fixed = list(alpha = 0))
   ################## Output ##################
-return(list(fitNoAlpha = myFitNoAlpha,
-            fitAlpha = myFitAlpha))
+  return(list(fitNoAlphaBasic = myFitNoAlphaBasic,
+              fitAlphaBasic = myFitAlphaBasic,
+              fitNoAlphaAdvanced = myFitNoAlphaAdvanced,
+              fitAlphaAdvanced = myFitAlphaAdvanced))
 }
 
 ################## Data analysis ################## 
-dataTrichuris <- Joelle_data[complete.cases(Joelle_data$Trichuris),]
+paramBounds <- c(L1start = 10, L1LB = 0, L1UB = 700, 
+                 L2start = 10, L2LB = 0, L2UB = 700, 
+                 alphaStart = 0, alphaLB = -5, alphaUB = 5,
+                 A1start = 10, A1LB = 0, A1UB = 1000, 
+                 A2start = 10, A2LB = 0, A2UB = 1000, 
+                 Zstart = 0, ZLB = -5, ZUB = 5)
+tTrichurisFit <- fit(data = dataTrichuris, response = "Trichuris",
+                     hybridIndex = HI, paramBounds = paramBounds)
 
-dataTrichuris_F <- dataTrichuris[dataTrichuris$Sex == "F",]
-dataTrichuris_F$Sex <- droplevels(dataTrichuris_F$Sex)
+tTrichurisFit
 
-system.time(ModelTestWhipworm <- myFun(data = dataTrichuris_F, 
-                                  hybridIndex = HI, 
-                                  response = "Trichuris"))
 
 anova(ModelTestWhipworm$fitNoAlpha, ModelTestWhipworm$fitAlpha)
 logLik(ModelTestWhipworm$fitNoAlpha)
