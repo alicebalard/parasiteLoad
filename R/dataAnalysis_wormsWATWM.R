@@ -1,7 +1,19 @@
-source("MLE_hybrid_functions.R")
+##' MLE.hybrid is used to fit a maximum likelihood estimation, using a negative binomial distribution 
+##' for which the parameter mu is defined by the function "MeanLoad" and k is the inverse of the "Aggregation" parameter
+##'
+##' @title Fit a maximum likelihood estimation along a gradient between 0 and 1
+##' @param data a data frame containing the observed parasite loads, and the hybrid indexes
+##' @param response an object of class character defining for which parasite the response is estimated
+##' @return A list containing the full analysis for the nested hypotheses
+##' @references Baird, S. J. E., Ribas A., Macholan M., Albrecht T., Pialek J. and Gouy de Bellocq J. (2012) 
+##' \emph{Where are the wormy mice? Reexamination of hybrid parasitism in the European House Mouse Hybrid Zone}
+##' @author Alice Balard, Emanuel Heitlinger
+##' @export
+
+# source("MLE_hybrid_functions.R")
 
 ## Import data WATWM
-Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
+Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
 Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
 
 # pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
@@ -27,7 +39,6 @@ runAll <- function (data, response) {
   defaultConfig <- list(optimizer = "optimx",
                         method = c("bobyqa", "L-BFGS-B"),
                         control = list(follow.on = TRUE))
-  
   paramBounds <- c(L1start = 10, L1LB = 0, L1UB = 700, 
                    L2start = 10, L2LB = 0, L2UB = 700, 
                    alphaStart = 0, alphaLB = -5, alphaUB = 5,
@@ -62,51 +73,65 @@ runAll <- function (data, response) {
   return(list(FitAll = FitAll, FitFemale = FitFemale, FitMale = FitMale))
 }
 
-TrichurisFit <- runAll(Joelle_data, "Trichuris")
+analyse <- function(data, response) {
+  print(paste0("Analysing data for response: ", response))
+  FitForResponse <- runAll(Joelle_data, response)
+  
+  ####### Is alpha significant for each hypothesis?
+  
+  # H0: the expected load for the subspecies and between sexes is the same
+  print("Testing H0 no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitAll$fitBasicNoAlpha, 
+        model1 = FitForResponse$FitAll$fitBasicAlpha)
+  H0 <- FitForResponse$FitAll$fitBasicAlpha
+  
+  # H1: the mean load across sexes is the same, but can differ across subspecies
+  print("Testing H1 no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitAll$fitAdvancedNoAlpha, 
+        model1 = FitForResponse$FitAll$fitAdvancedAlpha)
+  
+  H1 <- FitForResponse$FitAll$fitAdvancedAlpha
+  
+  # H2: the mean load across subspecies is the same, but can differ between the sexes
+  print("Testing H2 female no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitFemale$fitBasicNoAlpha, 
+        model1 = FitForResponse$FitFemale$fitBasicAlpha)
+  
+  print("Testing H2 male no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitMale$fitBasicNoAlpha, 
+        model1 = FitForResponse$FitMale$fitBasicAlpha)
+  
+  H2 <- list(female = FitForResponse$FitFemale$fitBasicAlpha,
+             male = FitForResponse$FitMale$fitBasicAlpha)
+  
+  # H3: the mean load can differ both across subspecies and between sexes
+  print("Testing H3 female no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitFemale$fitAdvancedNoAlpha, 
+        model1 = FitForResponse$FitFemale$fitAdvancedAlpha)
+  
+  print("Testing H3 male no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitMale$fitAdvancedNoAlpha, 
+        model1 = FitForResponse$FitMale$fitAdvancedAlpha)
+  
+  H3 <- list(female = FitForResponse$FitFemale$fitAdvancedAlpha,
+             male = FitForResponse$FitMale$fitAdvancedAlpha)
+  
+  ####### Compare the hypotheses with G-tests 
+  # H1 vs H0
+  print("Testing H1 vs H0")
+  Gtest(model0 = H0, model1 = H1)
+  
+  # H2 vs H0
+  print("Testing H2 vs H0")
+  Gtest(model0 = H0, model1 = H2)
+  
+  # H3 vs H1
+  print("Testing H3 vs H1")
+  Gtest(model0 = H1, model1 = H3)
+  
+  # H3 vs H2
+  print("Testing H3 vs H2")
+  Gtest(model0 = H2, model1 = H3)
+}
 
-####### Is alpha significant for each hypothesis?
-
-# H0: the expected load for the subspecies and between sexes is the same
-Gtest(model0 = TrichurisFit$FitAll$fitBasicNoAlpha, 
-      model1 = TrichurisFit$FitAll$fitBasicAlpha)
-
-H0 <- TrichurisFit$FitAll$fitBasicAlpha
-
-# H1: the mean load across sexes is the same, but can differ across subspecies
-Gtest(model0 = TrichurisFit$FitAll$fitAdvancedNoAlpha, 
-      model1 = TrichurisFit$FitAll$fitAdvancedAlpha)
-
-H1 <- TrichurisFit$FitAll$fitAdvancedAlpha
-
-# H2: the mean load across subspecies is the same, but can differ between the sexes
-Gtest(model0 = TrichurisFit$FitFemale$fitBasicNoAlpha, 
-      model1 = TrichurisFit$FitFemale$fitBasicAlpha)
-
-Gtest(model0 = TrichurisFit$FitMale$fitBasicNoAlpha, 
-      model1 = TrichurisFit$FitMale$fitBasicAlpha)
-
-H2 <- list(female = TrichurisFit$FitFemale$fitBasicAlpha,
-           male = TrichurisFit$FitMale$fitBasicAlpha)
-
-# H3: the mean load can differ both across subspecies and between sexes
-Gtest(model0 = TrichurisFit$FitFemale$fitAdvancedNoAlpha, 
-      model1 = TrichurisFit$FitFemale$fitAdvancedAlpha)
-
-Gtest(model0 = TrichurisFit$FitMale$fitAdvancedNoAlpha, 
-      model1 = TrichurisFit$FitMale$fitAdvancedAlpha)
-
-H3 <- list(female = TrichurisFit$FitFemale$fitAdvancedAlpha,
-           male = TrichurisFit$FitMale$fitAdvancedAlpha)
-
-####### Compare the hypotheses with G-tests 
-# H1 vs H0
-Gtest(model0 = H0, model1 = H1)
-
-# H2 vs H0
-Gtest(model0 = H0, model1 = H2)
-
-# H3 vs H1
-Gtest(model0 = H1, model1 = H3)
-
-# H3 vs H2
-Gtest(model0 = H2, model1 = H3)
+analyse(Joelle_data, "Trichuris")
