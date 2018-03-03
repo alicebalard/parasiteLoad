@@ -2,56 +2,101 @@ source("MLE_hybrid_functions.R")
 
 ## Import data WATWM
 Joelle_data <- read.csv("../examples/Reproduction_WATWM/EvolutionFinalData.csv")
-# to check
 Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
-# pinworms (A. tetraptera and S. obvelata)
-# Trichuris muris (whipworm)
-dataTrichuris <- Joelle_data[complete.cases(Joelle_data$Trichuris),]
-dataTrichuris_F <- dataTrichuris[dataTrichuris$Sex == "F",]
-dataTrichuris_M <- dataTrichuris[dataTrichuris$Sex == "M",]
-dataTrichuris_F$Sex <- droplevels(dataTrichuris_F$Sex)
-dataTrichuris_M$Sex <- droplevels(dataTrichuris_M$Sex)
 
-# Taenia taeniaeformis (tapeworm) 
+# pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
+# Trichuris muris (whipworm (Joelle_data$Trichuris))
+# Taenia taeniaeformis (tapeworm (Joelle_data$Taenia))
+# Mastophorus muris (Joelle_data$Mastophorus)
 
-##### Input end #####
-paramBounds <- c(L1start = 10, L1LB = 0, L1UB = 700, 
-                 L2start = 10, L2LB = 0, L2UB = 700, 
-                 alphaStart = 0, alphaLB = -5, alphaUB = 5,
-                 A1start = 10, A1LB = 0, A1UB = 1000, 
-                 A2start = 10, A2LB = 0, A2UB = 1000, 
-                 Zstart = 0, ZLB = -5, ZUB = 5)
+marshallData <- function (data, response) {
+  dataForResponse <- data[complete.cases(data[[response]]),]
+  dataForResponse_F <- dataForResponse[dataForResponse$Sex == "F",]
+  dataForResponse_M <- dataForResponse[dataForResponse$Sex == "M",]
+  dataForResponse_F$Sex <- droplevels(dataForResponse_F$Sex)
+  dataForResponse_M$Sex <- droplevels(dataForResponse_M$Sex)
+  return(list(
+    all = dataForResponse,
+    female = dataForResponse_F,
+    male = dataForResponse_M
+  ))
+}
 
-TrichurisFit <- fit(data = dataTrichuris, response = "Trichuris",
-                    hybridIndex = HI, paramBounds = paramBounds)
+runAll <- function (data, response) {
+  print(paste0("Fit for the response: ", response))
+  defaultConfig <- list(optimizer = "optimx",
+                        method = c("bobyqa", "L-BFGS-B"),
+                        control = list(follow.on = TRUE))
+  
+  paramBounds <- c(L1start = 10, L1LB = 0, L1UB = 700, 
+                   L2start = 10, L2LB = 0, L2UB = 700, 
+                   alphaStart = 0, alphaLB = -5, alphaUB = 5,
+                   A1start = 10, A1LB = 0, A1UB = 1000, 
+                   A2start = 10, A2LB = 0, A2UB = 1000, 
+                   Zstart = 0, ZLB = -5, ZUB = 5)
+  marshalledData <- marshallData(data, response)
+  print("Fitting for all")
+  FitAll <- run(
+    data = marshalledData$all,
+    response = response,
+    hybridIndex = HI, 
+    paramBounds = paramBounds, 
+    config = defaultConfig
+  )
+  print("Fitting for female")
+  FitFemale <- run(
+    data = marshalledData$female,
+    response = response,
+    hybridIndex = HI, 
+    paramBounds = paramBounds,
+    config = defaultConfig
+  )
+  print("Fitting for male")
+  FitMale <- run(
+    data = marshalledData$male,
+    response = response,
+    hybridIndex = HI, 
+    paramBounds = paramBounds,
+    config = defaultConfig
+  )
+  return(list(FitAll = FitAll, FitFemale = FitFemale, FitMale = FitMale))
+}
 
-TrichurisFit_F <- fit(data = dataTrichuris_F, response = "Trichuris",
-                      hybridIndex = HI, paramBounds = paramBounds)
-
-TrichurisFit_M <- fit(data = dataTrichuris_M, response = "Trichuris",
-                      hybridIndex = HI, paramBounds = paramBounds)
+TrichurisFit <- runAll(Joelle_data, "Trichuris")
 
 ####### Is alpha significant for each hypothesis?
 
 # H0: the expected load for the subspecies and between sexes is the same
-isAlphaSignif(TrichurisFit$fitAlphaBasic, TrichurisFit$fitNoAlphaBasic)
-H0 <- TrichurisFit$fitAlphaBasic
+Gtest(model0 = TrichurisFit$FitAll$fitBasicNoAlpha, 
+      model1 = TrichurisFit$FitAll$fitBasicAlpha)
+
+H0 <- TrichurisFit$FitAll$fitBasicAlpha
 
 # H1: the mean load across sexes is the same, but can differ across subspecies
-isAlphaSignif(TrichurisFit$fitAlphaAdvanced, TrichurisFit$fitNoAlphaAdvanced)
-H1 <- TrichurisFit$fitAlphaAdvanced
+Gtest(model0 = TrichurisFit$FitAll$fitAdvancedNoAlpha, 
+      model1 = TrichurisFit$FitAll$fitAdvancedAlpha)
+
+H1 <- TrichurisFit$FitAll$fitAdvancedAlpha
 
 # H2: the mean load across subspecies is the same, but can differ between the sexes
-isAlphaSignif(TrichurisFit_F$fitAlphaBasic, TrichurisFit_F$fitNoAlphaBasic)
-isAlphaSignif(TrichurisFit_M$fitAlphaBasic, TrichurisFit_M$fitNoAlphaBasic)
-H2 <- list(female = TrichurisFit_F$fitAlphaBasic,
-           male = TrichurisFit_M$fitAlphaBasic)
+Gtest(model0 = TrichurisFit$FitFemale$fitBasicNoAlpha, 
+      model1 = TrichurisFit$FitFemale$fitBasicAlpha)
+
+Gtest(model0 = TrichurisFit$FitMale$fitBasicNoAlpha, 
+      model1 = TrichurisFit$FitMale$fitBasicAlpha)
+
+H2 <- list(female = TrichurisFit$FitFemale$fitBasicAlpha,
+           male = TrichurisFit$FitMale$fitBasicAlpha)
 
 # H3: the mean load can differ both across subspecies and between sexes
-isAlphaSignif(TrichurisFit_F$fitAlphaAdvanced, TrichurisFit_F$fitNoAlphaAdvanced)
-isAlphaSignif(TrichurisFit_M$fitAlphaAdvanced, TrichurisFit_M$fitNoAlphaAdvanced)
-H3 <- list(female = TrichurisFit_F$fitAlphaAdvanced,
-           male = TrichurisFit_M$fitAlphaAdvanced)
+Gtest(model0 = TrichurisFit$FitFemale$fitAdvancedNoAlpha, 
+      model1 = TrichurisFit$FitFemale$fitAdvancedAlpha)
+
+Gtest(model0 = TrichurisFit$FitMale$fitAdvancedNoAlpha, 
+      model1 = TrichurisFit$FitMale$fitAdvancedAlpha)
+
+H3 <- list(female = TrichurisFit$FitFemale$fitAdvancedAlpha,
+           male = TrichurisFit$FitMale$fitAdvancedAlpha)
 
 ####### Compare the hypotheses with G-tests 
 # H1 vs H0
