@@ -1,3 +1,6 @@
+library(bbmle)
+library(optimx)
+
 ## Functions defining the distribution of mu and 1/k of the Negative binomial distribution
 MeanLoad <- function(L1, L2, alpha, hybridIndex){
   heterozygoty <- 2 * hybridIndex * (1 - hybridIndex)
