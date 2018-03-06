@@ -1,16 +1,7 @@
-##' MLE.hybrid is used to fit a maximum likelihood estimation, using a negative binomial distribution 
-##' for which the parameter mu is defined by the function "MeanLoad" and k is the inverse of the "Aggregation" parameter
-##'
-##' @title Fit a maximum likelihood estimation along a gradient between 0 and 1
-##' @param data a data frame containing the observed parasite loads, and the hybrid indexes
-##' @param response an object of class character defining for which parasite the response is estimated
-##' @return A list containing the full analysis for the nested hypotheses
-##' @references Baird, S. J. E., Ribas A., Macholan M., Albrecht T., Pialek J. and Gouy de Bellocq J. (2012) 
-##' \emph{Where are the wormy mice? Reexamination of hybrid parasitism in the European House Mouse Hybrid Zone}
-##' @author Alice Balard, Emanuel Heitlinger
-##' @export
+source("MLE_hybrid_functions.R")
+# source the functions defining meanload and aggregation for the negative binomial
+source("Models/MacroParasiteLoad-NegBin.R")
 
-# source("MLE_hybrid_functions.R")
 
 ## Import data WATWM
 Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
