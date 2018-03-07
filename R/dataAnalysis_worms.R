@@ -2,15 +2,9 @@ source("MLE_hybrid_functions.R")
 # source the functions defining meanload and aggregation for the negative binomial
 source("Models/MacroParasiteLoad-NegBin.R")
 
-
 ## Import data WATWM
 Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
 Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
-
-# pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
-# Trichuris muris (whipworm (Joelle_data$Trichuris))
-# Taenia taeniaeformis (tapeworm (Joelle_data$Taenia))
-# Mastophorus muris (Joelle_data$Mastophorus)
 
 ## Import data from our field trips
 Jenny_data <- read.csv("../data/MiceTable_2014to2017_07032018.csv")
@@ -130,18 +124,31 @@ analyse <- function(data, response) {
   print("Testing H3 vs H2")
   Gtest(model0 = H2, model1 = H3)
   
-  return(list(H0, H1, H2, H3))
+  return(list(H0 = H0, H1 = H1, H2 = H2, H3 = H3))
 }
 
 ## Run the analysis
-analyse(Joelle_data, "Trichuris")
-analyse(Joelle_data, "Aspiculuris.Syphacia")
-analyse(Joelle_data, "Taenia")
-analyse(Joelle_data, "Mastophorus")
 
-analyse(Jenny_data, "Trichuris")
-analyse(Jenny_data, "Aspiculuris_Syphacia")
-analyse(Jenny_data, "Taenia")
-analyse(Jenny_data, "Mastophorus")
+# pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
+# Trichuris muris (whipworm (Joelle_data$Trichuris))
+# Taenia taeniaeformis (tapeworm (Joelle_data$Taenia))
+# Mastophorus muris (Joelle_data$Mastophorus)
 
+TriJo <- analyse(Joelle_data, "Trichuris")
+AspJo <- analyse(Joelle_data, "Aspiculuris.Syphacia")
+TaeJo <- analyse(Joelle_data, "Taenia")
+MasJo <- analyse(Joelle_data, "Mastophorus")
 
+TriJe <- analyse(Jenny_data, "Trichuris")
+AspJe <- analyse(Jenny_data, "Aspiculuris_Syphacia")
+TaeJe <- analyse(Jenny_data, "Taenia")
+MasJe <- analyse(Jenny_data, "Mastophorus")
+
+## Plots
+plotAll(TriJo$H1, Joelle_data, "Trichuris", CI = FALSE)
+plot2sexes(modF = TriJo$H3$female, modM = TriJo$H3$male, Joelle_data, "Trichuris", CI = FALSE)
+
+plotAll(AspJo$H1, Joelle_data, "Aspiculuris.Syphacia", CI = FALSE)
+
+plotAll(AspJe$H1, Jenny_data, "Aspiculuris_Syphacia", CI = TRUE)
+plotAll(AspJe$H1, Jenny_data, "Trichuris", CI = TRUE)
