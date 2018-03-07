@@ -35,7 +35,7 @@ plotAll <- function(mod, data, response, CI){
   if (CI == TRUE){
     
     ## profile investigates behavior of objective function near the MLE
-    myProf <- profile(TriJo$H1)
+    myProf <- profile(mod)
     
     ## Marginal confidence interval
     myConfInt <- confint(myProf)
