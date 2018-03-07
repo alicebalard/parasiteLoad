@@ -66,7 +66,7 @@ runAll <- function (data, response) {
 
 analyse <- function(data, response) {
   print(paste0("Analysing data for response: ", response))
-  FitForResponse <- runAll(Joelle_data, response)
+  FitForResponse <- runAll(data, response)
   
   ####### Is alpha significant for each hypothesis?
   
