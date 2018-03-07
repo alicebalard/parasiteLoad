@@ -1,11 +1,36 @@
 ## source the functions defining meanload and aggregation for the negative binomial
-source("Models/BCI-NormalDistrib.R")
-
+source("Models/BCI_qPCR-NormalDistrib.R")
 source("MLE_hybrid_functions.R")
 
 # if (!require("devtools")) install.packages("devtools")
 # devtools::install_github("sjmgarnier/viridis")
 library(rms)
+# First statistical model
+# 
+# model0 <- lm(formula = BCI ~ HI, data = data4stats)
+# 
+# model1 <- lm(formula = BCI ~ HI * EimeriaDetected, data = data4stats)
+# 
+# model2 <- lm(formula = BCI ~ HI * EimeriaDetected * Sex, data = data4stats)
+# 
+# anova(model0, model1) # So we choose model 0
+# anova(model1, model2)
+# 
+# summary(model1)
+# 
+# # In rms vocabulary
+# dd <- datadist(data4stats)
+# options(datadist="dd")
+# 
+# fit <- ols(formula = BCI ~ HI * EimeriaDetected, data = data4stats, x = TRUE, y = TRUE)
+# 
+# p <- Predict(fit, HI, EimeriaDetected)
+# 
+# ggplot(p) +
+#   geom_point(data = miceTable, aes(x = HI, y = BCI)) +
+#   coord_cartesian(ylim = c(min(na.omit(miceTable$BCI)) - 0.005,
+#                            max(na.omit(miceTable$BCI)) + 0.005)) +
+#   theme_bw()
 
 ## Import data 
 
@@ -19,34 +44,7 @@ data4stats <- miceTable[names(miceTable) %in% c("BCI", "HI", "EimeriaDetected", 
 data4stats <- na.omit(data4stats)
 data4stats$EimeriaDetected <- factor(data4stats$EimeriaDetected)
 
-# First statistical model
-
-model0 <- lm(formula = BCI ~ HI, data = data4stats)
-
-model1 <- lm(formula = BCI ~ HI * EimeriaDetected, data = data4stats)
-
-model2 <- lm(formula = BCI ~ HI * EimeriaDetected * Sex, data = data4stats)
-
-anova(model0, model1) # So we choose model 0
-anova(model1, model2)
-
-summary(model1)
-
-# In rms vocabulary
-dd <- datadist(data4stats)
-options(datadist="dd")
-
-fit <- ols(formula = BCI ~ HI * EimeriaDetected, data = data4stats, x = TRUE, y = TRUE)
-
-p <- Predict(fit, HI, EimeriaDetected)
-
-ggplot(p) +
-  geom_point(data = miceTable, aes(x = HI, y = BCI)) +
-  coord_cartesian(ylim = c(min(na.omit(miceTable$BCI)) - 0.005,
-                           max(na.omit(miceTable$BCI)) + 0.005)) +
-  theme_bw()
-
-qplot(data4stats$BCI)
+qplot(data4stats$BCI) + theme_bw()
 
 #### Our model
 marshallData <- function (data, response) {
@@ -157,6 +155,10 @@ analyse <- function(data, response) {
   # H3 vs H2
   print("Testing H3 vs H2")
   Gtest(model0 = H2, model1 = H3)
+  
+  return(list(H0 = H0, H1 = H1, H2 = H2, H3 = H3))
 }
 
-analyse(data4stats, "BCI")
+fit <- analyse(data4stats, "BCI")
+
+plotAll(mod = fit$H1, data = data4stats, response = "BCI", CI = TRUE)
