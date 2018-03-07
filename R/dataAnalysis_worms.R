@@ -12,6 +12,10 @@ Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
 # Taenia taeniaeformis (tapeworm (Joelle_data$Taenia))
 # Mastophorus muris (Joelle_data$Mastophorus)
 
+## Import data from our field trips
+Jenny_data <- read.csv("../data/MiceTable_2014to2017_07032018.csv")
+
+## Separate in all, male, female the data frames
 marshallData <- function (data, response) {
   dataForResponse <- data[complete.cases(data[[response]]),]
   dataForResponse_F <- dataForResponse[dataForResponse$Sex == "F",]
@@ -25,6 +29,7 @@ marshallData <- function (data, response) {
   ))
 }
 
+# Fit per all, female or male our model
 runAll <- function (data, response) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
@@ -64,6 +69,7 @@ runAll <- function (data, response) {
   return(list(FitAll = FitAll, FitFemale = FitFemale, FitMale = FitMale))
 }
 
+# compare the inner hypotheses (with alpha or without) and the nested hypotheses
 analyse <- function(data, response) {
   print(paste0("Analysing data for response: ", response))
   FitForResponse <- runAll(data, response)
@@ -123,6 +129,19 @@ analyse <- function(data, response) {
   # H3 vs H2
   print("Testing H3 vs H2")
   Gtest(model0 = H2, model1 = H3)
+  
+  return(list(H0, H1, H2, H3))
 }
 
+## Run the analysis
 analyse(Joelle_data, "Trichuris")
+analyse(Joelle_data, "Aspiculuris.Syphacia")
+analyse(Joelle_data, "Taenia")
+analyse(Joelle_data, "Mastophorus")
+
+analyse(Jenny_data, "Trichuris")
+analyse(Jenny_data, "Aspiculuris_Syphacia")
+analyse(Jenny_data, "Taenia")
+analyse(Jenny_data, "Mastophorus")
+
+
