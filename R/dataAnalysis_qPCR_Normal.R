@@ -1,10 +1,11 @@
 source("Models/BCI_qPCR-NormalDistrib.R")
 source("MLE_hybrid_functions.R")
+library(ggplot2)
 
 ## Import data
 qpcrData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/Eimeria_detection/qPCR_2016.csv")
 names(qpcrData)[1] <- "Mouse_ID"
-miceTable <- read.csv("../../../Mouse_Eimeria_Databasing/raw_data/MiceTable_2014to2017.csv")
+miceTable <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/MiceTable_2014to2017.csv")
 
 miceTable <- merge(miceTable, qpcrData)
 
@@ -12,7 +13,8 @@ miceTable$delta_ct_cewe <- miceTable$delta_ct_cewe + 5
 miceTable$delta_ct_ilwe <- miceTable$delta_ct_ilwe + 5
 
 ## Separate in all, male, female the data frames
-qplot(data4stats$BCI) + theme_bw()
+qplot(miceTable$delta_ct_cewe) + theme_bw()
+qplot(miceTable$delta_ct_ilwe) + theme_bw()
 
 #### Our model
 marshallData <- function (data, response) {
@@ -129,4 +131,16 @@ analyse <- function(data, response) {
 
 fit <- analyse(miceTable, "delta_ct_cewe")
 
-plotAll(mod = fit$H1, data = data4stats, response = "BCI", CI = TRUE)
+
+ggplot(data = miceTable, aes(x = HI, y = delta_ct_ilwe, col = Sex)) +
+  scale_color_manual(values = c("red", "blue")) +
+  geom_smooth() +
+  geom_point() +
+  theme_bw()
+
+ggplot(data = miceTable, aes(x = HI, y = delta_ct_cewe, col = Sex)) +
+  scale_color_manual(values = c("red", "blue")) +
+  geom_smooth() +
+  geom_point() +
+  theme_bw()
+
