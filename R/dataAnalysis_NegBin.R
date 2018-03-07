@@ -134,11 +134,12 @@ analyse <- function(data, response) {
 
 ## Run the analysis
 
-eimData <- analyse(data, "OPG")
+eimData <- analyse(Eimeria_data, "OPG")
 
 ## Plots
-plotAll(eimData$H1, data, "OPG", CI = TRUE)
+plotAll(eimData$H1, Eimeria_data, "OPG", CI = FALSE)
 
+qplot(Eimeria_data$OPG) + theme_bw()
 ## Run the analysis
 
 # pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
