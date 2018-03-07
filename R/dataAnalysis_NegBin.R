@@ -2,6 +2,11 @@ source("MLE_hybrid_functions.R")
 # source the functions defining meanload and aggregation for the negative binomial
 source("Models/MacroParasiteLoad-NegBin.R")
 
+## Import data
+Oocysts_counts <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/Eimeria_detection/Alice_newdilution_oocysts_counts_jan2018.csv")
+Mice_data <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/MiceTable_2014to2017.csv")
+Eimeria_data <- merge(Oocysts_counts, Mice_data)
+
 ## Import data WATWM
 Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
 Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
@@ -126,6 +131,13 @@ analyse <- function(data, response) {
   
   return(list(H0 = H0, H1 = H1, H2 = H2, H3 = H3))
 }
+
+## Run the analysis
+
+eimData <- analyse(data, "OPG")
+
+## Plots
+plotAll(eimData$H1, data, "OPG", CI = TRUE)
 
 ## Run the analysis
 
