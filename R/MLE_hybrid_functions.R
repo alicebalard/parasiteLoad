@@ -28,8 +28,12 @@ Gtest <- function(model0, model1){
 }
 
 ## Plot functions
-plotAll <- function(mod, data, response, CI){
+plotAll <- function(mod, data, response, CI, cols = c("red", "blue"), mygroup = "Sex", switchlevels = FALSE){
   data$response <- data[[response]]
+  data$log10resp <- log10(data$response + 1)  
+  if (switchlevels == TRUE){
+    data[[mygroup]] <- factor(data[[mygroup]], levels(data[[mygroup]])[c(2,1)])
+  }
   
   # Do we plot CI ?
   if (CI == TRUE){
@@ -58,9 +62,10 @@ plotAll <- function(mod, data, response, CI){
                                                L2 =  coef(mod)[names(coef(mod)) == "L2"],
                                                alpha =  alphaCIUB,
                                                hybridIndex = seq(0,1,0.01)))
+
     ggplot() + 
-      geom_point(data = data, aes(x = HI, y = log10(response + 1), color = Sex)) + 
-      scale_color_manual(values = c("red", "blue")) +
+      geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
+      scale_color_manual(values = cols) +
       geom_ribbon(aes(x = DF$HI,
                       ymin = log10(DF$loadMLEAlphaUB + 1),
                       ymax = log10(DF$loadMLEAlphaLB + 1)),
@@ -75,16 +80,20 @@ plotAll <- function(mod, data, response, CI){
                                         alpha =  coef(mod)[names(coef(mod)) == "alpha"],  
                                         hybridIndex = seq(0,1,0.01)))
     ggplot() + 
-      geom_point(data = data, aes(x = HI, y = log10(response + 1), color = Sex)) + 
-      scale_color_manual(values = c("red", "blue")) +
+      geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
+      scale_color_manual(values = cols) +
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
       theme_bw()
   }
 }
 
 #### Case 2 : 2 sexes
-plot2sexes <- function(modF, modM, data, response, CI){
+plot2sexes <- function(modF, modM, data, response, CI, cols = c("red", "blue"), mygroup = "Sex", switchlevels = FALSE){
   data$response <- data[[response]]
+  data$log10resp <- log10(data$response + 1)
+  if (switchlevels == TRUE){
+    data[[mygroup]] <- factor(data[[mygroup]], levels(data[[mygroup]])[c(2,1)])
+  }
   
   # Do we plot CI ?
   if (CI == TRUE){
@@ -130,18 +139,18 @@ plot2sexes <- function(modF, modM, data, response, CI){
                                                 hybridIndex = seq(0,1,0.01))) 
     
     ggplot() + 
-      geom_point(data = data, aes(x = HI, y = log10(response + 1), color = Sex)) + 
-      scale_color_manual(values = c("red", "blue")) +
+      geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
+      scale_color_manual(values = cols) +
       geom_ribbon(aes(x = DF$HI,  
                       ymin = log10(DF$loadMLEAlphaUBF + 1),  
                       ymax = log10(DF$loadMLEAlphaLBF + 1)), 
-                  fill = "pink", alpha = .5) + 
+                  fill = cols[1], alpha = .5) + 
       geom_ribbon(aes(x = DF$HI,  
                       ymin = log10(DF$loadMLEAlphaUBM + 1),  
                       ymax = log10(DF$loadMLEAlphaLBM + 1)), 
-                  fill = "blue", alpha = .5) + 
-      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEF + 1)), col = "pink") + 
-      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEM + 1)), col = "blue") + 
+                  fill = cols[2], alpha = .5) + 
+      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEF + 1)), col = cols[1]) + 
+      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEM + 1)), col = cols[2]) + 
       theme_bw()
   } else {
     ## Draw the line for the parameters at their MLE, alpha varying 
@@ -154,13 +163,11 @@ plot2sexes <- function(modF, modM, data, response, CI){
                                          L2 =  coef(modM)[names(coef(modM)) == "L2"], 
                                          alpha =  coef(modM)[names(coef(modM)) == "alpha"],  
                                          hybridIndex = seq(0,1,0.01))) 
-    
     ggplot() + 
-      geom_point(data = data, aes(x = HI, y = log10(response + 1), color = Sex)) + 
-      scale_color_manual(values = c("red", "blue")) +
-      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEF + 1)), col = "pink", size = 3) + 
-      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEM + 1)), col = "blue", size = 3) + 
+      geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
+      scale_color_manual(values = cols) +
+      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEF + 1)), col = cols[1], size = 3) + 
+      geom_line(aes(x = DF$HI, y = log10(DF$loadMLEM + 1)), col = cols[2], size = 3) + 
       theme_bw()
   }
 }
-
