@@ -34,9 +34,8 @@ library(rms)
 
 ## Import data 
 
-#read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/Eimeria_detection/Summary_eimeria.csv")
-eimeria_detect <- read.csv("../../../Mouse_Eimeria_Databasing/raw_data/Eimeria_detection/Summary_eimeria.csv")
-miceTable <- read.csv("../../../Mouse_Eimeria_Databasing/raw_data/MiceTable_2014to2017.csv")
+eimeria_detect <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/Eimeria_detection/Summary_eimeria.csv")
+miceTable <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/MiceTable_2014to2017.csv")
 
 miceTable <- merge(miceTable, eimeria_detect)
 
