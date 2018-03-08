@@ -161,4 +161,6 @@ analyse <- function(data, response) {
 fit <- analyse(data4stats, "BCI")
 
 plotAll(mod = fit$H1, data = data4stats, response = "BCI", CI = FALSE)
-plot2sexes(modF = fit$H3$true, modM = fit$H3$false, data = data4stats, response = "BCI", CI = FALSE)
+plot2sexes(modF = fit$H3$true, modM = fit$H3$false, data = data4stats, 
+           response = "BCI", CI = FALSE, cols = c("black", "grey"),
+           mygroup = "EimeriaDetected", switchlevels = TRUE)
