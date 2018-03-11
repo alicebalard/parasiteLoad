@@ -3,9 +3,7 @@ source("MLE_hybrid_functions.R")
 source("Models/MacroParasiteLoad-NegBin.R")
 
 ## Import data
-Oocysts_counts <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/Eimeria_detection/Alice_newdilution_oocysts_counts_jan2018.csv")
-Mice_data <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/MiceTable_2014to2017.csv")
-Eimeria_data <- merge(Oocysts_counts, Mice_data)
+Flotation_data <- read.csv("../data/Partial_mice_usable_for_model.csv")
 
 ## Import data WATWM
 Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
@@ -29,17 +27,11 @@ marshallData <- function (data, response) {
 }
 
 # Fit per all, female or male our model
-runAll <- function (data, response) {
+runAll <- function (data, response, paramBounds) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
                         method = c("bobyqa", "L-BFGS-B"),
                         control = list(follow.on = TRUE))
-  paramBounds <- c(L1start = 10, L1LB = 0, L1UB = 700, 
-                   L2start = 10, L2LB = 0, L2UB = 700, 
-                   alphaStart = 0, alphaLB = -5, alphaUB = 5,
-                   A1start = 10, A1LB = 0, A1UB = 1000, 
-                   A2start = 10, A2LB = 0, A2UB = 1000, 
-                   Zstart = 0, ZLB = -5, ZUB = 5)
   marshalledData <- marshallData(data, response)
   print("Fitting for all")
   FitAll <- run(
@@ -69,9 +61,9 @@ runAll <- function (data, response) {
 }
 
 # compare the inner hypotheses (with alpha or without) and the nested hypotheses
-analyse <- function(data, response) {
+analyse <- function(data, response, paramBounds) {
   print(paste0("Analysing data for response: ", response))
-  FitForResponse <- runAll(data, response)
+  FitForResponse <- runAll(data, response, paramBounds)
   
   ####### Is alpha significant for each hypothesis?
   
@@ -134,12 +126,31 @@ analyse <- function(data, response) {
 
 ## Run the analysis
 
-eimData <- analyse(Eimeria_data, "OPG")
+giveParamBounds <- function(data, response){
+  return(c(L1start = mean(na.omit(data[[response]])), 
+           L1LB = 0, 
+           L1UB = max(na.omit(data[[response]])),
+           L2start = mean(na.omit(data[[response]])), 
+           L2LB = 0,
+           L2UB = max(na.omit(data[[response]])),
+           alphaStart = 0, alphaLB = -5, alphaUB = 5, 
+           A1start = 10, A1LB = 0, A1UB = 1000,
+           A2start = 10, A2LB = 0, A2UB = 1000,
+           Zstart = 0, ZLB = -20, ZUB = 20))
+}
+
+fit_flotation <- analyse(Flotation_data, "OPG", 
+                         paramBounds = giveParamBounds(Flotation_data, "OPG"))
 
 ## Plots
-plotAll(eimData$H1, Eimeria_data, "OPG", CI = FALSE)
+plotAll(mod = fit_flotation$H1, data = Flotation_data, response = "OPG", 
+        CI = FALSE )
 
-qplot(Eimeria_data$OPG) + theme_bw()
+plot2sexes(modF = fit_flotation$H3$female,
+           modM = fit_flotation$H3$male,
+           Flotation_data, "OPG", CI = FALSE)
+
+qplot(Flotation_data$OPG) + theme_bw()
 ## Run the analysis
 
 # pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
@@ -147,21 +158,30 @@ qplot(Eimeria_data$OPG) + theme_bw()
 # Taenia taeniaeformis (tapeworm (Joelle_data$Taenia))
 # Mastophorus muris (Joelle_data$Mastophorus)
 
-TriJo <- analyse(Joelle_data, "Trichuris")
-AspJo <- analyse(Joelle_data, "Aspiculuris.Syphacia")
-TaeJo <- analyse(Joelle_data, "Taenia")
-MasJo <- analyse(Joelle_data, "Mastophorus")
+TriJo <- analyse(Joelle_data, "Trichuris", 
+                 giveParamBounds(Joelle_data, "Trichuris"))
+AspJo <- analyse(Joelle_data, "Aspiculuris.Syphacia", 
+                 giveParamBounds(Joelle_data, "Aspiculuris.Syphacia"))
+TaeJo <- analyse(Joelle_data, "Taenia",
+                 giveParamBounds(Joelle_data, "Taenia"))
+MasJo <- analyse(Joelle_data, "Mastophorus",
+                 giveParamBounds(Joelle_data, "Mastophorus"))
 
-TriJe <- analyse(Jenny_data, "Trichuris")
-AspJe <- analyse(Jenny_data, "Aspiculuris_Syphacia")
-TaeJe <- analyse(Jenny_data, "Taenia")
-MasJe <- analyse(Jenny_data, "Mastophorus")
+TriJe <- analyse(Jenny_data, "Trichuris", 
+                 giveParamBounds(Jenny_data, "Trichuris"))
+AspJe <- analyse(Jenny_data, "Aspiculuris_Syphacia",
+                 giveParamBounds(Jenny_data, "Aspiculuris_Syphacia"))
+TaeJe <- analyse(Jenny_data, "Taenia",
+                 giveParamBounds(Jenny_data, "Taenia"))
+MasJe <- analyse(Jenny_data, "Mastophorus",
+                 giveParamBounds(Jenny_data, "Mastophorus"))
 
 ## Plots
 plotAll(TriJo$H1, Joelle_data, "Trichuris", CI = FALSE)
-plot2sexes(modF = TriJo$H3$female, modM = TriJo$H3$male, Joelle_data, "Trichuris", CI = FALSE)
+plot2sexes(modF = TriJo$H3$female, modM = TriJo$H3$male, 
+           Joelle_data, "Trichuris", CI = FALSE)
 
 plotAll(AspJo$H1, Joelle_data, "Aspiculuris.Syphacia", CI = FALSE)
 
-plotAll(AspJe$H1, Jenny_data, "Aspiculuris_Syphacia", CI = TRUE)
-plotAll(AspJe$H1, Jenny_data, "Trichuris", CI = TRUE)
+plotAll(TriJe$H1, Jenny_data, "Trichuris", CI = FALSE)
+plotAll(AspJe$H1, Jenny_data, "Aspiculuris.Syphacia", CI = FALSE)
