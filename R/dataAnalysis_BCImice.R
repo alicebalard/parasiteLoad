@@ -156,7 +156,8 @@ plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
    scale_color_manual(values = cols) +
    geom_line(aes(x = DF$HI, y = log10(DF$loadMLEN + 1)), col = "grey", size = 3) + 
    geom_line(aes(x = DF$HI, y = log10(DF$loadMLEP + 1)), col = "red", size = 3) +
-   theme_bw()
+   theme_bw(base_size = 20)+
+   ylab(label = "BCI")
 }
 
 plot2groups(modP = fit$H3$positive, modN = fit$H3$negative, 

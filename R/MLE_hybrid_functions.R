@@ -28,7 +28,8 @@ Gtest <- function(model0, model1){
 }
 
 ## Plot functions
-plotAll <- function(mod, data, response, CI, cols = c("red", "blue"), mygroup = "Sex", switchlevels = FALSE){
+plotAll <- function(mod, data, response, CI, cols = c("red", "blue"),
+                    mygroup = "Sex", switchlevels = FALSE, labelfory = "log10 response +1"){
   data$response <- data[[response]]
   data$log10resp <- log10(data$response + 1)  
   if (switchlevels == TRUE){
@@ -71,7 +72,8 @@ plotAll <- function(mod, data, response, CI, cols = c("red", "blue"), mygroup = 
                       ymax = log10(DF$loadMLEAlphaLB + 1)),
                   fill = "grey", alpha = .5) +
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
-      theme_bw()
+      theme_bw(base_size = 20)+
+      ylab(label = labelfory)
   } else {
     ## Draw the line for the parameters at their MLE, alpha varying 
     DF <- data.frame(HI = seq(0,1,0.01), 
@@ -83,12 +85,14 @@ plotAll <- function(mod, data, response, CI, cols = c("red", "blue"), mygroup = 
       geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
       scale_color_manual(values = cols) +
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
-      theme_bw()
+      theme_bw(base_size = 20)+
+      ylab(label = labelfory)
   }
 }
 
 #### Case 2 : 2 sexes
-plot2sexes <- function(modF, modM, data, response, CI, cols = c("red", "blue"), mygroup = "Sex", switchlevels = FALSE){
+plot2sexes <- function(modF, modM, data, response, CI, cols = c("red", "blue"), 
+                       mygroup = "Sex", switchlevels = FALSE, labelfory = "log10 response +1"){
   data$response <- data[[response]]
   data$log10resp <- log10(data$response + 1)
   if (switchlevels == TRUE){
@@ -151,7 +155,8 @@ plot2sexes <- function(modF, modM, data, response, CI, cols = c("red", "blue"), 
                   fill = cols[2], alpha = .5) + 
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLEF + 1)), col = cols[1]) + 
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLEM + 1)), col = cols[2]) + 
-      theme_bw()
+      theme_bw(base_size = 20)+
+      ylab(label = labelfory)
   } else {
     ## Draw the line for the parameters at their MLE, alpha varying 
     DF <- data.frame(HI = seq(0,1,0.01), 
@@ -168,6 +173,7 @@ plot2sexes <- function(modF, modM, data, response, CI, cols = c("red", "blue"), 
       scale_color_manual(values = cols) +
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLEF + 1)), col = cols[1], size = 3) + 
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLEM + 1)), col = cols[2], size = 3) + 
-      theme_bw()
+      theme_bw(base_size = 20)+
+      ylab(label = labelfory)
   }
 }
