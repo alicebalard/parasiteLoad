@@ -144,11 +144,20 @@ giveParamBounds <- function(data, response){
 fit_flotation <- analyse(Flotation_data, "OPG", 
                          paramBounds = giveParamBounds(Flotation_data, "OPG"))
 
+# Let's try ONLY the infected individuals. Hyp : HI makes the LOAD vary, not the infection
+fit_flotation_positive <- analyse(Flotation_data[Flotation_data$OPG > 0,], "OPG", 
+                                  paramBounds = giveParamBounds(Flotation_data[Flotation_data$OPG > 0,], "OPG"))
+
 ## Plots
 plotAll(mod = fit_flotation$H1, data = Flotation_data, response = "OPG", 
         CI = FALSE ) + 
   annotate("text", x = 0.5, y = 3.7, col = "grey32", cex = 7,
-           label = as.character(round(fit$H1@coef[["alpha"]], 2)))
+           label = as.character(round(fit_flotation$H1@coef[["alpha"]], 2)))
+
+plotAll(mod = fit_flotation_positive$H1, data = Flotation_data[Flotation_data$OPG > 0,], response = "OPG", 
+        CI = TRUE ) + 
+  annotate("text", x = 0.5, y = 3.7, col = "grey32", cex = 7,
+           label = as.character(round(fit_flotation_positive$H1@coef[["alpha"]], 2)))
 
 
 plot2sexes(modF = fit_flotation$H3$female,
