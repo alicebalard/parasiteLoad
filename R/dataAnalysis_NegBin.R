@@ -146,7 +146,10 @@ fit_flotation <- analyse(Flotation_data, "OPG",
 
 ## Plots
 plotAll(mod = fit_flotation$H1, data = Flotation_data, response = "OPG", 
-        CI = FALSE )
+        CI = FALSE ) + 
+  annotate("text", x = 0.5, y = 3.7, col = "grey32", cex = 7,
+           label = as.character(round(fit$H1@coef[["alpha"]], 2)))
+
 
 plot2sexes(modF = fit_flotation$H3$female,
            modM = fit_flotation$H3$male,

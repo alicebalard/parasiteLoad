@@ -141,6 +141,7 @@ plot2sexes(modF = fit$H3$positive, modM = fit$H3$negative, data = data4stats,
 
 plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
                         cols = c("grey", "black")){
+  fit <- analyse(data, response)
   data$response <- data[[response]]
   data$log10resp <- log10(data$response + 1)
   ## Draw the line for the parameters at their MLE, alpha varying 
@@ -156,13 +157,18 @@ plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
  ggplot() + 
    geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
    scale_color_manual(values = cols) +
-   geom_line(aes(x = DF$HI, y = log10(DF$loadMLEN + 1)), col = "grey", size = 3) + 
+   geom_line(aes(x = DF$HI, y = log10(DF$loadMLEN + 1)), col = "grey32", size = 3) + 
    geom_line(aes(x = DF$HI, y = log10(DF$loadMLEP + 1)), col = "red", size = 3) +
    theme_bw(base_size = 20)+
-   ylab(label = "BCI")
+   ylab(label = "BCI") +
+   annotate("text", x = 0.5, y = 0.20, col = "red", cex = 7,
+            label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
+   annotate("text", x = 0.5, y = 0.2125, col = "grey32", cex = 7,
+            label = as.character(round(fit$H3$negative@coef[["alpha"]], 2)))
 }
 
 plot2groups(modP = fit$H3$positive, modN = fit$H3$negative, 
            data = data4stats, 
-           response = "BCI", cols = c("grey", "red"))
+           response = "BCI", cols = c("grey32", "red"))
+
 
