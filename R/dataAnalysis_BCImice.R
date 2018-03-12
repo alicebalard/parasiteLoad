@@ -4,6 +4,8 @@ source("MLE_hybrid_functions.R")
 
 ## Import data 
 miceTable <- read.csv("../data/Partial_mice_usable_for_model.csv")
+# or 
+miceTable <- read.csv("../data/ALL_mice_usable_for_model.csv")
 
 data4stats <- miceTable[names(miceTable) %in% c("BCI", "HI", "OPG", "Sex")]
 data4stats <- na.omit(data4stats)

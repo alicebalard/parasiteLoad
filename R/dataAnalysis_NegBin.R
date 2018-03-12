@@ -4,6 +4,8 @@ source("Models/MacroParasiteLoad-NegBin.R")
 
 ## Import data
 Flotation_data <- read.csv("../data/Partial_mice_usable_for_model.csv")
+# or 
+Flotation_data <- read.csv("../data/ALL_mice_usable_for_model.csv")
 
 ## Import data WATWM
 Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
