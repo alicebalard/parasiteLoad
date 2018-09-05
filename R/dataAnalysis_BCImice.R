@@ -2,10 +2,14 @@
 source("Models/BCI_qPCR-NormalDistrib.R")
 source("MLE_hybrid_functions.R")
 
-## Import data 
-miceTable <- read.csv("../data/Partial_mice_usable_for_model.csv")
-# or 
-miceTable <- read.csv("../data/ALL_mice_usable_for_model.csv")
+## Import data
+HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$BCI) &
+                                   !is.na(HeitlingerFieldData$HI) &
+                                   !is.na(HeitlingerFieldData$Sex) &
+                                   !is.na(HeitlingerFieldData$OPG), ]
+# Works if OPG are integers
+Flotation_data$OPG <- round(Flotation_data$OPG)
 
 data4stats <- miceTable[names(miceTable) %in% c("BCI", "HI", "OPG", "Sex")]
 data4stats <- na.omit(data4stats)
