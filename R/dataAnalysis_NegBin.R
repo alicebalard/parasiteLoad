@@ -3,16 +3,16 @@ source("MLE_hybrid_functions.R")
 source("Models/MacroParasiteLoad-NegBin.R")
 
 ## Import data
-Flotation_data <- read.csv("../data/Partial_mice_usable_for_model.csv")
-# or 
-Flotation_data <- read.csv("../data/ALL_mice_usable_for_model.csv")
+HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+Flotation_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$OPG) &
+                                        !is.na(HeitlingerFieldData$HI) &
+                                        !is.na(HeitlingerFieldData$Sex), ]
+# Works if OPG are integers
+Flotation_data$OPG <- round(Flotation_data$OPG)
 
 ## Import data WATWM
 Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
 Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
-
-## Import data from our field trips
-Jenny_data <- read.csv("../data/MiceTable_2014to2017_07032018.csv")
 
 ## Separate in all, male, female the data frames
 marshallData <- function (data, response) {
@@ -158,7 +158,6 @@ plotAll(mod = fit_flotation_positive$H1, data = Flotation_data[Flotation_data$OP
         CI = TRUE ) + 
   annotate("text", x = 0.5, y = 3.7, col = "grey32", cex = 7,
            label = as.character(round(fit_flotation_positive$H1@coef[["alpha"]], 2)))
-
 
 plot2sexes(modF = fit_flotation$H3$female,
            modM = fit_flotation$H3$male,
