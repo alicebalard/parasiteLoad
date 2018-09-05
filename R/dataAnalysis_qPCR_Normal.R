@@ -4,58 +4,16 @@ library(ggplot2)
 library(reshape2)
 
 ## Import data
-qpcrData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/Eimeria_detection/qPCR_2016.csv")
-names(qpcrData)[1] <- "Mouse_ID"
-
-# Did Enas calculate the other way around? 
-qpcrData$delta_ct_cewe[qpcrData$observer_qpcr == "Enas"] <- 
-  - qpcrData$delta_ct_cewe[qpcrData$observer_qpcr == "Enas"]
-
-qpcrData$delta_ct_ilwe[qpcrData$observer_qpcr == "Enas"] <- 
-  - qpcrData$delta_ct_ilwe[qpcrData$observer_qpcr == "Enas"]
-
-# deltaCT = ct eimeria - ct mouse. If high infection, low deltaCT
-# -deltaCT = ct mouse - ct eimeria
-qpcrData$status[qpcrData$delta_ct_cewe > 6 & qpcrData$delta_ct_ilwe > 6] <- "non infected"
-qpcrData$status[qpcrData$delta_ct_cewe < 6 & qpcrData$delta_ct_ilwe > 6] <- "infected cecum"
-qpcrData$status[qpcrData$delta_ct_cewe > 6 & qpcrData$delta_ct_ilwe < 6] <- "infected ileum"
-
-qpcrData$status[
-  qpcrData$delta_ct_cewe < 6 & 
-    qpcrData$delta_ct_ilwe < 6 & 
-    qpcrData$delta_ct_cewe < qpcrData$delta_ct_ilwe] <- "cecum stronger"
-qpcrData$status[
-  qpcrData$delta_ct_cewe < 6 & 
-    qpcrData$delta_ct_ilwe < 6 & 
-    qpcrData$delta_ct_cewe > qpcrData$delta_ct_ilwe] <- "ileum stronger"
-
-# and keep the infected segment value OR the higher value 
-qpcrData$delta_ct[
-  qpcrData$status %in% c("infected cecum", "cecum stronger")] <- 
-  qpcrData$delta_ct_cewe[
-    qpcrData$status %in% c("infected cecum", "cecum stronger")] 
-
-qpcrData$delta_ct[
-  qpcrData$status %in% c("infected ileum", "ileum stronger")] <- 
-  qpcrData$delta_ct_ilwe[
-    qpcrData$status %in% c("infected ileum", "ileum stronger")] 
-
-# Turn around
-qpcrData$delta_ct_MminusE <- - qpcrData$delta_ct
-
-# Set floor values
-qpcrData$delta_ct_MminusE[is.na(qpcrData$delta_ct_MminusE)] <- -6
-
-# Add infos
-miceTable <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/raw_data/MiceTable_2014to2017.csv")
-
-miceTable <- merge(miceTable, qpcrData)
+HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$qPCRstatus) &
+                                        !is.na(HeitlingerFieldData$HI) &
+                                        !is.na(HeitlingerFieldData$Sex), ]
 
 # To pass positive I add 6 to all
 miceTable$delta_ct_MminusE <- miceTable$delta_ct_MminusE + 6
 
 ## Separate in all, male, female the data frames
-qplot(miceTable$delta_ct_MminusE) + theme_bw()
+qplot(miceTable$delta_ct_MminusE[miceTable$delta_ct_MminusE > 0]) + theme_bw()
 
 #### Our model
 marshallData <- function (data, response) {
@@ -156,19 +114,28 @@ analyse <- function(data, response, paramBounds) {
 }
 
 # remove zeros
-miceTable <- miceTable[miceTable$status != "non infected",]
+miceTable <- miceTable[miceTable$delta_ct_MminusE > 0,]
 
-# not enough values for males vs females
-paramBounds = c(L1start = mean(miceTable$delta_ct_MminusE), L1LB = min(miceTable$delta_ct_MminusE), L1UB = max(miceTable$delta_ct_MminusE), 
-                L2start = mean(miceTable$delta_ct_MminusE), L2LB = min(miceTable$delta_ct_MminusE), L2UB = max(miceTable$delta_ct_MminusE),  
-                alphaStart = 0, alphaLB = -5, alphaUB = 5)
+## 2016
+miceTable2016 <- miceTable[miceTable$Year == 2016,]
 
-fit <- analyse(miceTable, "delta_ct_MminusE", paramBounds = paramBounds)
+## 2017
+miceTable2017 <- miceTable[miceTable$Year == 2017,]
 
-plotAll(mod = fit$H1, data = miceTable, response = "delta_ct_MminusE", CI = TRUE) +
-  ylab(label = "delta CT mouse vs eimeria") +
-  annotate("text", x = 0.5, y = 0.58, col = "black", cex = 7,
-           label = as.character(round(fit$H1@coef[["alpha"]], 2))) 
+perYear <- function(miceTable){
+  # not enough values for males vs females
+  paramBounds = c(L1start = mean(miceTable$delta_ct_MminusE), L1LB = min(miceTable$delta_ct_MminusE), L1UB = max(miceTable$delta_ct_MminusE), 
+                  L2start = mean(miceTable$delta_ct_MminusE), L2LB = min(miceTable$delta_ct_MminusE), L2UB = max(miceTable$delta_ct_MminusE),  
+                  alphaStart = 0, alphaLB = -5, alphaUB = 5)
+  
+  fit <- analyse(miceTable, "delta_ct_MminusE", paramBounds = paramBounds)
+  
+  plot <- plotAll(mod = fit$H1, data = miceTable, response = "delta_ct_MminusE", CI = TRUE) +
+    ylab(label = "delta CT mouse vs eimeria") +
+    annotate("text", x = 0.5, y = 0.58, col = "black", cex = 7,
+             label = as.character(round(fit$H1@coef[["alpha"]], 2)))
+  
+  return(list(fit, plot))
+}
 
-summary(fit$H1)
-
+perYear(miceTable2017)
