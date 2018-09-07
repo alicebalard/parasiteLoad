@@ -7,16 +7,27 @@ HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPc
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$BCI) &
                                    !is.na(HeitlingerFieldData$HI) &
                                    !is.na(HeitlingerFieldData$Sex) &
-                                   !is.na(HeitlingerFieldData$OPG), ]
-# Works if OPG are integers
-Flotation_data$OPG <- round(Flotation_data$OPG)
+                                   (
+                                     !is.na(HeitlingerFieldData$OPG) |
+                                       !is.na(HeitlingerFieldData$delta_ct_MminusE) |
+                                       !is.na(HeitlingerFieldData$PCRstatus)
+                                   ), ]
+# # Works if OPG are integers
+# miceTable$OPG <- round(miceTable$OPG)
 
-data4stats <- miceTable[names(miceTable) %in% c("BCI", "HI", "OPG", "Sex")]
-data4stats <- na.omit(data4stats)
-data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
-data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
+data4stats <- miceTable[names(miceTable) %in% c("BCI", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex")]
 
-qplot(data4stats$BCI) + theme_bw()
+# data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
+# data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
+data4stats$EimeriaDetected <- NA
+data4stats$EimeriaDetected[data4stats$delta_ct_MminusE <= -6] <- "negative"
+data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
+
+data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
+
+ggplot(data4stats, aes(x = BCI, fill = EimeriaDetected)) +
+  geom_density(alpha=0.25) +
+  theme_bw()
 
 #### Our model
 marshallData <- function (data, response) {
