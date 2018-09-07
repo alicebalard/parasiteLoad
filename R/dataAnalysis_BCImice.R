@@ -4,7 +4,8 @@ source("MLE_hybrid_functions.R")
 
 ## Import data
 HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
-miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$BCI) &
+miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
+                                   !is.na(HeitlingerFieldData$Body_length) &
                                    !is.na(HeitlingerFieldData$HI) &
                                    !is.na(HeitlingerFieldData$Sex) &
                                    (
@@ -15,7 +16,7 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$BCI) &
 # # Works if OPG are integers
 # miceTable$OPG <- round(miceTable$OPG)
 
-data4stats <- miceTable[names(miceTable) %in% c("BCI", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex")]
+data4stats <- miceTable[names(miceTable) %in% c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex")]
 
 # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
 # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
@@ -25,8 +26,11 @@ data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
 
 data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
 
-ggplot(data4stats, aes(x = BCI, fill = EimeriaDetected)) +
-  geom_density(alpha=0.25) +
+# Try different indexes?
+data4stats$index <- log(data4stats$Body_weight) / log(data4stats$Body_length)
+
+ggplot(data4stats, aes(x = Body_weight, y = Body_length)) +
+  geom_point(aes(fill = EimeriaDetected), pch = 21, size = 3, alpha = .5)+
   theme_bw()
 
 #### Our model
