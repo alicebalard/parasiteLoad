@@ -3,7 +3,7 @@ source("Models/BCI_qPCR-NormalDistrib.R")
 source("MLE_hybrid_functions.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
                                    !is.na(HeitlingerFieldData$Body_length) &
                                    !is.na(HeitlingerFieldData$HI) &
@@ -13,24 +13,72 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
                                        !is.na(HeitlingerFieldData$delta_ct_MminusE) |
                                        !is.na(HeitlingerFieldData$PCRstatus)
                                    ), ]
+
 # # Works if OPG are integers
 # miceTable$OPG <- round(miceTable$OPG)
 
-data4stats <- miceTable[names(miceTable) %in% c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex")]
+getDF <- function(rawDF){
+  data4stats <- rawDF[names(rawDF) %in% 
+                        c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
+  
+  # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
+  # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
+  data4stats$EimeriaDetected <- NA
+  data4stats$EimeriaDetected[data4stats$delta_ct_MminusE <= -6] <- "negative"
+  data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
 
-# data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
-# data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
-data4stats$EimeriaDetected <- NA
-data4stats$EimeriaDetected[data4stats$delta_ct_MminusE <= -6] <- "negative"
-data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
+  data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
+  
+  # Try index as in paper https://www.researchgate.net/publication/259551749_Which_body_condition_index_is_best
+  # log body mass/log body length
+  data4stats$BCI <- log(data4stats$Body_weight, base = 10) / log(data4stats$Body_length, base = 10)
 
-data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
+  # Remove pregnant/post partum and juveniles
+  data4stats <- data4stats[!data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant", "young"), ]
+  
+  return(data4stats)
+}
 
-# Try different indexes?
-data4stats$index <- log(data4stats$Body_weight) / log(data4stats$Body_length)
+# Fit distribution Normal vs Student
+library(MASS)
+# normal fit
+fit <- fitdistr(data4stats$BCI, densfun="normal")  # we assume my_data ~ Normal(?,?)fit
+hist(data4stats$BCI, pch=20, breaks=50, prob=TRUE, main="")
+curve(dnorm(x, fit$estimate[1], fit$estimate[2]), col="red", lwd=2, add=T)
+# student fit
+fit2 <- fitdistr(data4stats$BCI, "t", start = list(m=mean(my_data),s=sd(my_data), df=3), lower=c(-1, 0.001,1))
+mu.std = fit2$estimate[["m"]]
+lambda = fit2$estimate[["s"]]
+nu = fit2$estimate[["df"]]
+curve(dt((x-mu.std)/lambda, nu)/lambda, col="blue", lwd=2, add=TRUE, yaxt="n")
 
-ggplot(data4stats, aes(x = Body_weight, y = Body_length)) +
-  geom_point(aes(fill = EimeriaDetected), pch = 21, size = 3, alpha = .5)+
+
+# getDFPregnantVsNotPregnant <- function(rawDF){
+#   data4stats <- rawDF[names(rawDF) %in% 
+#                         c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
+#   
+#   # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
+#   # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
+#   data4stats$EimeriaDetected <- NA
+#   data4stats$EimeriaDetected[is.na(data4stats$Status) & data4stats$Sex == "F"] <- "negative"
+#   data4stats$EimeriaDetected[data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant") &
+#                                       data4stats$Sex == "F"] <- "positive"
+#   
+#   data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
+#   
+#   # Try index as in paper https://www.researchgate.net/publication/259551749_Which_body_condition_index_is_best
+#   # log body mass/log body length
+#   data4stats$BCI <- log(data4stats$Body_weight, base = 10) / log(data4stats$Body_length, base = 10)
+#   
+#   # # Remove pregnant/post partum and juveniles
+#   # data4stats <- data4stats[!data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant", "young"), ]
+#   
+#   return(data4stats)
+# }
+
+ggplot(data4stats, aes(x = HI, y = BCI, fill = Sex, group = Sex)) +
+  geom_point(pch = 21, size = 3, alpha = .5)+
+  geom_smooth(aes(col = Sex)) +
   theme_bw()
 
 #### Our model
@@ -43,7 +91,7 @@ marshallData <- function (data, response) {
   return(list(
     all = dataForResponse,
     positive = dataForResponse_P,
-    negative = dataForResponse_N
+    negative = dataForResponse_N 
   ))
 }
 
@@ -174,10 +222,14 @@ plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
                                        alpha =  coef(modN)[names(coef(modN)) == "alpha"],  
                                        hybridIndex = seq(0,1,0.01))) 
  ggplot() + 
-   geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
+   # geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
+
+   geom_point(data = data, aes_string(x = "HI", y = "response", color = mygroup)) +
    scale_color_manual(values = cols) +
-   geom_line(aes(x = DF$HI, y = log10(DF$loadMLEN + 1)), col = "grey32", size = 3) + 
-   geom_line(aes(x = DF$HI, y = log10(DF$loadMLEP + 1)), col = "red", size = 3) +
+   # geom_line(aes(x = DF$HI, y = log10(DF$loadMLEN + 1)), col = "grey32", size = 3) +
+   # geom_line(aes(x = DF$HI, y = log10(DF$loadMLEP + 1)), col = "red", size = 3) +
+   geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 3) +
+   geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 3) +
    theme_bw(base_size = 20)+
    ylab(label = "BCI") +
    annotate("text", x = 0.5, y = 0.20, col = "red", cex = 7,
