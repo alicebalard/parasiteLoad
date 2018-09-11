@@ -29,7 +29,7 @@ Gtest <- function(model0, model1){
 
 ## Plot functions
 plotAll <- function(mod, data, response, CI, cols = c("red", "blue"),
-                    mygroup = "Sex", switchlevels = FALSE, labelfory = "log10 response +1"){
+                    mygroup = "Sex", switchlevels = FALSE, labelfory = "log10 response +1", isLog10 = TRUE){
   data$response <- data[[response]]
   data$log10resp <- log10(data$response + 1)  
   if (switchlevels == TRUE){
@@ -63,17 +63,30 @@ plotAll <- function(mod, data, response, CI, cols = c("red", "blue"),
                                                L2 =  coef(mod)[names(coef(mod)) == "L2"],
                                                alpha =  alphaCIUB,
                                                hybridIndex = seq(0,1,0.01)))
-
-    ggplot() + 
-      geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
-      scale_color_manual(values = cols) +
-      geom_ribbon(aes(x = DF$HI,
-                      ymin = log10(DF$loadMLEAlphaUB + 1),
-                      ymax = log10(DF$loadMLEAlphaLB + 1)),
-                  fill = "grey", alpha = .5) +
-      geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
-      theme_bw(base_size = 20)+
-      ylab(label = labelfory)
+    # Do we plot on log10 scale?
+    if(isLog10 == TRUE){
+      ggplot() + 
+        geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
+        scale_color_manual(values = cols) +
+        geom_ribbon(aes(x = DF$HI,
+                        ymin = log10(DF$loadMLEAlphaUB + 1),
+                        ymax = log10(DF$loadMLEAlphaLB + 1)),
+                    fill = "grey", alpha = .5) +
+        geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
+        theme_bw(base_size = 20)+
+        ylab(label = labelfory)
+    } else {
+      ggplot() + 
+        geom_point(data = data, aes_string(x = "HI", y = "response", color = mygroup)) + 
+        scale_color_manual(values = cols) +
+        geom_ribbon(aes(x = DF$HI,
+                        ymin = DF$loadMLEAlphaUB,
+                        ymax = DF$loadMLEAlphaLB),
+                    fill = "grey", alpha = .5) +
+        geom_line(aes(x = DF$HI, y = DF$loadMLE)) +
+        theme_bw(base_size = 20)+
+        ylab(label = labelfory)
+    }
   } else {
     ## Draw the line for the parameters at their MLE, alpha varying 
     DF <- data.frame(HI = seq(0,1,0.01), 
@@ -81,15 +94,24 @@ plotAll <- function(mod, data, response, CI, cols = c("red", "blue"),
                                         L2 =  coef(mod)[names(coef(mod)) == "L2"], 
                                         alpha =  coef(mod)[names(coef(mod)) == "alpha"],  
                                         hybridIndex = seq(0,1,0.01)))
+    # Do we plot on log10 scale?
+    if(isLog10 == TRUE){
     ggplot() + 
       geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
       scale_color_manual(values = cols) +
       geom_line(aes(x = DF$HI, y = log10(DF$loadMLE + 1))) +
       theme_bw(base_size = 20)+
       ylab(label = labelfory)
+    } else {
+      ggplot() + 
+        geom_point(data = data, aes_string(x = "HI", y = "response", color = mygroup)) + 
+        scale_color_manual(values = cols) +
+        geom_line(aes(x = DF$HI, y = DF$loadMLE)) +
+        theme_bw(base_size = 20)+
+        ylab(label = labelfory)
+    }
   }
 }
-
 #### Case 2 : 2 sexes
 plot2sexes <- function(modF, modM, data, response, CI, cols = c("red", "blue"), 
                        mygroup = "Sex", switchlevels = FALSE, labelfory = "log10 response +1"){

@@ -14,7 +14,7 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
                                        !is.na(HeitlingerFieldData$PCRstatus)
                                    ), ]
 
-# # Works if OPG are integers
+# Works if OPG are integers
 # miceTable$OPG <- round(miceTable$OPG)
 
 getDF <- function(rawDF){
@@ -39,19 +39,33 @@ getDF <- function(rawDF){
   return(data4stats)
 }
 
-# Fit distribution Normal vs Student
-library(MASS)
-# normal fit
-fit <- fitdistr(data4stats$BCI, densfun="normal")  # we assume my_data ~ Normal(?,?)fit
-hist(data4stats$BCI, pch=20, breaks=50, prob=TRUE, main="")
-curve(dnorm(x, fit$estimate[1], fit$estimate[2]), col="red", lwd=2, add=T)
-# student fit
-fit2 <- fitdistr(data4stats$BCI, "t", start = list(m=mean(my_data),s=sd(my_data), df=3), lower=c(-1, 0.001,1))
-mu.std = fit2$estimate[["m"]]
-lambda = fit2$estimate[["s"]]
-nu = fit2$estimate[["df"]]
-curve(dt((x-mu.std)/lambda, nu)/lambda, col="blue", lwd=2, add=TRUE, yaxt="n")
+data4stats <- getDF(miceTable)
 
+# Which distribution to choose?
+library(MASS)
+
+dat <- data4stats$BCI
+
+# let's compute some fits...
+fits <- list(
+  normal = fitdistr(dat,"normal"),
+  logistic = fitdistr(dat,"logistic"),
+  cauchy = fitdistr(dat,"cauchy"),
+  weibull = fitdistr(dat, "weibull"),
+  student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df=3), lower=c(-1, 0.001,1))
+)
+
+# get the logliks for each model...
+sapply(fits, function(i) i$loglik)
+# WEIBULL is the way to go!
+
+ggplot(data4stats, aes(BCI)) +
+  geom_histogram(aes(y=..density..), bins = 100) + 
+  stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
+                aes(color = "normal"), size = 2) +
+  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1], scale = fits$weibull$estimate[2]),
+                aes(color = "weibull"), size = 2) +
+  theme_bw(base_size = 24) 
 
 # getDFPregnantVsNotPregnant <- function(rawDF){
 #   data4stats <- rawDF[names(rawDF) %in% 
@@ -76,7 +90,7 @@ curve(dt((x-mu.std)/lambda, nu)/lambda, col="blue", lwd=2, add=TRUE, yaxt="n")
 #   return(data4stats)
 # }
 
-ggplot(data4stats, aes(x = HI, y = BCI, fill = Sex, group = Sex)) +
+ggplot(data4stats, aes(x = HI, y = BCI, fill = EimeriaDetected, group = EimeriaDetected)) +
   geom_point(pch = 21, size = 3, alpha = .5)+
   geom_smooth(aes(col = Sex)) +
   theme_bw()
@@ -200,7 +214,7 @@ analyse <- function(data, response) {
 
 fit <- analyse(data4stats, "BCI")
 
-plotAll(mod = fit$H1, data = data4stats, response = "BCI", CI = FALSE)
+plotAll(mod = fit$H1, data = data4stats, response = "BCI", CI = FALSE, labelfory = "BCI", isLog10 = F)
 
 plot2sexes(modF = fit$H3$positive, modM = fit$H3$negative, data = data4stats, 
            response = "BCI", CI = FALSE, cols = c("grey", "black"), 
@@ -223,18 +237,17 @@ plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
                                        hybridIndex = seq(0,1,0.01))) 
  ggplot() + 
    # geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
-
-   geom_point(data = data, aes_string(x = "HI", y = "response", color = mygroup)) +
+   geom_point(data = data, aes_string(x = "HI", y = "response", color = mygroup, size = 3)) +
    scale_color_manual(values = cols) +
    # geom_line(aes(x = DF$HI, y = log10(DF$loadMLEN + 1)), col = "grey32", size = 3) +
    # geom_line(aes(x = DF$HI, y = log10(DF$loadMLEP + 1)), col = "red", size = 3) +
-   geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 3) +
-   geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 3) +
+   geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 2) +
+   geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 2) +
    theme_bw(base_size = 20)+
    ylab(label = "BCI") +
-   annotate("text", x = 0.5, y = 0.20, col = "red", cex = 7,
+   annotate("text", x = 0.5, y = 0.65, col = "red", cex = 7,
             label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
-   annotate("text", x = 0.5, y = 0.2125, col = "grey32", cex = 7,
+   annotate("text", x = 0.5, y = 0.55, col = "grey32", cex = 7,
             label = as.character(round(fit$H3$negative@coef[["alpha"]], 2)))
 }
 
