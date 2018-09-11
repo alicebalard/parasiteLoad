@@ -4,7 +4,7 @@ library(ggplot2)
 library(reshape2)
 
 ## Import data
-HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$qPCRstatus) &
                                         !is.na(HeitlingerFieldData$HI) &
                                         !is.na(HeitlingerFieldData$Sex), ]
@@ -14,6 +14,32 @@ miceTable$delta_ct_MminusE <- miceTable$delta_ct_MminusE + 6
 
 ## Separate in all, male, female the data frames
 qplot(miceTable$delta_ct_MminusE[miceTable$delta_ct_MminusE > 0]) + theme_bw()
+
+# Which distribution to choose?
+library(MASS)
+
+dat <- miceTable$delta_ct_MminusE[miceTable$delta_ct_MminusE > 0]
+
+# let's compute some fits...
+fits <- list(
+  normal = fitdistr(dat,"normal"),
+  logistic = fitdistr(dat,"logistic"),
+  cauchy = fitdistr(dat,"cauchy"),
+  weibull = fitdistr(dat, "weibull"),
+  student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df=3), lower=c(-1, 0.001,1))
+)
+
+# get the logliks for each model...
+sapply(fits, function(i) i$loglik)
+# WEIBULL is the way to go!
+
+ggplot(miceTable[miceTable$delta_ct_MminusE > 0, ], aes(miceTable$delta_ct_MminusE[miceTable$delta_ct_MminusE > 0])) +
+  geom_histogram(aes(y=..density..), bins = 100) +
+  stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
+                aes(color = "normal"), size = 2) +
+  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1], scale = fits$weibull$estimate[2]),
+                aes(color = "weibull"), size = 2) +
+  theme_bw(base_size = 24)
 
 #### Our model
 marshallData <- function (data, response) {
