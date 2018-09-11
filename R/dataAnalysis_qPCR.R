@@ -1,24 +1,18 @@
-# source("Models/BCI_qPCR-NormalDistrib.R")
-source("Models/BCI_qPCR-WeibullDistrib.R")
 source("MLE_hybrid_functions.R")
 library(ggplot2)
 library(reshape2)
+library(MASS)
 
 ## Import data
 HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$qPCRstatus) &
-                                        !is.na(HeitlingerFieldData$HI) &
-                                        !is.na(HeitlingerFieldData$Sex), ]
+                                   !is.na(HeitlingerFieldData$HI) &
+                                   !is.na(HeitlingerFieldData$Sex), ]
 
 # To pass positive I add 6 to all
 miceTable$delta_ct_MminusE <- miceTable$delta_ct_MminusE + 6
 
-## Separate in all, male, female the data frames
-qplot(miceTable$delta_ct_MminusE[miceTable$delta_ct_MminusE > 0]) + theme_bw()
-qplot(miceTable$delta_ct_MminusE) + theme_bw()
-
-# Which distribution to choose?
-library(MASS)
+######## Choose a correct distribution for our data ########
 dat <- miceTable$delta_ct_MminusE[miceTable$delta_ct_MminusE > 0]
 
 # let's compute some fits...
@@ -43,19 +37,8 @@ ggplot(miceTable[miceTable$delta_ct_MminusE > 0, ], aes(miceTable$delta_ct_Mminu
                 aes(color = "weibullOne"), size = 2) +
   theme_bw(base_size = 24)
 
-fits$normal
-
-shape=fits$weibull$estimate[1]
-scale=fits$weibull$estimate[1]
-
-#------ some data ------
-Test <- rweibull(n=10000, shape = shape, scale = scale)
-#------ theoretical and empirical means ------
-mean(T)
-
-Mean = scale * gamma(1/shape + 1)
-
-# OKKKK
+######## Fit a normal then a weibull distribution to data
+source("Models/fitNormal.R")
 
 #### Our model
 marshallData <- function (data, response) {
@@ -71,11 +54,7 @@ marshallData <- function (data, response) {
   ))
 }
 
-range(miceTable$delta_ct_MminusE)
-
-runAll <- function (data, response, paramBounds = c(L1start = 0, L1LB = 0, L1UB = 10, 
-                                                    L2start = 0, L2LB = 0, L2UB = 0, 
-                                                    alphaStart = 0, alphaLB = -5, alphaUB = 5)) {
+runAll <- function (data, response, paramBounds, sd) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
                         method = c("bobyqa", "L-BFGS-B"),
@@ -87,14 +66,15 @@ runAll <- function (data, response, paramBounds = c(L1start = 0, L1LB = 0, L1UB 
     response = response,
     hybridIndex = HI, 
     paramBounds = paramBounds, 
-    config = defaultConfig
+    config = defaultConfig,
+    sd = sd
   )
   return(list(FitAll = FitAll))
 }
 
-analyse <- function(data, response, paramBounds) {
+analyse <- function(data, response, paramBounds, sd) {
   print(paste0("Analysing data for response: ", response))
-  FitForResponse <- runAll(data, response, paramBounds)
+  FitForResponse <- runAll(data, response, paramBounds, sd)
   
   ####### Is alpha significant for each hypothesis?
   
@@ -122,7 +102,7 @@ analyse <- function(data, response, paramBounds) {
   # 
   # H2 <- list(female = FitForResponse$FitFemale$fitBasicAlpha,
   #            male = FitForResponse$FitMale$fitBasicAlpha)
-
+  
   # # H3: the mean load can differ both across subspecies and between sexes
   # print("Testing H3 female no alpha vs alpha")
   # Gtest(model0 = FitForResponse$FitFemale$fitAdvancedNoAlpha,
@@ -143,7 +123,7 @@ analyse <- function(data, response, paramBounds) {
   # H2 vs H0
   # print("Testing H2 vs H0")
   # Gtest(model0 = H0, model1 = H2)
-
+  
   # # H3 vs H1
   # print("Testing H3 vs H1")
   # Gtest(model0 = H1, model1 = H3)
@@ -164,13 +144,18 @@ miceTable2016 <- miceTable[miceTable$Year == 2016,]
 ## 2017
 miceTable2017 <- miceTable[miceTable$Year == 2017,]
 
-perYear <- function(miceTable, myshape = fits$weibull$estimate[1]){
+# perYear <- function(miceTable, sd = sd){
   # not enough values for males vs females
-  paramBounds = c(L1start = mean(miceTable$delta_ct_MminusE), L1LB = min(miceTable$delta_ct_MminusE), L1UB = max(miceTable$delta_ct_MminusE), 
-                  L2start = mean(miceTable$delta_ct_MminusE), L2LB = min(miceTable$delta_ct_MminusE), L2UB = max(miceTable$delta_ct_MminusE),  
+  paramBounds = c(L1start = mean(miceTable$delta_ct_MminusE), 
+                  L1LB = min(miceTable$delta_ct_MminusE), 
+                  L1UB = max(miceTable$delta_ct_MminusE), 
+                  L2start = mean(miceTable$delta_ct_MminusE), 
+                  L2LB = min(miceTable$delta_ct_MminusE), 
+                  L2UB = max(miceTable$delta_ct_MminusE),  
                   alphaStart = 0, alphaLB = -5, alphaUB = 5)
+  mysd = 2
   
-  fit <- analyse(miceTable, "delta_ct_MminusE", paramBounds = paramBounds)
+  fit <- analyse(miceTable, "delta_ct_MminusE", paramBounds = paramBounds, sd = mysd)
   
   plot <- plotAll(mod = fit$H1, data = miceTable, response = "delta_ct_MminusE", CI = TRUE) +
     ylab(label = "delta CT mouse vs eimeria") +
@@ -180,8 +165,40 @@ perYear <- function(miceTable, myshape = fits$weibull$estimate[1]){
   return(list(fit, plot))
 }
 
-perYear(miceTable2016)
+# perYear(miceTable, sd = fits$normal$estimate[2])
 
-perYear(miceTable2017)
 
-perYear(miceTable)
+# WHATS WRONG
+fit <- analyse(miceTable, "delta_ct_MminusE", paramBounds = paramBounds, sd = 2)
+
+# analyse <- function(data, response, paramBounds, sd) {
+data = miceTable
+response = "delta_ct_MminusE"
+paramBounds
+sd = 2
+
+  print(paste0("Analysing data for response: ", response))
+  FitForResponse <- runAll(data, response, paramBounds, sd)
+  
+  ####### Is alpha significant for each hypothesis?
+  
+  # H0: the expected load for the subspecies and between sexes is the same
+  print("Testing H0 no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitAll$fitBasicNoAlpha, 
+        model1 = FitForResponse$FitAll$fitBasicAlpha)
+  H0 <- FitForResponse$FitAll$fitBasicAlpha
+  
+  # H1: the mean load across sexes is the same, but can differ across subspecies
+  print("Testing H1 no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitAll$fitAdvancedNoAlpha, 
+        model1 = FitForResponse$FitAll$fitAdvancedAlpha)
+  
+  H1 <- FitForResponse$FitAll$fitAdvancedAlpha
+
+  ####### Compare the hypotheses with G-tests 
+  # H1 vs H0
+  print("Testing H1 vs H0")
+  Gtest(model0 = H0, model1 = H1)
+
+
+
