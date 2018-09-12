@@ -40,3 +40,5 @@ vignettes/*.pdf
 *.knit.md
 
 tests/\.Rhistory
+
+data/FinalFullDF_flotationPcrqPCR\.csv
