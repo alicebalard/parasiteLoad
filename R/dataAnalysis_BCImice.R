@@ -99,6 +99,18 @@ ggplot(d, aes(resBMBL)) +
   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
                                                df = fits$student$estimate[3]),
                 aes(color = "student"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 10),
+                aes(color = "student10"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 400),
+                aes(color = "student500"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 1000),
+                aes(color = "student1000"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 5),
+                aes(color = "student5"), size = 2) +
   theme_bw(base_size = 24) 
 
 #### Our model
@@ -127,7 +139,7 @@ runAll <- function (data, response, mydf) {
                    L2LB = min(na.omit(data[[response]])), 
                    L2UB = max(na.omit(data[[response]])), 
                    alphaStart = 0, alphaLB = -5, alphaUB = 5,
-                   mydfStart = 2, mydfLB = 1, mydfUB = 10)
+                   mydfStart = 4, mydfLB = 1, mydfUB = 400)
   marshalledData <- marshallData(data, response)
   print("Fitting for all")
   FitAll <- run(
@@ -220,50 +232,33 @@ analyse <- function(data, response, mydf) {
 }
 
 # fit <- analyse(data4stats, "BCI")
-fit <- analyse(d, "resBMBL", mydf = 5)
+fit <- analyse(d, "resBMBL")
 
-fit
-
-plotAll(mod = fit$H1, data = d, response = "resBMBL", CI = TRUE, 
+# plot all
+plotAll(mod = fit$H1, data = d, response = "resBMBL", CI = F, 
         labelfory = "resBMBL", isLog10 = F)
 
-# plot2sexes(modF = fit$H3$positive, modM = fit$H3$negative, data = data4stats, 
-#            response = "resBMBL", CI = FALSE, cols = c("grey", "black"), 
-#            mygroup = "EimeriaDetected", switchlevels = TRUE)
+# plot 2 groups
+modP = fit$H3$positive
+modN = fit$H3$negative
+DF <- data.frame(HI = seq(0,1,0.01), 
+                 loadMLEP = MeanLoad(L1 = coef(modP)[names(coef(modP)) == "L1"], 
+                                     L2 =  coef(modP)[names(coef(modP)) == "L2"], 
+                                     alpha =  coef(modP)[names(coef(modP)) == "alpha"],  
+                                     hybridIndex = seq(0,1,0.01)), 
+                 loadMLEN = MeanLoad(L1 = coef(modN)[names(coef(modN)) == "L1"], 
+                                     L2 =  coef(modN)[names(coef(modN)) == "L2"], 
+                                     alpha =  coef(modN)[names(coef(modN)) == "alpha"],  
+                                     hybridIndex = seq(0,1,0.01))) 
 
-plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
-                        cols = c("grey", "black")){
-  fit <- analyse(data, response)
-  data$response <- data[[response]]
-  data$log10resp <- log10(data$response + 1)
-  ## Draw the line for the parameters at their MLE, alpha varying 
-  DF <- data.frame(HI = seq(0,1,0.01), 
-                   loadMLEP = MeanLoad(L1 = coef(modP)[names(coef(modP)) == "L1"], 
-                                       L2 =  coef(modP)[names(coef(modP)) == "L2"], 
-                                       alpha =  coef(modP)[names(coef(modP)) == "alpha"],  
-                                       hybridIndex = seq(0,1,0.01)), 
-                   loadMLEN = MeanLoad(L1 = coef(modN)[names(coef(modN)) == "L1"], 
-                                       L2 =  coef(modN)[names(coef(modN)) == "L2"], 
-                                       alpha =  coef(modN)[names(coef(modN)) == "alpha"],  
-                                       hybridIndex = seq(0,1,0.01))) 
- ggplot() + 
-   # geom_point(data = data, aes_string(x = "HI", y = "log10resp", color = mygroup)) + 
-   geom_point(data = data, aes_string(x = "HI", y = "response", color = mygroup, size = 3)) +
-   scale_color_manual(values = cols) +
-   # geom_line(aes(x = DF$HI, y = log10(DF$loadMLEN + 1)), col = "grey32", size = 3) +
-   # geom_line(aes(x = DF$HI, y = log10(DF$loadMLEP + 1)), col = "red", size = 3) +
-   geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 2) +
-   geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 2) +
-   theme_bw(base_size = 20)+
-   ylab(label = "resBMBL") +
-   annotate("text", x = 0.5, y = 0.65, col = "red", cex = 7,
-            label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
-   annotate("text", x = 0.5, y = 0.55, col = "grey32", cex = 7,
-            label = as.character(round(fit$H3$negative@coef[["alpha"]], 2)))
-}
-
-plot2groups(modP = fit$H3$positive, modN = fit$H3$negative, 
-           data = data4stats, 
-           response = "resBMBL", cols = c("grey32", "red"))
-
-
+ggplot() +
+  geom_point(data = d, aes_string(x = "HI", y = "resBMBL", col = "EimeriaDetected"), size = 3) +
+  scale_color_manual(values = c("grey", "red")) +
+  geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 2) +
+  geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 2) +
+  theme_bw(base_size = 20)+
+  ylab(label = "resBMBL") +
+  annotate("text", x = 0.5, y = 4, col = "red", cex = 7,
+           label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
+  annotate("text", x = 0.5, y = 6, col = "grey32", cex = 7,
+           label = as.character(round(fit$H3$negative@coef[["alpha"]], 2)))
