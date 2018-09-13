@@ -1,5 +1,5 @@
 #### Fit a normal distribution
-## We consider a constant sd and a varying mean along the HI
+## We consider a constant mysd and a varying mean along the HI
 library(bbmle)
 library(optimx)
 
@@ -21,12 +21,12 @@ printConvergence <- function(fit) {
 ## Fit functions for each model parameters set
 
 # no difference between subspecies, no hybrid effect
-FitBasicNoAlpha <- function(data, response, hybridIndex, paramBounds, config, sd){
+FitBasicNoAlpha <- function(data, response, hybridIndex, paramBounds, config, mysd){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
   start <-  list(L1 = paramBounds[["L1start"]])
   fit <- mle2(
-    response ~ dnorm(mean =  MeanLoad(L1, L1, 0, HI), sd = sd),
+    response ~ dnorm(mean =  MeanLoad(L1, L1, 0, HI), sd = mysd),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]]
@@ -40,13 +40,13 @@ FitBasicNoAlpha <- function(data, response, hybridIndex, paramBounds, config, sd
 }
 
 # no difference between subspecies, flexible hybrid effect
-FitBasicAlpha <- function(data, response, hybridIndex, paramBounds, config, sd){
+FitBasicAlpha <- function(data, response, hybridIndex, paramBounds, config, mysd){
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- mle2(
-    response ~ dnorm(mean = MeanLoad(L1, L1, alpha, HI), sd = sd),
+    response ~ dnorm(mean = MeanLoad(L1, L1, alpha, HI), sd = mysd),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
@@ -61,14 +61,14 @@ FitBasicAlpha <- function(data, response, hybridIndex, paramBounds, config, sd){
 }
 
 # difference between subspecies, no hybrid effect
-FitAdvancedNoAlpha <- function(data, response, hybridIndex, paramBounds, config, sd){
+FitAdvancedNoAlpha <- function(data, response, hybridIndex, paramBounds, config, mysd){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]]
   )
   fit <- mle2(
-    response ~ dnorm(mean = MeanLoad(L1, L2, 0, HI), sd = sd),
+    response ~ dnorm(mean = MeanLoad(L1, L2, 0, HI), sd = mysd),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]], 
@@ -83,14 +83,14 @@ FitAdvancedNoAlpha <- function(data, response, hybridIndex, paramBounds, config,
 }
 
 # difference between subspecies, flexible hybrid effect
-FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config, sd){
+FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config, mysd){
   print("Fitting model advanced with alpha")
   data$response <- data[[response]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- mle2(
-    response ~ dnorm(mean = MeanLoad(L1, L2, alpha, HI), sd = sd),
+    response ~ dnorm(mean = MeanLoad(L1, L2, alpha, HI), sd = mysd),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]], 
@@ -106,7 +106,7 @@ FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config, s
   return(fit)
 }
 
-run <- function (data, response, hybridIndex, paramBounds, config, sd) {
+run <- function (data, response, hybridIndex, paramBounds, config, mysd) {
   data$response <- data[[response]]
   results = list()
   methods = c(
@@ -123,7 +123,7 @@ run <- function (data, response, hybridIndex, paramBounds, config, sd) {
       hybridIndex, 
       paramBounds, 
       config,
-      sd
+      mysd
     )
   }
   return(results)

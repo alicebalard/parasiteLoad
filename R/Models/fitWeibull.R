@@ -27,7 +27,7 @@ FitBasicNoAlpha <- function(data, response, hybridIndex, paramBounds, config, sh
   data$response <- data[[response]] # little trick
   start <-  list(L1 = paramBounds[["L1start"]])
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = (MeanLoad(L1, L1, 0, HI))/ shape),
+    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/shape)),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]]
@@ -47,7 +47,7 @@ FitBasicAlpha <- function(data, response, hybridIndex, paramBounds, config, shap
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = (MeanLoad(L1, L1, 0, HI))/ shape),
+    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/shape)),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
@@ -69,7 +69,7 @@ FitAdvancedNoAlpha <- function(data, response, hybridIndex, paramBounds, config,
                  L2 = paramBounds[["L2start"]]
   )
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = (MeanLoad(L1, L1, 0, HI))/ shape),
+    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/shape)),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]], 
@@ -91,7 +91,7 @@ FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config, s
                  L2 = paramBounds[["L2start"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = (MeanLoad(L1, L1, 0, HI))/ shape),
+    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI) / gamma(1 + 1/shape)),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]], 
@@ -107,7 +107,7 @@ FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config, s
   return(fit)
 }
 
-run <- function (data, response, hybridIndex, paramBounds, config) {
+run <- function (data, response, hybridIndex, paramBounds, config, shape) {
   results = list()
   methods = c(
     fitBasicNoAlpha = FitBasicNoAlpha, 
@@ -122,7 +122,8 @@ run <- function (data, response, hybridIndex, paramBounds, config) {
       response, 
       hybridIndex, 
       paramBounds, 
-      config
+      config,
+      shape
     )
   }
   return(results)
