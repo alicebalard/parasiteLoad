@@ -1,6 +1,6 @@
 #### Fit a weibull distribution
-## Mean = scale * gamma(1/shape + 1)
-## We consider a constant shape and a varying scale along the HI
+## Mean = scale * gamma(1/myshape + 1)
+## We consider a constant myshape (optimized) and a varying scale along the HI
 library(bbmle)
 library(optimx)
 
@@ -22,17 +22,19 @@ printConvergence <- function(fit) {
 ## Fit functions for each model parameters set
 
 # no difference between subspecies, no hybrid effect
-FitBasicNoAlpha <- function(data, response, hybridIndex, paramBounds, config, shape){
+FitBasicNoAlpha <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
-  start <-  list(L1 = paramBounds[["L1start"]])
+  start <-  list(L1 = paramBounds[["L1start"]],
+                 myshape = paramBounds[["myshapestart"]])
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/shape)),
+    response ~ dweibull(shape = myshape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/myshape)),
     data = data, 
     start = start,
-    lower = c(L1 = paramBounds[["L1LB"]]
-    ),
-    upper = c(L1 = paramBounds[["L1UB"]]    ),
+    lower = c(L1 = paramBounds[["L1LB"]],
+              myshape = paramBounds[["myshapeLB"]]),
+    upper = c(L1 = paramBounds[["L1UB"]],
+              myshape = paramBounds[["myshapeUB"]]),
     optimizer = config$optimizer, 
     method = config$method, 
     control = config$control)
@@ -41,19 +43,22 @@ FitBasicNoAlpha <- function(data, response, hybridIndex, paramBounds, config, sh
 }
 
 # no difference between subspecies, flexible hybrid effect
-FitBasicAlpha <- function(data, response, hybridIndex, paramBounds, config, shape){
+FitBasicAlpha <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
   start <-  list(L1 = paramBounds[["L1start"]],
-                 alpha = paramBounds[["alphaStart"]])
+                 alpha = paramBounds[["alphaStart"]],
+                 myshape = paramBounds[["myshapestart"]])
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/shape)),
+    response ~ dweibull(shape = myshape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/myshape)),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
-              alpha = paramBounds[["alphaLB"]]),
+              alpha = paramBounds[["alphaLB"]],
+              myshape = paramBounds[["myshapeLB"]]),
     upper = c(L1 = paramBounds[["L1UB"]],
-              alpha = paramBounds[["alphaUB"]]),
+              alpha = paramBounds[["alphaUB"]],
+              myshape = paramBounds[["myshapeUB"]]),
     optimizer = config$optimizer, 
     method = config$method, 
     control = config$control)
@@ -62,20 +67,22 @@ FitBasicAlpha <- function(data, response, hybridIndex, paramBounds, config, shap
 }
 
 # difference between subspecies, no hybrid effect
-FitAdvancedNoAlpha <- function(data, response, hybridIndex, paramBounds, config, shape){
+FitAdvancedNoAlpha <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
   start <-  list(L1 = paramBounds[["L1start"]],
-                 L2 = paramBounds[["L2start"]]
-  )
+                 L2 = paramBounds[["L2start"]],
+                 myshape = paramBounds[["myshapestart"]])
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/shape)),
+    response ~ dweibull(shape = myshape, scale = MeanLoad(L1, L1, 0, HI)/ gamma(1 + 1/myshape)),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]], 
-              L2 = paramBounds[["L2LB"]]              ),
+              L2 = paramBounds[["L2LB"]],
+              myshape = paramBounds[["myshapeLB"]]),
     upper = c(L1 = paramBounds[["L1UB"]],
-              L2 = paramBounds[["L2UB"]]),
+              L2 = paramBounds[["L2UB"]],
+              myshape = paramBounds[["myshapeUB"]]),
     optimizer = config$optimizer, 
     method = config$method, 
     control = config$control)
@@ -84,22 +91,25 @@ FitAdvancedNoAlpha <- function(data, response, hybridIndex, paramBounds, config,
 }
 
 # difference between subspecies, flexible hybrid effect
-FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config, shape){
+FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced with alpha")
   data$response <- data[[response]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
-                 alpha = paramBounds[["alphaStart"]])
+                 alpha = paramBounds[["alphaStart"]],
+                 myshape = paramBounds[["myshapestart"]])
   fit <- mle2(
-    response ~ dweibull(shape = shape, scale = MeanLoad(L1, L1, 0, HI) / gamma(1 + 1/shape)),
+    response ~ dweibull(shape = myshape, scale = MeanLoad(L1, L1, 0, HI) / gamma(1 + 1/myshape)),
     data = data, 
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]], 
               L2 = paramBounds[["L2LB"]], 
-              alpha = paramBounds[["alphaLB"]]),
+              alpha = paramBounds[["alphaLB"]],
+              myshape = paramBounds[["myshapeLB"]]),
     upper = c(L1 = paramBounds[["L1UB"]],
               L2 = paramBounds[["L2UB"]],
-              alpha = paramBounds[["alphaUB"]]),
+              alpha = paramBounds[["alphaUB"]],
+              myshape = paramBounds[["myshapeUB"]]),
     optimizer = config$optimizer, 
     method = config$method, 
     control = config$control)
@@ -107,7 +117,7 @@ FitAdvancedAlpha <- function(data, response, hybridIndex, paramBounds, config, s
   return(fit)
 }
 
-run <- function (data, response, hybridIndex, paramBounds, config, shape) {
+run <- function (data, response, hybridIndex, paramBounds, config) {
   results = list()
   methods = c(
     fitBasicNoAlpha = FitBasicNoAlpha, 
@@ -122,8 +132,7 @@ run <- function (data, response, hybridIndex, paramBounds, config, shape) {
       response, 
       hybridIndex, 
       paramBounds, 
-      config,
-      shape
+      config
     )
   }
   return(results)
