@@ -20,9 +20,9 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
 getDF <- function(rawDF){
   data4stats <- rawDF[names(rawDF) %in% 
                         c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
+  data4stats$EimeriaDetected <- NA
   # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
   # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
-  data4stats$EimeriaDetected <- NA
   data4stats$EimeriaDetected[data4stats$delta_ct_MminusE <= -6] <- "negative"
   data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
   data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
@@ -47,20 +47,17 @@ ggplot(data4stats,
   theme_bw()
 
 # Remove pregnant females
-data4stats <- data4stats[!data4stats$status %in% c("pregnant/lactating female"), ]
+d <- data4stats[!data4stats$status %in% c("pregnant/lactating female"), ]
 
 # Regression of BM/BS for males and females (all together, then separate subsp.) 
 # Advantage: independant of size!!
 
 # Step 1: fit the model
-d <- data4stats
 fit <- lm(Body_weight ~ Body_length * Sex, data = d)
 
 # Step 2: obtain predicted and residual values
 d$predicted <- predict(fit)   # Save the predicted values
 d$residuals <- residuals(fit) # Save the residual values
-library(dplyr)
-d %>% select(Body_weight, predicted, residuals) %>% head()
 
 # Step 3: plot the actual and predicted values
 ggplot(d, aes(x = Body_length, y = Body_weight)) +
@@ -73,6 +70,9 @@ ggplot(d, aes(x = Body_length, y = Body_weight)) +
   theme_bw()  # Add theme for cleaner look
 
 # Step 4: use residuals as indice
+hist(d$residuals[d$Sex =="F"], breaks = 100) # remove outliers, keep [-5,5] interval
+
+d <- d[d$residuals <= 5,]
 d$resBMBL <- d$residuals
 
 # give positive values only
@@ -231,11 +231,15 @@ analyse <- function(data, response, mydf) {
   return(list(H0 = H0, H1 = H1, H2 = H2, H3 = H3))
 }
 
-# fit <- analyse(data4stats, "BCI")
-fit <- analyse(d, "resBMBL")
+# choose dataset
+# data <- d[d$Sex == "F",]
+# data <- d[d$Sex == "M",]
+data <- d
+
+fit <- analyse(data, "resBMBL")
 
 # plot all
-plotAll(mod = fit$H1, data = d, response = "resBMBL", CI = F, 
+plotAll(mod = fit$H1, data = data, response = "resBMBL", CI = F, 
         labelfory = "resBMBL", isLog10 = F)
 
 # plot 2 groups
@@ -252,7 +256,7 @@ DF <- data.frame(HI = seq(0,1,0.01),
                                      hybridIndex = seq(0,1,0.01))) 
 
 ggplot() +
-  geom_point(data = d, aes_string(x = "HI", y = "resBMBL", col = "EimeriaDetected"), size = 3) +
+  geom_point(data = data, aes_string(x = "HI", y = "resBMBL", col = "EimeriaDetected"), size = 3) +
   scale_color_manual(values = c("grey", "red")) +
   geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 2) +
   geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 2) +
