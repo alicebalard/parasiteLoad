@@ -1,9 +1,9 @@
 ## source the functions defining meanload and aggregation for the negative binomial
-source("Models/BCI_qPCR-NormalDistrib.R")
+source("Models/fitStudent.R")
 source("MLE_hybrid_functions.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
                                    !is.na(HeitlingerFieldData$Body_length) &
                                    !is.na(HeitlingerFieldData$HI) &
@@ -20,80 +20,86 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
 getDF <- function(rawDF){
   data4stats <- rawDF[names(rawDF) %in% 
                         c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
-  
   # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
   # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
   data4stats$EimeriaDetected <- NA
   data4stats$EimeriaDetected[data4stats$delta_ct_MminusE <= -6] <- "negative"
   data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
-
   data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
-  
-  # Try index as in paper https://www.researchgate.net/publication/259551749_Which_body_condition_index_is_best
+  # Use index as in paper https://www.researchgate.net/publication/259551749_Which_body_condition_index_is_best
   # log body mass/log body length
   data4stats$BCI <- log(data4stats$Body_weight, base = 10) / log(data4stats$Body_length, base = 10)
-
-  # Remove pregnant/post partum and juveniles
-  data4stats <- data4stats[!data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant", "young"), ]
-  
   return(data4stats)
 }
 
 data4stats <- getDF(miceTable)
 
+# Remove pregnant/post partum and juveniles
+data4stats$status[data4stats$Sex %in% c("F")] <- "non pregnant/lactating female"
+data4stats$status[data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant")] <- "pregnant/lactating female"
+data4stats$status[data4stats$Sex %in% c("M")] <- "male"
+
+# Test  our detection of pregnancy in females using BCI
+ggplot(data4stats, 
+       aes(x = HI, y = BCI, fill = status, group = status)) +
+  geom_point(pch = 21, size = 3, alpha = .5)+
+  geom_smooth(aes(col = status)) +
+  theme_bw()
+
+# Remove pregnant females
+data4stats <- data4stats[!data4stats$status %in% c("pregnant/lactating female"), ]
+
+# Regression of BM/BS for males and females (all together, then separate subsp.) 
+# Advantage: independant of size!!
+
+# Step 1: fit the model
+d <- data4stats
+fit <- lm(Body_weight ~ Body_length * Sex, data = d)
+
+# Step 2: obtain predicted and residual values
+d$predicted <- predict(fit)   # Save the predicted values
+d$residuals <- residuals(fit) # Save the residual values
+library(dplyr)
+d %>% select(Body_weight, predicted, residuals) %>% head()
+
+# Step 3: plot the actual and predicted values
+ggplot(d, aes(x = Body_length, y = Body_weight)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  geom_segment(aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
+  geom_point(aes(col = delta_ct_MminusE), size = 3) +
+  scale_color_gradient(low = "lightgrey", high = "red") +
+  geom_point(aes(y = predicted), shape = 1) +
+  facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
+  theme_bw()  # Add theme for cleaner look
+
+# Step 4: use residuals as indice
+d$resBMBL <- d$residuals
+
+# give positive values only
+d$resBMBL <- d$resBMBL + 5
+
 # Which distribution to choose?
 library(MASS)
-
-dat <- data4stats$BCI
-
+dat <- d$resBMBL
 # let's compute some fits...
 fits <- list(
   normal = fitdistr(dat,"normal"),
-  logistic = fitdistr(dat,"logistic"),
-  cauchy = fitdistr(dat,"cauchy"),
-  weibull = fitdistr(dat, "weibull"),
-  student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df=3), lower=c(-1, 0.001,1))
+  # logistic = fitdistr(dat,"logistic"), #tested
+  # cauchy = fitdistr(dat,"cauchy"), #tested
+  # weibull = fitdistr(dat, "weibull"), #tested (needs positive values)
+  student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df = 3), lower=c(-1, 0.001,1))
 )
-
 # get the logliks for each model...
 sapply(fits, function(i) i$loglik)
-# WEIBULL is the way to go!
-
-ggplot(data4stats, aes(BCI)) +
+# STUDENT is the way to go!
+ggplot(d, aes(resBMBL)) +
   geom_histogram(aes(y=..density..), bins = 100) + 
   stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
                 aes(color = "normal"), size = 2) +
-  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1], scale = fits$weibull$estimate[2]),
-                aes(color = "weibull"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = fits$student$estimate[3]),
+                aes(color = "student"), size = 2) +
   theme_bw(base_size = 24) 
-
-# getDFPregnantVsNotPregnant <- function(rawDF){
-#   data4stats <- rawDF[names(rawDF) %in% 
-#                         c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
-#   
-#   # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
-#   # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
-#   data4stats$EimeriaDetected <- NA
-#   data4stats$EimeriaDetected[is.na(data4stats$Status) & data4stats$Sex == "F"] <- "negative"
-#   data4stats$EimeriaDetected[data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant") &
-#                                       data4stats$Sex == "F"] <- "positive"
-#   
-#   data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
-#   
-#   # Try index as in paper https://www.researchgate.net/publication/259551749_Which_body_condition_index_is_best
-#   # log body mass/log body length
-#   data4stats$BCI <- log(data4stats$Body_weight, base = 10) / log(data4stats$Body_length, base = 10)
-#   
-#   # # Remove pregnant/post partum and juveniles
-#   # data4stats <- data4stats[!data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant", "young"), ]
-#   
-#   return(data4stats)
-# }
-
-ggplot(data4stats, aes(x = HI, y = BCI, fill = EimeriaDetected, group = EimeriaDetected)) +
-  geom_point(pch = 21, size = 3, alpha = .5)+
-  geom_smooth(aes(col = Sex)) +
-  theme_bw()
 
 #### Our model
 marshallData <- function (data, response) {
@@ -109,18 +115,19 @@ marshallData <- function (data, response) {
   ))
 }
 
-runAll <- function (data, response) {
+runAll <- function (data, response, mydf) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
                         method = c("bobyqa", "L-BFGS-B"),
                         control = list(follow.on = TRUE))
   paramBounds <- c(L1start = mean(na.omit(data[[response]])), 
-                   L1LB = 0, 
+                   L1LB = min(na.omit(data[[response]])), 
                    L1UB = max(na.omit(data[[response]])), 
                    L2start = mean(na.omit(data[[response]])), 
-                   L2LB = 0, 
+                   L2LB = min(na.omit(data[[response]])), 
                    L2UB = max(na.omit(data[[response]])), 
-                   alphaStart = 0, alphaLB = -5, alphaUB = 5)
+                   alphaStart = 0, alphaLB = -5, alphaUB = 5,
+                   mydfStart = 2, mydfLB = 1, mydfUB = 10)
   marshalledData <- marshallData(data, response)
   print("Fitting for all")
   FitAll <- run(
@@ -149,9 +156,9 @@ runAll <- function (data, response) {
   return(list(FitAll = FitAll, FitPositive = FitPositive, FitNegative = FitNegative))
 }
 
-analyse <- function(data, response) {
+analyse <- function(data, response, mydf) {
   print(paste0("Analysing data for response: ", response))
-  FitForResponse <- runAll(data, response)
+  FitForResponse <- runAll(data, response, mydf)
   
   ####### Is alpha significant for each hypothesis?
   
@@ -212,13 +219,17 @@ analyse <- function(data, response) {
   return(list(H0 = H0, H1 = H1, H2 = H2, H3 = H3))
 }
 
-fit <- analyse(data4stats, "BCI")
+# fit <- analyse(data4stats, "BCI")
+fit <- analyse(d, "resBMBL", mydf = 5)
 
-plotAll(mod = fit$H1, data = data4stats, response = "BCI", CI = FALSE, labelfory = "BCI", isLog10 = F)
+fit
 
-plot2sexes(modF = fit$H3$positive, modM = fit$H3$negative, data = data4stats, 
-           response = "BCI", CI = FALSE, cols = c("grey", "black"), 
-           mygroup = "EimeriaDetected", switchlevels = TRUE)
+plotAll(mod = fit$H1, data = d, response = "resBMBL", CI = TRUE, 
+        labelfory = "resBMBL", isLog10 = F)
+
+# plot2sexes(modF = fit$H3$positive, modM = fit$H3$negative, data = data4stats, 
+#            response = "resBMBL", CI = FALSE, cols = c("grey", "black"), 
+#            mygroup = "EimeriaDetected", switchlevels = TRUE)
 
 plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
                         cols = c("grey", "black")){
@@ -244,7 +255,7 @@ plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
    geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 2) +
    geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 2) +
    theme_bw(base_size = 20)+
-   ylab(label = "BCI") +
+   ylab(label = "resBMBL") +
    annotate("text", x = 0.5, y = 0.65, col = "red", cex = 7,
             label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
    annotate("text", x = 0.5, y = 0.55, col = "grey32", cex = 7,
@@ -253,6 +264,6 @@ plot2groups <- function(modP, modN, data, response, mygroup = "EimeriaDetected",
 
 plot2groups(modP = fit$H3$positive, modN = fit$H3$negative, 
            data = data4stats, 
-           response = "BCI", cols = c("grey32", "red"))
+           response = "resBMBL", cols = c("grey32", "red"))
 
 
