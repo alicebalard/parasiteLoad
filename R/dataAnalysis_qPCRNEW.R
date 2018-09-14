@@ -64,14 +64,14 @@ source("Models/fitWeibull.R")
 
 marshallData <- function (data, response) {
   dataForResponse <- data[complete.cases(data[[response]]),]
-  dataForResponse_P <- data[data$PCRstatus == "positive",]
-  dataForResponse_P <- dataForResponse_P[complete.cases(dataForResponse_P[[response]]),]
-  dataForResponse_N <- data[data$PCRstatus == "negative",]
-  dataForResponse_N <- dataForResponse_N[complete.cases(dataForResponse_N[[response]]),]
+  dataForResponse_F <- data[data$Sex == "F",]
+  dataForResponse_F <- dataForResponse_F[complete.cases(dataForResponse_F[[response]]),]
+  dataForResponse_M <- data[data$Sex == "M",]
+  dataForResponse_M <- dataForResponse_M[complete.cases(dataForResponse_M[[response]]),]
   return(list(
     all = dataForResponse,
-    positive = dataForResponse_P,
-    negative = dataForResponse_N 
+    female = dataForResponse_F,
+    male = dataForResponse_M 
   ))
 }
 
@@ -97,23 +97,23 @@ runAll <- function (data, response) {
     paramBounds = paramBounds, 
     config = defaultConfig
   )
-  print("Fitting for positive")
-  FitPositive <- run(
-    data = marshalledData$positive,
+  print("Fitting for female")
+  FitFemale <- run(
+    data = marshalledData$female,
     response = response,
     hybridIndex = HI, 
     paramBounds = paramBounds,
     config = defaultConfig
   )
-  print("Fitting for negative")
-  FitNegative <- run(
-    data = marshalledData$negative,
+  print("Fitting for male")
+  FitMale <- run(
+    data = marshalledData$male,
     response = response,
     hybridIndex = HI, 
     paramBounds = paramBounds,
     config = defaultConfig
   )
-  return(list(FitAll = FitAll, FitPositive = FitPositive, FitNegative = FitNegative))
+  return(list(FitAll = FitAll, FitFemale = FitFemale, FitMale = FitMale))
 }
 
 analyse <- function(data, response) {
@@ -136,28 +136,28 @@ analyse <- function(data, response) {
   H1 <- FitForResponse$FitAll$fitAdvancedAlpha
   
   # H2: the mean load across subspecies is the same, but can differ between the sexes
-  print("Testing H2 positive no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitPositive$fitBasicNoAlpha, 
-        model1 = FitForResponse$FitPositive$fitBasicAlpha)
+  print("Testing H2 female no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitFemale$fitBasicNoAlpha, 
+        model1 = FitForResponse$FitFemale$fitBasicAlpha)
   
-  print("Testing H2 negative no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitNegative$fitBasicNoAlpha, 
-        model1 = FitForResponse$FitNegative$fitBasicAlpha)
+  print("Testing H2 male no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitMale$fitBasicNoAlpha, 
+        model1 = FitForResponse$FitMale$fitBasicAlpha)
   
-  H2 <- list(positive = FitForResponse$FitPositive$fitBasicAlpha,
-             negative = FitForResponse$FitNegative$fitBasicAlpha)
+  H2 <- list(female = FitForResponse$FitFemale$fitBasicAlpha,
+             male = FitForResponse$FitMale$fitBasicAlpha)
   
   # H3: the mean load can differ both across subspecies and between sexes
-  print("Testing H3 poitive no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitPositive$fitAdvancedNoAlpha, 
-        model1 = FitForResponse$FitPositive$fitAdvancedAlpha)
+  print("Testing H3 female no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitFemale$fitAdvancedNoAlpha, 
+        model1 = FitForResponse$FitFemale$fitAdvancedAlpha)
   
-  print("Testing H3 negative no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitNegative$fitAdvancedNoAlpha, 
-        model1 = FitForResponse$FitNegative$fitAdvancedAlpha)
+  print("Testing H3 male no alpha vs alpha")
+  Gtest(model0 = FitForResponse$FitMale$fitAdvancedNoAlpha, 
+        model1 = FitForResponse$FitMale$fitAdvancedAlpha)
   
-  H3 <- list(positive = FitForResponse$FitPositive$fitAdvancedAlpha,
-             negative = FitForResponse$FitNegative$fitAdvancedAlpha)
+  H3 <- list(female = FitForResponse$FitFemale$fitAdvancedAlpha,
+             male = FitForResponse$FitMale$fitAdvancedAlpha)
   
   ####### Compare the hypotheses with G-tests 
   # H1 vs H0
@@ -187,8 +187,8 @@ plotAll(mod = fit$H1, data = data4stats, response = "delta_ct_MminusE", CI = F,
         labelfory = "delta_ct_MminusE", isLog10 = F)
 
 # plot 2 groups
-modP = fit$H3$positive
-modN = fit$H3$negative
+modP = fit$H3$female
+modN = fit$H3$male
 DF <- data.frame(HI = seq(0,1,0.01), 
                  loadMLEP = MeanLoad(L1 = coef(modP)[names(coef(modP)) == "L1"], 
                                      L2 =  coef(modP)[names(coef(modP)) == "L2"], 
@@ -200,14 +200,14 @@ DF <- data.frame(HI = seq(0,1,0.01),
                                      hybridIndex = seq(0,1,0.01))) 
 
 ggplot() +
-  geom_point(data = data, aes_string(x = "HI", y = "resBMBL", col = "EimeriaDetected"), size = 3) +
+  geom_point(data = data4stats, aes_string(x = "HI", y = "delta_ct_MminusE", col = "Sex"), size = 3) +
   scale_color_manual(values = c("grey", "red")) +
   geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 2) +
   geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 2) +
   theme_bw(base_size = 20)+
-  ylab(label = "resBMBL") +
+  ylab(label = "delta_ct_MminusE") +
   annotate("text", x = 0.5, y = 4, col = "red", cex = 7,
-           label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
+           label = as.character(round(fit$H3$female@coef[["alpha"]], 2))) +
   annotate("text", x = 0.5, y = 6, col = "grey32", cex = 7,
-           label = as.character(round(fit$H3$negative@coef[["alpha"]], 2)))
+           label = as.character(round(fit$H3$male@coef[["alpha"]], 2)))
 
