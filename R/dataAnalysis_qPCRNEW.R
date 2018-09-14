@@ -3,122 +3,62 @@ source("MLE_hybrid_functions.R")
 
 ## Import data
 HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
-miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
-                                   !is.na(HeitlingerFieldData$Body_length) &
-                                   !is.na(HeitlingerFieldData$HI) &
+miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$HI) &
                                    !is.na(HeitlingerFieldData$Sex) &
-                                   (
-                                     !is.na(HeitlingerFieldData$OPG) |
-                                       !is.na(HeitlingerFieldData$delta_ct_MminusE) |
-                                       !is.na(HeitlingerFieldData$PCRstatus)
-                                   ), ]
+                                   !is.na(HeitlingerFieldData$delta_ct_MminusE), ]
 
-# Works if OPG are integers
-# miceTable$OPG <- round(miceTable$OPG)
+data4stats <- miceTable[names(miceTable) %in% 
+                          c("HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
 
-getDF <- function(rawDF){
-  data4stats <- rawDF[names(rawDF) %in% 
-                        c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
-  data4stats$EimeriaDetected <- NA
-  # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
-  # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
-  data4stats$EimeriaDetected[data4stats$delta_ct_MminusE <= -6] <- "negative"
-  data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
-  data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
-  # Use index as in paper https://www.researchgate.net/publication/259551749_Which_body_condition_index_is_best
-  # log body mass/log body length
-  data4stats$BCI <- log(data4stats$Body_weight, base = 10) / log(data4stats$Body_length, base = 10)
-  return(data4stats)
-}
-
-data4stats <- getDF(miceTable)
-
-# Remove pregnant/post partum and juveniles
-data4stats$status[data4stats$Sex %in% c("F")] <- "non pregnant/lactating female"
-data4stats$status[data4stats$Status %in% c("post partum", "post partum (lactating)", "pregnant")] <- "pregnant/lactating female"
-data4stats$status[data4stats$Sex %in% c("M")] <- "male"
-
-# Test  our detection of pregnancy in females using BCI
+# First look
 ggplot(data4stats, 
-       aes(x = HI, y = BCI, fill = status, group = status)) +
+       aes(x = HI, y = delta_ct_MminusE, fill = Sex, group = Sex)) +
   geom_point(pch = 21, size = 3, alpha = .5)+
-  geom_smooth(aes(col = status)) +
+  geom_smooth(aes(col = Sex)) +
   theme_bw()
 
-# Remove pregnant females
-d <- data4stats[!data4stats$status %in% c("pregnant/lactating female"), ]
-
-# Regression of BM/BS for males and females (all together, then separate subsp.) 
-# Advantage: independant of size!!
-
-# Step 1: fit the model
-fit <- lm(Body_weight ~ Body_length * Sex, data = d)
-
-# Step 2: obtain predicted and residual values
-d$predicted <- predict(fit)   # Save the predicted values
-d$residuals <- residuals(fit) # Save the residual values
-
-# Step 3: plot the actual and predicted values
-ggplot(d, aes(x = Body_length, y = Body_weight)) +
-  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
-  geom_segment(aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
-  geom_point(aes(col = delta_ct_MminusE), size = 3) +
-  scale_color_gradient(low = "lightgrey", high = "red") +
-  geom_point(aes(y = predicted), shape = 1) +
-  facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
-  theme_bw()  # Add theme for cleaner look
-
-# Step 4: use residuals as indice
-hist(d$residuals[d$Sex =="F"], breaks = 100) # remove outliers, keep [-5,5] interval
-
-d <- d[d$residuals <= 5,]
-d$resBMBL <- d$residuals
-
-# give positive values only
-d$resBMBL <- d$resBMBL + 5
-
-# Which distribution to choose?
-library(MASS)
-dat <- d$resBMBL
-# let's compute some fits...
-fits <- list(
-  normal = fitdistr(dat,"normal"),
-  # logistic = fitdistr(dat,"logistic"), #tested
-  # cauchy = fitdistr(dat,"cauchy"), #tested
-  # weibull = fitdistr(dat, "weibull"), #tested (needs positive values)
-  student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df = 3), lower=c(-1, 0.001,1))
-)
-# get the logliks for each model...
-sapply(fits, function(i) i$loglik)
-# STUDENT is the way to go!
-ggplot(d, aes(resBMBL)) +
-  geom_histogram(aes(y=..density..), bins = 100) + 
-  stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
-                aes(color = "normal"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-                                               df = fits$student$estimate[3]),
-                aes(color = "student"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-                                               df = 10),
-                aes(color = "student10"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-                                               df = 400),
-                aes(color = "student500"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-                                               df = 1000),
-                aes(color = "student1000"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-                                               df = 5),
-                aes(color = "student5"), size = 2) +
-  theme_bw(base_size = 24) 
+# # Which distribution to choose?
+# library(MASS)
+# dat <- d$resBMBL
+# # let's compute some fits...
+# fits <- list(
+#   normal = fitdistr(dat,"normal"),
+#   # logistic = fitdistr(dat,"logistic"), #tested
+#   # cauchy = fitdistr(dat,"cauchy"), #tested
+#   # weibull = fitdistr(dat, "weibull"), #tested (needs positive values)
+#   student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df = 3), lower=c(-1, 0.001,1))
+# )
+# # get the logliks for each model...
+# sapply(fits, function(i) i$loglik)
+# # STUDENT is the way to go!
+# ggplot(d, aes(resBMBL)) +
+#   geom_histogram(aes(y=..density..), bins = 100) + 
+#   stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
+#                 aes(color = "normal"), size = 2) +
+#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+#                                                df = fits$student$estimate[3]),
+#                 aes(color = "student"), size = 2) +
+#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+#                                                df = 10),
+#                 aes(color = "student10"), size = 2) +
+#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+#                                                df = 400),
+#                 aes(color = "student500"), size = 2) +
+#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+#                                                df = 1000),
+#                 aes(color = "student1000"), size = 2) +
+#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+#                                                df = 5),
+#                 aes(color = "student5"), size = 2) +
+#   theme_bw(base_size = 24) 
 
 #### Our model
 marshallData <- function (data, response) {
   dataForResponse <- data[complete.cases(data[[response]]),]
-  dataForResponse_P <- dataForResponse[dataForResponse$EimeriaDetected == "positive",]
-  dataForResponse_N <- dataForResponse[dataForResponse$EimeriaDetected == "negative",]
-  # dataForResponse_P$EimeriaDetected <- droplevels(dataForResponse_P$EimeriaDetected)
-  # dataForResponse_N$EimeriaDetected <- droplevels(dataForResponse_N$EimeriaDetected)
+  dataForResponse_P <- data[data$PCRstatus == "positive",]
+  dataForResponse_P <- dataForResponse_P[complete.cases(dataForResponse_P[[response]]),]
+  dataForResponse_N <- data[data$PCRstatus == "negative",]
+  dataForResponse_N <- dataForResponse_N[complete.cases(dataForResponse_N[[response]]),]
   return(list(
     all = dataForResponse,
     positive = dataForResponse_P,
@@ -231,15 +171,14 @@ analyse <- function(data, response, mydf) {
 }
 
 # choose dataset
-# data <- d[d$Sex == "F",]
-# data <- d[d$Sex == "M",]
-data <- d
+# Pass all positive for model:
+data4stats$delta_ct_MminusE <- data4stats$delta_ct_MminusE + abs(min(data4stats$delta_ct_MminusE))
 
-fit <- analyse(data, "resBMBL")
+fit <- analyse(data4stats, "delta_ct_MminusE")
 
 # plot all
-plotAll(mod = fit$H1, data = data, response = "resBMBL", CI = F, 
-        labelfory = "resBMBL", isLog10 = F)
+plotAll(mod = fit$H1, data = data4stats, response = "delta_ct_MminusE", CI = F, 
+        labelfory = "delta_ct_MminusE", isLog10 = F)
 
 # plot 2 groups
 modP = fit$H3$positive
@@ -265,3 +204,4 @@ ggplot() +
            label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
   annotate("text", x = 0.5, y = 6, col = "grey32", cex = 7,
            label = as.character(round(fit$H3$negative@coef[["alpha"]], 2)))
+
