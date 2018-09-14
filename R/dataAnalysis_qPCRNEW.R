@@ -1,5 +1,7 @@
-source("Models/fitStudent.R")
 source("MLE_hybrid_functions.R")
+library(ggplot2)
+library(reshape2)
+library(MASS)
 
 ## Import data
 HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
@@ -10,6 +12,9 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$HI) &
 data4stats <- miceTable[names(miceTable) %in% 
                           c("HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
 
+# To pass positive I add 6 to all
+data4stats$delta_ct_MminusE <- data4stats$delta_ct_MminusE + 6
+
 # First look
 ggplot(data4stats, 
        aes(x = HI, y = delta_ct_MminusE, fill = Sex, group = Sex)) +
@@ -17,42 +22,46 @@ ggplot(data4stats,
   geom_smooth(aes(col = Sex)) +
   theme_bw()
 
-# # Which distribution to choose?
-# library(MASS)
-# dat <- d$resBMBL
-# # let's compute some fits...
-# fits <- list(
-#   normal = fitdistr(dat,"normal"),
-#   # logistic = fitdistr(dat,"logistic"), #tested
-#   # cauchy = fitdistr(dat,"cauchy"), #tested
-#   # weibull = fitdistr(dat, "weibull"), #tested (needs positive values)
-#   student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df = 3), lower=c(-1, 0.001,1))
-# )
-# # get the logliks for each model...
-# sapply(fits, function(i) i$loglik)
-# # STUDENT is the way to go!
-# ggplot(d, aes(resBMBL)) +
-#   geom_histogram(aes(y=..density..), bins = 100) + 
-#   stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
-#                 aes(color = "normal"), size = 2) +
-#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-#                                                df = fits$student$estimate[3]),
-#                 aes(color = "student"), size = 2) +
-#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-#                                                df = 10),
-#                 aes(color = "student10"), size = 2) +
-#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-#                                                df = 400),
-#                 aes(color = "student500"), size = 2) +
-#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-#                                                df = 1000),
-#                 aes(color = "student1000"), size = 2) +
-#   stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
-#                                                df = 5),
-#                 aes(color = "student5"), size = 2) +
-#   theme_bw(base_size = 24) 
+######## Choose a correct distribution for our data ########
+data4stats <- data4stats[data4stats$delta_ct_MminusE > 0, ]
+dat <- data4stats$delta_ct_MminusE
+
+# let's compute some fits...
+fits <- list(
+  normal = fitdistr(dat,"normal"),
+  logistic = fitdistr(dat,"logistic"),
+  cauchy = fitdistr(dat,"cauchy"),
+  weibull = fitdistr(dat, "weibull"),
+  student = fitdistr(dat, "t", start = list(m = mean(dat), s = sd(dat), df=3), lower=c(-1, 0.001,1))
+)
+
+# get the logliks for each model...
+sapply(fits, function(i) i$loglik)
+# WEIBULL is the way to go!
+ggplot(data4stats, aes(delta_ct_MminusE)) +
+  geom_histogram(aes(y=..density..), bins = 100) + 
+  stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
+                aes(color = "normal"), size = 2) +
+  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1],
+                                                     scale = fits$weibull$estimate[2]),
+                aes(color = "weibull"), size = 2) +
+  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1],
+                                                     scale = 2),
+                aes(color = "weibull2"), size = 2) +
+  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1],
+                                                     scale = 5),
+                aes(color = "weibull5"), size = 2) +
+  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1],
+                                                     scale = 10),
+                aes(color = "weibull10"), size = 2) +
+  stat_function(fun = dweibull, n = 1e3, args = list(shape = fits$weibull$estimate[1],
+                                                     scale = 1),
+                aes(color = "weibull1"), size = 2) +
+  theme_bw(base_size = 24) 
 
 #### Our model
+source("Models/fitWeibull.R")
+
 marshallData <- function (data, response) {
   dataForResponse <- data[complete.cases(data[[response]]),]
   dataForResponse_P <- data[data$PCRstatus == "positive",]
@@ -66,7 +75,7 @@ marshallData <- function (data, response) {
   ))
 }
 
-runAll <- function (data, response, mydf) {
+runAll <- function (data, response) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
                         method = c("bobyqa", "L-BFGS-B"),
@@ -78,7 +87,7 @@ runAll <- function (data, response, mydf) {
                    L2LB = min(na.omit(data[[response]])), 
                    L2UB = max(na.omit(data[[response]])), 
                    alphaStart = 0, alphaLB = -5, alphaUB = 5,
-                   mydfStart = 4, mydfLB = 1, mydfUB = 400)
+                   myshapestart = 1, myshapeLB = 1, myshapeUB = 10)
   marshalledData <- marshallData(data, response)
   print("Fitting for all")
   FitAll <- run(
@@ -107,9 +116,9 @@ runAll <- function (data, response, mydf) {
   return(list(FitAll = FitAll, FitPositive = FitPositive, FitNegative = FitNegative))
 }
 
-analyse <- function(data, response, mydf) {
+analyse <- function(data, response) {
   print(paste0("Analysing data for response: ", response))
-  FitForResponse <- runAll(data, response, mydf)
+  FitForResponse <- runAll(data, response)
   
   ####### Is alpha significant for each hypothesis?
   
@@ -170,10 +179,7 @@ analyse <- function(data, response, mydf) {
   return(list(H0 = H0, H1 = H1, H2 = H2, H3 = H3))
 }
 
-# choose dataset
-# Pass all positive for model:
-data4stats$delta_ct_MminusE <- data4stats$delta_ct_MminusE + abs(min(data4stats$delta_ct_MminusE))
-
+## Run the fit
 fit <- analyse(data4stats, "delta_ct_MminusE")
 
 # plot all
