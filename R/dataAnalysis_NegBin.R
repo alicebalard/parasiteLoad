@@ -1,9 +1,9 @@
 source("MLE_hybrid_functions.R")
 # source the functions defining meanload and aggregation for the negative binomial
-source("Models/MacroParasiteLoad-NegBin.R")
+source("Models/fitNegBin.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("../../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
 Flotation_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$OPG) &
                                         !is.na(HeitlingerFieldData$HI) &
                                         !is.na(HeitlingerFieldData$Sex), ]
@@ -136,8 +136,8 @@ giveParamBounds <- function(data, response){
            L2LB = 0,
            L2UB = max(na.omit(data[[response]])),
            alphaStart = 0, alphaLB = -5, alphaUB = 5, 
-           A1start = 10, A1LB = 0, A1UB = 1000,
-           A2start = 10, A2LB = 0, A2UB = 1000,
+           A1start = 10, A1LB = 1e-9, A1UB = 1000,
+           A2start = 10, A2LB = 1e-9, A2UB = 1000,
            Zstart = 0, ZLB = -20, ZUB = 20))
 }
 
@@ -149,10 +149,11 @@ fit_flotation_positive <- analyse(Flotation_data[Flotation_data$OPG > 0,], "OPG"
                                   paramBounds = giveParamBounds(Flotation_data[Flotation_data$OPG > 0,], "OPG"))
 
 ## Plots
-plotAll(mod = fit_flotation$H1, data = Flotation_data, response = "OPG", 
+plotAll(mod = fit_flotation_positive$H1, data = Flotation_data[Flotation_data$OPG > 0,], 
+        response = "OPG", 
         CI = FALSE ) + 
   annotate("text", x = 0.5, y = 3.7, col = "grey32", cex = 7,
-           label = as.character(round(fit_flotation$H1@coef[["alpha"]], 2)))
+           label = as.character(round(fit_flotation_positive$H1@coef[["alpha"]], 2)))
 
 plotAll(mod = fit_flotation_positive$H1, data = Flotation_data[Flotation_data$OPG > 0,], response = "OPG", 
         CI = TRUE ) + 
