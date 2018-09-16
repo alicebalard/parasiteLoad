@@ -63,7 +63,7 @@ getBananaDF <- function(mod, hybridIndex){
 
 ## Plot function
 bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
-                        cols = c("green", "orange"), mygroup = "Sex", isLog10 = F){
+                        cols = c("green", "orange"), mygroup = "Sex", islog10 = F){
   data$response = data[[response]]
   if(is.list(mod) == FALSE){ # we do not have differences between groups
     bananaDF = getBananaDF(mod, hybridIndex)
@@ -74,7 +74,9 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
       geom_ribbon(aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max),
                   fill = "grey", alpha = .5) +
       geom_line(aes(x = bananaDF$HI, y = bananaDF$fit)) +
-      theme_classic(base_size = 20) +
+      theme_classic(base_size = 20) + {
+        if(islog10 == TRUE) scale_y_log10()
+        } +
       ylab(label = response) 
   }else{
     bananaDF = data.frame(HI = numeric(), fit = numeric(), min = numeric(), max = numeric(), group = factor())
@@ -92,7 +94,9 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
       geom_line(aes(x = bananaDF$HI, y = bananaDF$fit, col = bananaDF$group)) +
       scale_fill_manual(values = cols) +
       scale_color_manual(values = cols) +
-      theme_classic(base_size = 20) +
+      theme_classic(base_size = 20) + {
+        if(islog10 == TRUE) scale_y_log10()
+      } +
       ylab(label = response)
   }
 }  
