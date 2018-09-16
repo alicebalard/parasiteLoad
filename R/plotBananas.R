@@ -96,15 +96,3 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
       ylab(label = response)
   }
 }  
-
-# changes to do
-levels(data4stats$Sex) <- c(levels(data4stats$Sex), "female", "male")
-data4stats$Sex[data4stats$Sex == "F"] <- "female"
-data4stats$Sex[data4stats$Sex == "M"] <- "male"
-
-# tests
-bananaPlots(mod = fit$H0, data = data4stats, response = "delta_ct_MminusE")
-bananaPlots(mod = fit$H1, data = data4stats, response = "delta_ct_MminusE")
-bananaPlots(mod = fit$H2, data = data4stats, response = "delta_ct_MminusE")
-bananaPlots(mod = fit$H3, data = data4stats, response = "delta_ct_MminusE")
-
