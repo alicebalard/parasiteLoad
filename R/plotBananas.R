@@ -65,11 +65,11 @@ getBananaDF <- function(mod, hybridIndex){
 bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
                         cols = c("green", "orange"), mygroup = "Sex", isLog10 = F){
   data$response = data[[response]]
-  if(is.list(mod) == FALSE){
+  if(is.list(mod) == FALSE){ # we do not have differences between groups
     bananaDF = getBananaDF(mod, hybridIndex)
     # Draw the line for the parameters at their MLE, alpha varying 
     ggplot() +
-      geom_point(data = data, aes_string(x = "HI", y = "response", fill = mygroup), pch = 21, size = 3) +
+      geom_point(data = data, aes_string(x = "HI", y = "response"), fill = "lightgrey", pch = 21, size = 3) +
       scale_fill_manual(values = cols) +
       geom_ribbon(aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max),
                   fill = "grey", alpha = .5) +
