@@ -33,7 +33,7 @@ getBananaDF <- function(mod, hybridIndex){
                                        coef(mod)[names(coef((mod))) %in% "L2"],
                                        coef(mod)[names(coef((mod))) %in% "alpha"]),
                                      hybridIndex)
-
+    
   }
   # Run over HI values and optimise max and min for each
   bananaDF2 = data.frame(HI = numeric(), min = numeric(), max = numeric())
@@ -55,7 +55,7 @@ getBananaDF <- function(mod, hybridIndex){
                      upper = c(L1 = getSup("L1"), L2 = getSup("L2"), alpha = getSup("alpha")),
                      method = "L-BFGS-B",
                      hybridIndex = i)
-  bananaDF2 = rbind(bananaDF2, data.frame(HI = i, min = minLoad$value, max = maxLoad$value))
+    bananaDF2 = rbind(bananaDF2, data.frame(HI = i, min = minLoad$value, max = maxLoad$value))
   }
   bananaDF = merge(bananaDF, bananaDF2)
   return(bananaDF)
@@ -65,23 +65,46 @@ getBananaDF <- function(mod, hybridIndex){
 bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
                         cols = c("red", "blue"), mygroup = "Sex", isLog10 = F){
   data$response = data[[response]]
-  bananaDF = getBananaDF(mod, hybridIndex)
-  # Draw the line for the parameters at their MLE, alpha varying 
-  ggplot() +
-    geom_point(data = data, aes_string(x = "HI", y = "response", fill = mygroup), pch = 21, size = 3) +
-    scale_fill_manual(values = cols) +
-    geom_ribbon(aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max),
-                fill = "grey", alpha = .5) +
-    geom_line(aes(x = bananaDF$HI, y = bananaDF$fit)) +
-    theme_bw(base_size = 20) +
-    ylab(label = response) +
-    geom_text(aes(.5, bananaDF$fit[bananaDF$HI == .5] +1,
-                  label = paste("alpha = ", round(coef(mod)["alpha"], 2))), cex = 5)
+  if(is.list(mod) == FALSE){
+    bananaDF = getBananaDF(mod, hybridIndex)
+    # Draw the line for the parameters at their MLE, alpha varying 
+    ggplot() +
+      geom_point(data = data, aes_string(x = "HI", y = "response", fill = mygroup), pch = 21, size = 3) +
+      scale_fill_manual(values = cols) +
+      geom_ribbon(aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max),
+                  fill = "grey", alpha = .5) +
+      geom_line(aes(x = bananaDF$HI, y = bananaDF$fit)) +
+      theme_classic(base_size = 20) +
+      ylab(label = response) 
+  }else{
+    bananaDF = data.frame(HI = numeric(), fit = numeric(), min = numeric(), max = numeric(), group = factor())
+    mygroupDFnames = vector()
+    for (n in names(mod)){
+      thisbanana = getBananaDF(mod[[n]], hybridIndex)
+      thisbanana$group <- n
+      bananaDF <- rbind(bananaDF, thisbanana)
+    }
+    # Draw the line for the parameters at their MLE, alpha varying
+    ggplot() +
+      geom_point(data = data, aes_string(x = "HI", y = "response", fill = mygroup), pch = 21, size = 3) +
+      geom_ribbon(aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max, fill = bananaDF$group),
+                  alpha = .2) +
+      geom_line(aes(x = bananaDF$HI, y = bananaDF$fit, col = bananaDF$group)) +
+      scale_fill_manual(values = cols) +
+      scale_color_manual(values = cols) +
+      theme_classic(base_size = 20) +
+      ylab(label = response)
+  }
 }  
+
+# changes to do
+levels(data4stats$Sex) <- c(levels(data4stats$Sex), "female", "male")
+data4stats$Sex[data4stats$Sex == "F"] <- "female"
+data4stats$Sex[data4stats$Sex == "M"] <- "male"
 
 # tests
 bananaPlots(mod = fit$H0, data = data4stats, response = "delta_ct_MminusE")
 bananaPlots(mod = fit$H1, data = data4stats, response = "delta_ct_MminusE")
+bananaPlots(mod = fit$H2, data = data4stats, response = "delta_ct_MminusE")
+bananaPlots(mod = fit$H3, data = data4stats, response = "delta_ct_MminusE")
 
-
-fit$H2$male
