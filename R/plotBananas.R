@@ -63,7 +63,7 @@ getBananaDF <- function(mod, hybridIndex){
 
 ## Plot function
 bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
-                        cols = c("black", "white"), mygroup = "Sex", isLog10 = F){
+                        cols = c("green", "orange"), mygroup = "Sex", isLog10 = F){
   data$response = data[[response]]
   if(is.list(mod) == FALSE){
     bananaDF = getBananaDF(mod, hybridIndex)
