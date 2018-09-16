@@ -11,7 +11,7 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$HI) &
                                    !is.na(HeitlingerFieldData$delta_ct_MminusE), ]
 
 data4stats <- miceTable[names(miceTable) %in% 
-                          c("HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
+                          c("HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status", "Year")]
 
 # To pass positive I add 6 to all
 data4stats$delta_ct_MminusE <- data4stats$delta_ct_MminusE + 6
@@ -296,3 +296,12 @@ bananaPlots(mod = fit$H0, data = data4stats, response = "delta_ct_MminusE")
 bananaPlots(mod = fit$H1, data = data4stats, response = "delta_ct_MminusE")
 bananaPlots(mod = fit$H2, data = data4stats, response = "delta_ct_MminusE")
 bananaPlots(mod = fit$H3, data = data4stats, response = "delta_ct_MminusE")
+
+# check by year
+fit2016 <- analyse(data4stats[data4stats$Year %in% 2016, ], "delta_ct_MminusE")
+bananaPlots(mod = fit2016$H0, data = data4stats[data4stats$Year %in% 2016, ], response = "delta_ct_MminusE")
+# not significant
+
+fit2017 <- analyse(data4stats[data4stats$Year %in% 2017, ], "delta_ct_MminusE")
+bananaPlots(mod = fit2017$H0, data = data4stats[data4stats$Year %in% 2017, ], response = "delta_ct_MminusE")
+# significant
