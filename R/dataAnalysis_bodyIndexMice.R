@@ -1,8 +1,11 @@
-source("Models/fitStudent.R")
-source("MLE_hybrid_functions.R")
+library(ggplot2)
+library(reshape2)
+library(MASS)
+source("Gtest.R")
+source("plotBananas.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
                                    !is.na(HeitlingerFieldData$Body_length) &
                                    !is.na(HeitlingerFieldData$HI) &
@@ -77,6 +80,17 @@ d$resBMBL <- d$residuals
 # give positive values only
 d$resBMBL <- d$resBMBL + 5
 
+# Plot the actual and predicted values
+ggplot(d, aes(x = Body_length, y = Body_weight)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  geom_segment(aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
+  geom_point(aes(col = delta_ct_MminusE), size = 3) +
+  scale_color_gradient(low = "lightgrey", high = "red") +
+  geom_point(aes(y = predicted), shape = 1) +
+  facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
+  theme_bw()  # Add theme for cleaner look
+
+
 # Which distribution to choose?
 library(MASS)
 dat <- d$resBMBL
@@ -91,6 +105,9 @@ fits <- list(
 # get the logliks for each model...
 sapply(fits, function(i) i$loglik)
 # STUDENT is the way to go!
+
+source("Models/fitStudent.R")
+
 ggplot(d, aes(resBMBL)) +
   geom_histogram(aes(y=..density..), bins = 100) + 
   stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
@@ -237,31 +254,4 @@ data <- d
 
 fit <- analyse(data, "resBMBL")
 
-# plot all
-plotAll(mod = fit$H1, data = data, response = "resBMBL", CI = F, 
-        labelfory = "resBMBL", isLog10 = F)
-
-# plot 2 groups
-modP = fit$H3$positive
-modN = fit$H3$negative
-DF <- data.frame(HI = seq(0,1,0.01), 
-                 loadMLEP = MeanLoad(L1 = coef(modP)[names(coef(modP)) == "L1"], 
-                                     L2 =  coef(modP)[names(coef(modP)) == "L2"], 
-                                     alpha =  coef(modP)[names(coef(modP)) == "alpha"],  
-                                     hybridIndex = seq(0,1,0.01)), 
-                 loadMLEN = MeanLoad(L1 = coef(modN)[names(coef(modN)) == "L1"], 
-                                     L2 =  coef(modN)[names(coef(modN)) == "L2"], 
-                                     alpha =  coef(modN)[names(coef(modN)) == "alpha"],  
-                                     hybridIndex = seq(0,1,0.01))) 
-
-ggplot() +
-  geom_point(data = data, aes_string(x = "HI", y = "resBMBL", col = "EimeriaDetected"), size = 3) +
-  scale_color_manual(values = c("grey", "red")) +
-  geom_line(aes(x = DF$HI, y = DF$loadMLEN), col = "grey32", size = 2) +
-  geom_line(aes(x = DF$HI, y = DF$loadMLEP), col = "red", size = 2) +
-  theme_bw(base_size = 20)+
-  ylab(label = "resBMBL") +
-  annotate("text", x = 0.5, y = 4, col = "red", cex = 7,
-           label = as.character(round(fit$H3$positive@coef[["alpha"]], 2))) +
-  annotate("text", x = 0.5, y = 6, col = "grey32", cex = 7,
-           label = as.character(round(fit$H3$negative@coef[["alpha"]], 2)))
+bananaPlots(mod = fit$H1, data = data, response = "resBMBL")

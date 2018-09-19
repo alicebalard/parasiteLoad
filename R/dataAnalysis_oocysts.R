@@ -2,7 +2,7 @@ source("Gtest.R")
 source("plotBananas.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
 Flotation_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$OPG) &
                                         !is.na(HeitlingerFieldData$HI) &
                                         !is.na(HeitlingerFieldData$Sex), ]
@@ -147,7 +147,8 @@ analyse <- function(data, response) {
 ## Run the fit
 fit <- analyse(Flotation_data, "flotStatus")
 # plot H0
-bananaPlots(mod = fit$H0, data = Flotation_data, response = "flotStatus")
+bananaPlots(mod = fit$H0, data = Flotation_data, response = "flotStatus") + 
+  coord_cartesian(ylim = c(0, 0.5)) # zoom in
 
 ######## Choose a correct distribution for our data : negative binomial ########
 # source the functions defining meanload and aggregation for the negative binomial
@@ -278,5 +279,8 @@ fit_flotation <- analyse(Flotation_data, "OPG",
 fit_flotation_positive <- analyse(Flotation_data[Flotation_data$OPG > 0,], "OPG", 
                                   paramBounds = giveParamBounds(Flotation_data[Flotation_data$OPG > 0,], "OPG"))
 
-# bananaPlots(mod = fit_flotation_positive$H0, data = Flotation_data[Flotation_data$OPG > 0,], response = "OPG")
+bananaPlots(mod = fit_flotation_positive$H0, 
+            data = Flotation_data[Flotation_data$OPG > 0,], response = "OPG")
+
+bananaPlots
 # problems for the profiling...

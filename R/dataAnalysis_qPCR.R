@@ -5,7 +5,7 @@ source("Gtest.R")
 source("plotBananas.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("../../Data_important/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$HI) &
                                    !is.na(HeitlingerFieldData$Sex) &
                                    !is.na(HeitlingerFieldData$delta_ct_MminusE), ]
@@ -163,7 +163,8 @@ analyse <- function(data, response) {
 fit <- analyse(data4stats, "qPCRstatus")
 
 # plot the different hypothesis
-bananaPlots(mod = fit$H0, data = data4stats, response = "qPCRstatus")
+plot <- bananaPlots(mod = fit$H0, data = data4stats, response = "qPCRstatus") 
+plot + coord_cartesian(ylim = c(0, 0.5)) # zoom in
 
 ######## Choose a correct distribution for our data ########
 data4stats <- data4stats[data4stats$delta_ct_MminusE > 0, ]

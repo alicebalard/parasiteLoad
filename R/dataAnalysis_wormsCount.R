@@ -141,7 +141,7 @@ giveParamBounds <- function(data, response){
 # pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
 AspJo <- analyse(Joelle_data, "Aspiculuris.Syphacia", 
                  giveParamBounds(Joelle_data, "Aspiculuris.Syphacia"))
-bananaPlots(mod = AspJo$H1, data = Joelle_data, response = "Aspiculuris.Syphacia", islog10 = TRUE) # error in Hessian
+bananaPlots(mod = AspJo$H1, data = Joelle_data, response = "Aspiculuris.Syphacia", islog10 = TRUE) 
 # alpha = 1.39 in WATWM paper
 coef(AspJo$H1)[["alpha"]]
 
@@ -159,11 +159,12 @@ TaeJo <- analyse(Joelle_data, "Taenia",
 MasJo <- analyse(Joelle_data, "Mastophorus",
                  giveParamBounds(Joelle_data, "Mastophorus"))
 
-# TriJe <- analyse(Jenny_data, "Trichuris", 
-#                  giveParamBounds(Jenny_data, "Trichuris"))
-# AspJe <- analyse(Jenny_data, "Aspiculuris_Syphacia",
-#                  giveParamBounds(Jenny_data, "Aspiculuris_Syphacia"))
-# TaeJe <- analyse(Jenny_data, "Taenia",
-#                  giveParamBounds(Jenny_data, "Taenia"))
-# MasJe <- analyse(Jenny_data, "Mastophorus",
-#                  giveParamBounds(Jenny_data, "Mastophorus"))
+## And ours?
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
+
+HeitlingerFieldData <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Aspiculuris_Syphacia),]
+
+AspJe <- analyse(HeitlingerFieldData, "Aspiculuris_Syphacia",
+                  giveParamBounds(HeitlingerFieldData, "Aspiculuris_Syphacia"))
+
+# Error!!
