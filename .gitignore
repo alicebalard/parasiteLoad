@@ -6,7 +6,7 @@
 .Rproj.user
 
 # History files
-.Rhistory
+R/.Rhistory
 .Rapp.history
 
 # Session Data files
@@ -38,3 +38,7 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+
+tests/\.Rhistory
+
+data/FinalFullDF_flotationPcrqPCR\.csv
