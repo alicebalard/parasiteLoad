@@ -255,3 +255,7 @@ data <- d
 fit <- analyse(data, "resBMBL")
 
 bananaPlots(mod = fit$H1, data = data, response = "resBMBL")
+
+bananaPlots(mod = fit$H3, data = data, response = "resBMBL", mygroup = "EimeriaDetected")
+
+##### Part 2 : worms #####
