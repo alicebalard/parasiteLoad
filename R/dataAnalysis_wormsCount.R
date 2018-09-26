@@ -1,5 +1,6 @@
 source("Gtest.R")
 source("plotBananas.R")
+library(ggplot2)
 
 ## Import data WATWM
 Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
@@ -167,6 +168,20 @@ ggplot(HeitlingerFieldData, aes(x = HI, y = presenceAspiSypha)) +
 
 fit <- analyse(HeitlingerFieldData, "presenceAspiSypha")
 plot <- bananaPlots(mod = fit$H0, data = HeitlingerFieldData, response = "presenceAspiSypha") 
+plot# + coord_cartesian(ylim = c(0.45, 0.9)) # zoom in
+
+## And ectoparasites?
+EctoData <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Ectoparasites),]
+EctoData$presenceEcto[EctoData$Ectoparasites == TRUE] <- 1
+EctoData$presenceEcto[EctoData$Ectoparasites == FALSE] <- 0
+
+ggplot(EctoData, aes(x = HI, y = presenceEcto)) +
+  geom_point() +
+  geom_smooth() +
+  theme_classic()
+
+fitEcto <- analyse(EctoData, "presenceEcto")
+plot <- bananaPlots(mod = fitEcto$H0, data = EctoData, response = "presenceEcto") 
 plot# + coord_cartesian(ylim = c(0.45, 0.9)) # zoom in
 
 ######## Choose a correct distribution for our data : negative binomial ########
