@@ -9,7 +9,7 @@ Joelle_data$Sex[Joelle_data$Sex == "F"] <- "female"
 Joelle_data$Sex[Joelle_data$Sex == "M"] <- "male"
 
 ## Import our field data Jenny
-HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR_Threshold_5.csv")
 HeitlingerFieldData <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Aspiculuris_Syphacia) &
                                              !is.na(HeitlingerFieldData$HI) &
                                              !is.na(HeitlingerFieldData$Sex),]

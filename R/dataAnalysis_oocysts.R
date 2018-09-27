@@ -2,7 +2,7 @@ source("Gtest.R")
 source("plotBananas.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR_Threshold_5.csv")
 Flotation_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$OPG) &
                                         !is.na(HeitlingerFieldData$HI) &
                                         !is.na(HeitlingerFieldData$Sex), ]

@@ -5,7 +5,7 @@ source("Gtest.R")
 source("plotBananas.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR_Threshold_5.csv")
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
                                    !is.na(HeitlingerFieldData$Body_length) &
                                    !is.na(HeitlingerFieldData$HI) &

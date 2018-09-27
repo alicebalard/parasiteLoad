@@ -5,7 +5,8 @@ source("Gtest.R")
 source("plotBananas.R")
 
 ## Import data
-HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR.csv")
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR_Threshold_5.csv")
+
 miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$HI) &
                                    !is.na(HeitlingerFieldData$Sex) &
                                    !is.na(HeitlingerFieldData$delta_ct_MminusE), ]
@@ -13,8 +14,8 @@ miceTable <- HeitlingerFieldData[!is.na(HeitlingerFieldData$HI) &
 data4stats <- miceTable[names(miceTable) %in% 
                           c("HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status", "Year")]
 
-# To pass positive I add 6 to all
-data4stats$delta_ct_MminusE <- data4stats$delta_ct_MminusE + 6
+# To pass positive I add 5 to all
+data4stats$delta_ct_MminusE <- data4stats$delta_ct_MminusE + 5
 
 # changes to do for avoiding plotting error
 levels(data4stats$Sex) <- c(levels(data4stats$Sex), "female", "male")
