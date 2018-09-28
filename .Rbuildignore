@@ -1,5 +1,2 @@
-^\.travis\.yml$     # Used for continuous integration testing with travis
-^.*\.Rproj$         # Automatically added by RStudio,
-
-^\.travis\.yml$
+^.*\.Rproj$
 ^\.Rproj\.user$

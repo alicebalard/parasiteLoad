@@ -1,17 +1,12 @@
-Package: MLE.hybrid
+Package: parasiteLoad
 Type: Package
-Title: Statistical models across a hybrid zone
-Version: 1.0
-Date: 2017-07-13
+Title: What the Package Does (Title Case)
+Version: 0.1.0
 Author: Who wrote it
-Maintainer: Alice Balard <alice.cam.balard@gmail.com>
-Description: Currently count (negative binomial) models are implemented to
-    access the influence of heterozygosity on parasite load (macroparasites)
-Depends: R (>= 3.1.0)
-License: GPL-3
-Imports: MASS,
-         effects,
-         devtools,
-	 bbmle,
-	 optimx
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
 RoxygenNote: 6.0.1

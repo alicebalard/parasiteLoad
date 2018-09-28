@@ -1,5 +1,10 @@
-## Compare the hypotheses between each other : G-test
-## Test if the difference between 2 likelihood is significant
+#' Compare the hypotheses between each other : G-test. Test if the difference between 2 likelihood is significant
+#'
+#' @param model0 A model
+#' @param model1 A model
+#' @return A data.frame giving the difference of likelihood betweend the two models, the difference of degrees of freedom, and the pvalue of the G-test
+#' @export
+
 Gtest <- function(model0, model1){
   LL0 <- Reduce(x = c(model0), f = function(accum, model){
     accum + logLik(model)}, init = 0)
@@ -14,13 +19,7 @@ Gtest <- function(model0, model1){
   pvalue <- 1 - pchisq(2*dLL, df=dDF)
   out <- data.frame(dLL = round(dLL, 2),
                     dDF = dDF,
-                    pvalue = 
-                      if (pvalue < 0.01){
-                      "< 0.01"
-                    } else {
-                      round(pvalue, 3)
-                    }
-  )
+                    pvalue = round(pvalue, 4))
   print(out)
   return(out)
 }
