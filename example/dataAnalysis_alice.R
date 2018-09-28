@@ -1,0 +1,307 @@
+library("Jmisc")
+sourceAll("functions")
+sourceAll("Models/")
+
+##### Import & prepare data ##### 
+HeitlingerFieldData <- read.csv("https://raw.githubusercontent.com/derele/Mouse_Eimeria_Databasing/master/FinalFullDF_flotationPcrqPCR_Threshold_5.csv")
+
+# Works if OPG are integers
+HeitlingerFieldData$OPG <- round(HeitlingerFieldData$OPG)
+
+# To pass positive I add 5 to all
+HeitlingerFieldData$delta_ct_MminusE <- HeitlingerFieldData$delta_ct_MminusE + 5
+# changes to do for avoiding plotting error
+levels(HeitlingerFieldData$Sex) <- c(levels(HeitlingerFieldData$Sex), "female", "male")
+HeitlingerFieldData$Sex[HeitlingerFieldData$Sex == "F"] <- "female"
+HeitlingerFieldData$Sex[HeitlingerFieldData$Sex == "M"] <- "male"
+HeitlingerFieldData$Sex <- droplevels(HeitlingerFieldData$Sex)
+
+## First question: can we consider the zeros out? If our hypothesis is : all get infected the same way, 
+# but hybrids got lower loads?
+HeitlingerFieldData$qPCRstatus <- 0
+HeitlingerFieldData$qPCRstatus[HeitlingerFieldData$delta_ct_MminusE > 0] <- 1
+
+HeitlingerFieldData$flotStatus <- 0
+HeitlingerFieldData$flotStatus[HeitlingerFieldData$OPG > 0] <- 1
+
+HeitlingerFieldData$presenceAspiSypha[HeitlingerFieldData$Aspiculuris_Syphacia > 0] <- 1
+HeitlingerFieldData$presenceAspiSypha[HeitlingerFieldData$Aspiculuris_Syphacia == 0] <- 0
+
+## Prepare dataset for each analysis
+qpcr_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$HI) &
+!is.na(HeitlingerFieldData$Sex) &
+ !is.na(HeitlingerFieldData$delta_ct_MminusE), ]
+
+flotation_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$OPG) &
+                                        !is.na(HeitlingerFieldData$HI) &
+                                        !is.na(HeitlingerFieldData$Sex), ]
+
+pinworms_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Aspiculuris_Syphacia) &
+                                             !is.na(HeitlingerFieldData$HI) &
+                                             !is.na(HeitlingerFieldData$Sex),]
+
+body_data <- HeitlingerFieldData[!is.na(HeitlingerFieldData$Body_weight) &
+                                   !is.na(HeitlingerFieldData$Body_length) &
+                                   !is.na(HeitlingerFieldData$HI) &
+                                   !is.na(HeitlingerFieldData$Sex) &
+                                   !is.na(HeitlingerFieldData$delta_ct_MminusE) ,]
+body_data$qPCRstatus <- as.factor(body_data$qPCRstatus)
+
+## Import data WATWM
+Joelle_data <- read.csv("../data/EvolutionFinalData.csv")
+Joelle_data <- Joelle_data[complete.cases(Joelle_data$HI),]
+levels(Joelle_data$Sex) <- c(levels(Joelle_data$Sex), "female", "male")
+Joelle_data$Sex[Joelle_data$Sex == "F"] <- "female"
+Joelle_data$Sex[Joelle_data$Sex == "M"] <- "male"
+Joelle_data$Sex <- droplevels(Joelle_data$Sex)
+
+Joelle_data <- Joelle_data[!is.na(Joelle_data$Aspiculuris.Syphacia),]
+Joelle_data$presenceAspiSypha[Joelle_data$Aspiculuris.Syphacia > 0] <- 1
+Joelle_data$presenceAspiSypha[Joelle_data$Aspiculuris.Syphacia == 0] <- 0
+
+##### End prepare data #####
+
+####### Part 1. qpcr results, 4 hypotheses, difference between sexes #######
+## Run the fit
+fit_qpcr_binom <- analyse(qpcr_data, "qPCRstatus", model = "binomial", group = "Sex")
+
+# plot the different hypothesis
+plot_qpcr_binom <- bananaPlots(mod = fit_qpcr_binom$H0, data = qpcr_data, response = "qPCRstatus", group = "Sex") + 
+  coord_cartesian(ylim = c(0, 0.5)) # zoom in
+plot_qpcr_binom
+
+######## Choose a correct distribution for our data ########
+# let's compute some fits...
+fits_test_qpcr <- list(
+  normal = fitdistr(qpcr_data[qpcr_data$delta_ct_MminusE > 0, "delta_ct_MminusE"],"normal"),
+  student = fitdistr(qpcr_data[qpcr_data$delta_ct_MminusE > 0, "delta_ct_MminusE"], "t", 
+                     start = list(m = mean(qpcr_data[qpcr_data$delta_ct_MminusE > 0, "delta_ct_MminusE"]), 
+                                  s = sd(qpcr_data[qpcr_data$delta_ct_MminusE > 0, "delta_ct_MminusE"]), 
+                                  df=3), lower=c(-1, 0.001,1))
+)
+
+# get the logliks for each model...
+sapply(fits_test_qpcr, function(i) i$loglik)
+# STUDENT is the way to go!
+
+## Run the fit
+fit_qpcr_student <- analyse(qpcr_data[qpcr_data$delta_ct_MminusE > 0, ],
+                               response = "delta_ct_MminusE", 
+                            model = "student", group = "Sex")
+
+# plot the different hypothesis
+plot_qpcr_student <- bananaPlots(mod = fit_qpcr_student$H0, 
+                                 data = qpcr_data[qpcr_data$delta_ct_MminusE > 0, ], 
+                                 response = "delta_ct_MminusE", group = "Sex")
+plot_qpcr_student
+
+# check by year
+fit2016_qpcr_student <- analyse(qpcr_data[qpcr_data$delta_ct_MminusE > 0 & qpcr_data$Year %in% 2016, ],
+                                   response = "delta_ct_MminusE", 
+                                   model = "student", group = "Sex")
+bananaPlots(mod = fit2016_qpcr_student$H1, 
+            data = qpcr_data[qpcr_data$delta_ct_MminusE > 0 & qpcr_data$Year %in% 2016, ], 
+            response = "delta_ct_MminusE", group = "Sex") # significant
+
+fit2017_qpcr_student <- analyse(qpcr_data[qpcr_data$delta_ct_MminusE > 0 & qpcr_data$Year %in% 2017, ],
+                                   response = "delta_ct_MminusE",
+                                   model = "student", group = "Sex")
+bananaPlots(mod = fit2017_qpcr_student$H1, 
+            data = qpcr_data[qpcr_data$delta_ct_MminusE > 0 & qpcr_data$Year %in% 2017, ], 
+            response = "delta_ct_MminusE", group = "Sex") # not significant
+
+####### Part 2. OPG results, 4 hypotheses, difference between sexes #######
+
+## Run the fit
+fit_opg_binom <- analyse(flotation_data, "flotStatus", model = "binomial", group = "Sex")
+# plot H0
+bananaPlots(mod = fit_opg_binom$H0, data = flotation_data, response = "flotStatus", group = "Sex") + 
+  coord_cartesian(ylim = c(0, 0.5)) # zoom in
+ 
+hist(flotation_data[flotation_data$OPG > 0, "OPG"], 100)
+
+fit_flotation_negbin <- analyse(flotation_data[flotation_data$OPG > 0, ], 
+                                   response = "OPG", 
+                                   model = "negbin", group = "Sex")
+
+# bananaPlots(mod = fit_flotation_negbin$H0, data = flotation_data, response = "OPG", group = "Sex")
+# problems for the profiling...
+
+# Let's focus ONLY on the infected individuals. Hyp : HI makes the LOAD vary, not the infection
+fit_flotation_positive_negbin <- analyseSex(flotation_data[flotation_data$OPG > 0,], "OPG", model = "negbin")
+                                  
+# bananaPlots(mod = fit_flotation_positive_negbin$H0, 
+#             data = flotation_data[flotation_data$OPG > 0,], response = "OPG")
+
+# problems for the profiling...
+
+####### Part 3. worms count, 4 hypotheses, difference between sexes #######
+
+## First question: can we consider the zeros out? If our hypothesis is : all get infected the same way, 
+# but hybrids got lower loads?
+fit_Joelle_binom <- analyse(Joelle_data, "presenceAspiSypha", model = "binomial",
+                            group = "Sex")
+# plot the different hypothesis
+plot_Joelle_binom <- bananaPlots(mod = fit_Joelle_binom$H0, 
+                                 data = Joelle_data, 
+                                 response = "presenceAspiSypha", 
+                                 group = "Sex")
+plot_Joelle_binom 
+
+fit_pinworms_data <- analyse(pinworms_data, "presenceAspiSypha", model = "binomial",
+               group = "Sex")
+plot_pinworms_data <- bananaPlots(mod = fit_pinworms_data$H0, 
+                                  data = pinworms_data, 
+                                  response = "presenceAspiSypha") 
+plot_pinworms_data# + coord_cartesian(ylim = c(0.45, 0.9)) # zoom in
+
+######## Choose a correct distribution for our data : negative binomial see WATWM########
+
+# pinworms (A. tetraptera and S. obvelata (Joelle_data$Aspiculuris.Syphacia))
+fit_Joelle_negbin <- analyse(Joelle_data, "Aspiculuris.Syphacia", 
+                             model = "negbin", group = "Sex")
+                 
+plot_Joelle_negbin <- bananaPlots(mod = fit_Joelle_negbin$H1, 
+                                 data = Joelle_data, 
+                                 response = "Aspiculuris.Syphacia", 
+                                 islog10 = TRUE, group = "Sex") 
+plot_Joelle_negbin
+
+## And ours now:
+fit_pinworms_negbin <- analyse(pinworms_data, "Aspiculuris_Syphacia", 
+                               model = "negbin", group = "Sex")
+                 
+plot_pinworms_negbin <- bananaPlots(mod = fit_pinworms_negbin$H1, 
+                                  data = pinworms_data, 
+                                  response = "Aspiculuris_Syphacia", 
+                                  islog10 = TRUE, group = "Sex") 
+plot_pinworms_negbin
+
+## qPCR vs worms (is there a correlation?)
+ggplot(pinworms_data, 
+       aes(delta_ct_MminusE, Aspiculuris_Syphacia + 1)) +
+  geom_point(aes(fill = HI), pch = 21, size = 5) + 
+  scale_fill_gradient(low = "blue", high = "red") +
+  scale_y_log10() +
+  geom_smooth(method = "lm") +
+  theme_classic()
+
+summary(lm(Aspiculuris_Syphacia ~ delta_ct_MminusE, data = HeitlingerFieldData))
+
+####### Part 4. body data, 4 hypotheses, difference between infected/not infected #######
+### TO DO : test coinfection data!! Are coinfected individuals more suffering?
+
+body_data
+
+# getDF <- function(rawDF){
+#   data4stats <- rawDF[names(rawDF) %in% 
+#                         c("Body_weight", "Body_length", "HI", "OPG", "delta_ct_MminusE", "PCRstatus", "Sex", "Status")]
+#   data4stats$EimeriaDetected <- NA
+#   # data4stats$EimeriaDetected[data4stats$OPG == 0] <- "negative"
+#   # data4stats$EimeriaDetected[data4stats$OPG > 0] <- "positive"
+#   data4stats$EimeriaDetected[data4stats$delta_ct_MminusE <= -6] <- "negative"
+#   data4stats$EimeriaDetected[data4stats$delta_ct_MminusE > -6] <- "positive"
+#   data4stats <- data4stats[!is.na(data4stats$EimeriaDetected),]
+#   # Use index as in paper https://www.researchgate.net/publication/259551749_Which_body_condition_index_is_best
+#   # log body mass/log body length
+#   data4stats$BCI <- log(data4stats$Body_weight, base = 10) / log(data4stats$Body_length, base = 10)
+#   return(data4stats)
+# }
+
+# data4stats <- getDF(miceTable)
+
+# Remove pregnant/post partum and juveniles
+body_data$status[body_data$Sex %in% c("female")] <- "non pregnant/lactating female"
+body_data$status[body_data$Status %in% c("post partum", "post partum (lactating)", "pregnant")] <- "pregnant/lactating female"
+body_data$status[body_data$Sex %in% c("male")] <- "male"
+
+# Test  our detection of pregnancy in females using BCI
+ggplot(body_data, 
+       aes(x = HI, y = BCI, fill = status, group = status)) +
+  geom_point(pch = 21, size = 3, alpha = .5)+
+  geom_smooth(aes(col = status)) +
+  theme_bw()
+
+# Remove pregnant females
+body_data <- body_data[!body_data$status %in% c("pregnant/lactating female"), ]
+
+# Regression of BM/BS for males and females (all together, then separate subsp.) 
+# Advantage: independant of size!!
+
+# Step 1: fit the model
+fitRes <- lm(Body_weight ~ Body_length * Sex, data = body_data)
+
+# Step 2: obtain predicted and residual values
+body_data$predicted <- predict(fitRes)   # Save the predicted values
+body_data$residuals <- residuals(fitRes) # Save the residual values
+
+# Step 3: plot the actual and predicted values
+ggplot(body_data, aes(x = Body_length, y = Body_weight)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  geom_segment(aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
+  geom_point(aes(col = delta_ct_MminusE), size = 3) +
+  scale_color_gradient(low = "lightgrey", high = "red") +
+  geom_point(aes(y = predicted), shape = 1) +
+  facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
+  theme_bw()  # Add theme for cleaner look
+
+# Step 4: use residuals as indice
+hist(body_data$residuals[d$Sex =="female"], breaks = 100) # remove outliers, keep [-5,5] interval
+
+body_data <- body_data[body_data$residuals <= 5,]
+body_data$resBMBL <- body_data$residuals
+
+# give positive values only
+body_data$resBMBL <- body_data$resBMBL + 5
+
+# Plot the actual and predicted values
+ggplot(body_data, aes(x = Body_length, y = Body_weight)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  geom_segment(aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
+  geom_point(aes(col = delta_ct_MminusE), size = 3) +
+  scale_color_gradient(low = "lightgrey", high = "red") +
+  geom_point(aes(y = predicted), shape = 1) +
+  facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
+  theme_bw()  # Add theme for cleaner look
+
+# Which distribution to choose?
+ 
+# let's compute some fits...
+fits <- list(
+  normal = fitdistr(body_data$resBMBL,"normal"),
+  student = fitdistr(body_data$resBMBL, "t", 
+                     start = list(m = mean(body_data$resBMBL), 
+                                  s = sd(body_data$resBMBL), df = 3), 
+                     lower=c(-1, 0.001,1))
+)
+# get the logliks for each model...
+sapply(fits, function(i) i$loglik)
+# STUDENT is the way to go!
+
+ggplot(body_data, aes(resBMBL)) +
+  geom_histogram(aes(y=..density..), bins = 100) + 
+  stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
+                aes(color = "normal"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = fits$student$estimate[3]),
+                aes(color = "student"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 10),
+                aes(color = "student10"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 400),
+                aes(color = "student500"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 1000),
+                aes(color = "student1000"), size = 2) +
+  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                                               df = 5),
+                aes(color = "student5"), size = 2) +
+  theme_bw(base_size = 24) 
+
+fit_body_student <- analyse(body_data, response = "resBMBL",
+                            model = "student", group = "qPCRstatus")
+
+bananaPlots(mod = fit_body_student$H1, data = body_data, response = "resBMBL")
+
+bananaPlots(mod = fit_body_student$H3, data = body_data, response = "resBMBL", group = "qPCRstatus")
