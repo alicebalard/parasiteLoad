@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 ```{r install}
 library(parasiteLoad)
 require(optimx) # for bbmle it needs to be required(?)
+library(ggplot2)
 ```
 
 ## Import & prepare your data 
@@ -251,7 +252,7 @@ plot_pinworms_negbin
 
 ## qPCR vs worms (is there a correlation?)
 ```{r}
-ggplot(pinworms_data, 
+ggplot2::ggplot(pinworms_data, 
        aes(delta_ct_MminusE, Aspiculuris_Syphacia + 1)) +
   geom_point(aes(fill = HI), pch = 21, size = 5) + 
   scale_fill_gradient(low = "blue", high = "red") +
@@ -273,8 +274,8 @@ body_data$status[body_data$Status %in% c("post partum", "post partum (lactating)
 body_data$status[body_data$Sex %in% c("male")] <- "male"
 
 # Test  our detection of pregnancy in females using BCI
-ggplot(body_data, 
-       aes(x = HI, y = BCI, fill = status, group = status)) +
+ggplot2::ggplot(body_data, 
+       ggplot2::aes(x = HI, y = BCI, fill = status, group = status)) +
   geom_point(pch = 21, size = 3, alpha = .5)+
   geom_smooth(aes(col = status)) +
   theme_bw()
@@ -302,20 +303,20 @@ body_data$residuals <- residuals(fitRes) # Save the residual values
 * Step 3: plot the actual and predicted values
 
 ```{r}
-ggplot(body_data, aes(x = Body_length, y = Body_weight)) +
-  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
-  geom_segment(aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
-  geom_point(aes(col = delta_ct_MminusE), size = 3) +
-  scale_color_gradient(low = "lightgrey", high = "red") +
-  geom_point(aes(y = predicted), shape = 1) +
-  facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
-  theme_bw()  # Add theme for cleaner look
+ggplot2::ggplot(body_data, ggplot2::aes(x = Body_length, y = Body_weight)) +
+  ggplot2::geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  ggplot2::geom_segment(ggplot2::aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
+  ggplot2::geom_point(ggplot2::aes(col = delta_ct_MminusE), size = 3) +
+  ggplot2::scale_color_gradient(low = "lightgrey", high = "red") +
+  ggplot2::geom_point(ggplot2::aes(y = predicted), shape = 1) +
+  ggplot2::facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
+  ggplot2::theme_bw()  # Add theme for cleaner look
 ```
 
 * Step 4: use residuals as indice
 
 ```{r}
-hist(body_data$residuals[d$Sex =="female"], breaks = 100) # remove outliers, keep [-5,5] interval
+hist(body_data$residuals[body_data$Sex =="female"], breaks = 100) # remove outliers, keep [-5,5] interval
 
 body_data <- body_data[body_data$residuals <= 5,]
 body_data$resBMBL <- body_data$residuals
@@ -324,14 +325,14 @@ body_data$resBMBL <- body_data$residuals
 body_data$resBMBL <- body_data$resBMBL + 5
 
 # Plot the actual and predicted values
-ggplot(body_data, aes(x = Body_length, y = Body_weight)) +
-  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
-  geom_segment(aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
-  geom_point(aes(col = delta_ct_MminusE), size = 3) +
-  scale_color_gradient(low = "lightgrey", high = "red") +
-  geom_point(aes(y = predicted), shape = 1) +
-  facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
-  theme_bw()  # Add theme for cleaner look
+ggplot2::ggplot(body_data, ggplot2::aes(x = Body_length, y = Body_weight)) +
+  ggplot2::geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  ggplot2::geom_segment(ggplot2::aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
+  ggplot2::geom_point(ggplot2::aes(col = delta_ct_MminusE), size = 3) +
+  ggplot2::scale_color_gradient(low = "lightgrey", high = "red") +
+  ggplot2::geom_point(ggplot2::aes(y = predicted), shape = 1) +
+  ggplot2::facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
+  ggplot2::theme_bw()  # Add theme for cleaner look
 ```
 
 ### Which distribution to choose?
@@ -340,8 +341,8 @@ Let's compute some fits...
 
 ```{r}
 fits <- list(
-  normal = fitdistr(body_data$resBMBL,"normal"),
-  student = fitdistr(body_data$resBMBL, "t", 
+  normal = MASS::fitdistr(body_data$resBMBL,"normal"),
+  student = MASS::fitdistr(body_data$resBMBL, "t", 
                      start = list(m = mean(body_data$resBMBL), 
                                   s = sd(body_data$resBMBL), df = 3), 
                      lower=c(-1, 0.001,1))
@@ -353,26 +354,26 @@ sapply(fits, function(i) i$loglik)
 STUDENT is the way to go!
 
 ```{r}
-ggplot(body_data, aes(resBMBL)) +
-  geom_histogram(aes(y=..density..), bins = 100) + 
-  stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
-                aes(color = "normal"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+ggplot2::ggplot(body_data, ggplot2::aes(resBMBL)) +
+  ggplot2::geom_histogram(ggplot2::aes(y=..density..), bins = 100) + 
+  ggplot2::stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
+                ggplot2::aes(color = "normal"), size = 2) +
+  ggplot2::stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
                                                df = fits$student$estimate[3]),
-                aes(color = "student"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                ggplot2::aes(color = "student"), size = 2) +
+  ggplot2::stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
                                                df = 10),
-                aes(color = "student10"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                ggplot2::aes(color = "student10"), size = 2) +
+  ggplot2::stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
                                                df = 400),
-                aes(color = "student500"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                ggplot2::aes(color = "student500"), size = 2) +
+  ggplot2::stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
                                                df = 1000),
-                aes(color = "student1000"), size = 2) +
-  stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
+                ggplot2::aes(color = "student1000"), size = 2) +
+  ggplot2::stat_function(fun = dt, n = 1e3, args = list(ncp = fits$student$estimate[1], 
                                                df = 5),
-                aes(color = "student5"), size = 2) +
-  theme_bw(base_size = 24) 
+                ggplot2::aes(color = "student5"), size = 2) +
+  ggplot2::theme_bw(base_size = 24) 
 ```
 
 ### Fit the model!
