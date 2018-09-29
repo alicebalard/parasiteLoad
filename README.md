@@ -1,1 +1,1 @@
-[![Build Status](https://travis-ci.org/alicebalard/Parasite_Load.png)](https://travis-ci.org/alicebalard/Parasite_Load)
+[![Build Status](https://travis-ci.org/alicebalard/parasiteLoad.svg?branch=master.png)](https://travis-ci.org/alicebalard/parasiteLoad.svg?branch=master)
