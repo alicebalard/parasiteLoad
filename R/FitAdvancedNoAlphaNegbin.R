@@ -16,7 +16,7 @@ FitAdvancedNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, c
                  A1 = paramBounds[["A1start"]],
                  A2 = paramBounds[["A2start"]],
                  Z = paramBounds[["Zstart"]])
-  fit <- mle2(
+  fit <- bbmle::mle2(
     response ~ dnbinom(mu = MeanLoad(L1, L2, 0, HI),
                        size = SizeNegBin(A1, A2, Z, HI)),
     data = data,

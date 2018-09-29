@@ -14,7 +14,7 @@ FitAdvancedAlphaBinomial <- function(data, response, hybridIndex, paramBounds, c
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  alpha = paramBounds[["alphaStart"]])
-  fit <- mle2(
+  fit <- bbmle::mle2(
     response ~ dbinom(prob = MeanLoad(L1, L2, alpha, HI),
                       size = 1),
     data = data,

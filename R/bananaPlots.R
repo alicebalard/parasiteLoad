@@ -16,16 +16,16 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
   if(is.list(mod) == FALSE){ # we do not have differences between groups
     bananaDF = getBananaDF(mod, hybridIndex)
     # Draw the line for the parameters at their MLE, alpha varying
-    ggplot() +
-      geom_point(data = data, aes_string(x = "HI", y = "response"), fill = "lightgrey", pch = 21, size = 3) +
-      scale_fill_manual(values = cols) +
-      geom_ribbon(aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max),
+    ggplot2::ggplot() +
+      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response"), fill = "lightgrey", pch = 21, size = 3) +
+      ggplot2::scale_fill_manual(values = cols) +
+      ggplot2::geom_ribbon(ggplot2::aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max),
                   fill = "grey", alpha = .5) +
-      geom_line(aes(x = bananaDF$HI, y = bananaDF$fit)) +
-      theme_classic(base_size = 20) + {
-        if(islog10 == TRUE) scale_y_log10()
+      ggplot2::geom_line(ggplot2::aes(x = bananaDF$HI, y = bananaDF$fit)) +
+      ggplot2::theme_classic(base_size = 20) + {
+        if(islog10 == TRUE) ggplot2::scale_y_log10()
         } +
-      ylab(label = response)
+      ggplot2::ylab(label = response)
   }else{
     bananaDF = data.frame(HI = numeric(), fit = numeric(), min = numeric(), max = numeric(), group = factor())
     mygroupDFnames = vector()
@@ -35,16 +35,16 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
       bananaDF <- rbind(bananaDF, thisbanana)
     }
     # Draw the line for the parameters at their MLE, alpha varying
-    ggplot() +
-      geom_point(data = data, aes_string(x = "HI", y = "response"), pch = 21, size = 3) +
-      geom_ribbon(aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max, fill = bananaDF$group),
+    ggplot2::ggplot() +
+      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response"), pch = 21, size = 3) +
+      ggplot2::geom_ribbon(ggplot2::aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max, fill = bananaDF$group),
                   alpha = .2) +
-      geom_line(aes(x = bananaDF$HI, y = bananaDF$fit, col = bananaDF$group)) +
-      scale_fill_manual(values = cols) +
-      scale_color_manual(values = cols) +
-      theme_classic(base_size = 20) + {
-        if(islog10 == TRUE) scale_y_log10()
+      ggplot2::geom_line(ggplot2::aes(x = bananaDF$HI, y = bananaDF$fit, col = bananaDF$group)) +
+      ggplot2::scale_fill_manual(values = cols) +
+      ggplot2::scale_color_manual(values = cols) +
+      ggplot2::theme_classic(base_size = 20) + {
+        if(islog10 == TRUE) ggplot2::scale_y_log10()
       } +
-      ylab(label = response)
+      ggplot2::ylab(label = response)
   }
 }

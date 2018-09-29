@@ -13,7 +13,7 @@ FitBasicAlphaBinomial <- function(data, response, hybridIndex, paramBounds, conf
   data$response <- data[[response]] # little trick
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]])
-  fit <- mle2(
+  fit <- bbmle::mle2(
     response ~ dbinom(prob = MeanLoad(L1, L1, alpha, HI),
                       size = 1),
     data = data,

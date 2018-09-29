@@ -26,7 +26,7 @@ runAll <- function (data, response, model, group) {
   # then run the analysis
   print("Fitting for all")
   FitAll <- run(
-    data = marshalledData$all,
+    data = marshalledData[["all"]],
     response = response,
     hybridIndex = HI,
     paramBounds = paramBounds,
@@ -34,7 +34,7 @@ runAll <- function (data, response, model, group) {
   )
   print("Fitting for groupA")
   FitGroupA <- run(
-    data = marshalledData$groupA,
+    data = marshalledData[["groupA"]],
     response = response,
     hybridIndex = HI,
     paramBounds = paramBounds,
@@ -42,7 +42,7 @@ runAll <- function (data, response, model, group) {
   )
   print("Fitting for groupB")
   FitGroupB <- run(
-    data = marshalledData$groupB,
+    data = marshalledData[["groupB"]],
     response = response,
     hybridIndex = HI,
     paramBounds = paramBounds,

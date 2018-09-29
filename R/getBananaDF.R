@@ -7,9 +7,9 @@
 
 getBananaDF <- function(mod, hybridIndex){
   ## profile investigates behavior of objective function near the MLE
-  myProf <- profile(mod)
+  myProf <- bbmle::profile(mod)
   ## Marginal confidence interval
-  myConfInt <- confint(myProf)
+  myConfInt <- bbmle::confint(myProf)
   ## Get marginal confidence interval for a given parameter
   getInf <- function(paramname){
     myConfInt[rownames(myConfInt) == paramname][1]}
@@ -29,15 +29,15 @@ getBananaDF <- function(mod, hybridIndex){
     myConfInt <- rbind(myConfInt, myConfInt[rownames(myConfInt) %in% "L1"])
     rownames(myConfInt)[rownames(myConfInt) %in% ""] <- "L2"
     # calculate response expected by the model
-    bananaDF$fit <- expectedResponse(c(coef(mod)[names(coef((mod))) %in% "L1"],
-                                       coef(mod)[names(coef((mod))) %in% "L1"],
-                                       coef(mod)[names(coef((mod))) %in% "alpha"]),
+    bananaDF$fit <- expectedResponse(c(bbmle::coef(mod)[names(bbmle::coef((mod))) %in% "L1"],
+                                       bbmle::coef(mod)[names(bbmle::coef((mod))) %in% "L1"],
+                                       bbmle::coef(mod)[names(bbmle::coef((mod))) %in% "alpha"]),
                                      hybridIndex)
   } else {
     # calculate response expected by the model
-    bananaDF$fit <- expectedResponse(c(coef(mod)[names(coef((mod))) %in% "L1"],
-                                       coef(mod)[names(coef((mod))) %in% "L2"],
-                                       coef(mod)[names(coef((mod))) %in% "alpha"]),
+    bananaDF$fit <- expectedResponse(c(bbmle::coef(mod)[names(bbmle::coef((mod))) %in% "L1"],
+                                       bbmle::coef(mod)[names(bbmle::coef((mod))) %in% "L2"],
+                                       bbmle::coef(mod)[names(bbmle::coef((mod))) %in% "alpha"]),
                                      hybridIndex)
 
   }

@@ -5,6 +5,6 @@
 #' @export
 
 printConvergence <- function(fit) {
-  convergence <- fit@details$convergence
+  convergence <- fit@details[["convergence"]]
   print(ifelse(convergence == 0, "Did converge", "Did not converge"))
 }

@@ -14,7 +14,7 @@ FitBasicAlphaStudent <- function(data, response, hybridIndex, paramBounds, confi
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]],
                  mydf = paramBounds[["mydfStart"]])
-  fit <- mle2(
+  fit <- bbmle::mle2(
     response ~ dt(ncp = MeanLoad(L1, L1, alpha, HI),
                   df = mydf),
     data = data,

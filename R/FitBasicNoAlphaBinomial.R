@@ -12,7 +12,7 @@ FitBasicNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds, co
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
   start <-  list(L1 = paramBounds[["L1start"]])
-  fit <- mle2(
+  fit <- bbmle::mle2(
     response ~ dbinom(prob = MeanLoad(L1, L1, 0, HI),
                       size = 1),
     data = data,
