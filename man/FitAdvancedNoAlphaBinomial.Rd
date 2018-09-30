@@ -4,7 +4,8 @@
 \alias{FitAdvancedNoAlphaBinomial}
 \title{Fit the model "difference between subspecies, no hybrid effect" for binomial distribution of the expected load}
 \usage{
-FitAdvancedNoAlphaBinomial(data, response, hybridIndex, paramBounds, config)
+FitAdvancedNoAlphaBinomial(data, response, hybridIndex, paramBounds,
+  config)
 }
 \arguments{
 \item{data}{A data frame}
