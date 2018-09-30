@@ -5,7 +5,8 @@
 ## Installation
 
 require(devtools)
-devtools::install_github("derele/MultiAmplicon")
+
+devtools::install_github("alicebalard/parasiteLoad")
 
 ## Reference
 
