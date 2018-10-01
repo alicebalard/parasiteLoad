@@ -6,7 +6,7 @@
 
 require(devtools)
 
-devtools::install_github("alicebalard/parasiteLoad", build_vignettes = TRUE)
+devtools::install_github("alicebalard/parasiteLoad")
 
 ## Reference
 
