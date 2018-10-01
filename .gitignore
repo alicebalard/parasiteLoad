@@ -29,3 +29,4 @@ R/.Rhistory
 *.utf8.md
 *.knit.md
 tests/\.Rhistory
+.Rproj.user
