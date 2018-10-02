@@ -37,4 +37,5 @@ getParamBounds <- function(model, data, response){
                      A2start = 10, A2LB = 1e-9, A2UB = 1000,
                      Zstart = 0, ZLB = -20, ZUB = 20)
   }
+  return(paramBounds)
 }

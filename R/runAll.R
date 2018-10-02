@@ -11,7 +11,7 @@
 runAll <- function (data, response, model, group) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
-                        method = c("bobyqa", "L-BFGS-B"),
+                        method = c("L-BFGS-B", "bobyqa"),
                         control = list(follow.on = TRUE))
   paramBounds <- getParamBounds(model, data, response)
   marshalledData <- marshallData(data, response, group)
@@ -32,7 +32,7 @@ runAll <- function (data, response, model, group) {
     paramBounds = paramBounds,
     config = defaultConfig
   )
-  print("Fitting for groupA")
+  print(paste0("Fitting for groupA : ", levels(data[[group]])[1]))
   FitGroupA <- run(
     data = marshalledData[["groupA"]],
     response = response,
@@ -40,7 +40,7 @@ runAll <- function (data, response, model, group) {
     paramBounds = paramBounds,
     config = defaultConfig
   )
-  print("Fitting for groupB")
+  print(paste0("Fitting for groupA : ", levels(data[[group]])[2]))
   FitGroupB <- run(
     data = marshalledData[["groupB"]],
     response = response,
