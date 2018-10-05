@@ -290,3 +290,38 @@ bananaPlots(mod = fit_body_student$H1, data = body_data, response = "resBMBL")
 
 bananaPlots(mod = fit_body_student$H3, data = body_data, response = "resBMBL", group = "qPCRstatus")
 ```
+
+
+# Suggestion from Stuart
+
+Sounds very cool. You may well have thought of this, but anyway (because likelihood is lovely)... a nice zonewise pinworm comparison is as follows:
+
+Do whole analysis on combined {WATWM, Jenny's} data -> Joint LLsurface
+You already have the whole analyses on the zonewise-split of this joint data. -> {WATM LL surface,Jenny LL surface}
+... and off we go: compare
+Max(WATWM LL surface)+Max(Jenny LL surface) VS Max(Joint LLsurface)
+
+On either side of the VS the same data is analysed - so LL comparison is valid. Any 'is there really a difference between the two zones re pinworms' style of question reduces to:
+Force them to be the same (the joint analysis) VS allow them to be different (WATWM and Jenny's each have their own parameters).... once you have counted degrees of freedom you can look up the answer to any such  question in a ChiSquared table... its so sweeeet!
+ (ok... there are lots of axes of heterogeneity... it not quite so simple as all that - but its basically what you do already re eg comparison of sexes)
+
+```{r compare all worms}
+fit_Joelle_negbin <- analyse(WATWMdata, "Aspiculuris.Syphacia", 
+                             model = "negbin", group = "Sex")
+fit_Joelle_negbin
+
+fit_pinworms_negbin <- analyse(pinworms_data, "Aspiculuris_Syphacia", 
+                               model = "negbin", group = "Sex")
+fit_pinworms_negbin
+
+d1 <- WATWMdata[c("Sex", "Aspiculuris.Syphacia", "HI")]
+d2 <- pinworms_data[c("Sex", "Aspiculuris_Syphacia", "HI")]
+names(d1) <- names(d2)
+allWorms <- rbind(d1,d2)
+
+fit_allWorms_negbin <- analyse(allWorms, "Aspiculuris_Syphacia", 
+                               model = "negbin", group = "Sex")
+fit_allWorms_negbin
+```
+
+

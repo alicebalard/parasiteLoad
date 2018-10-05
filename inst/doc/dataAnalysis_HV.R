@@ -202,3 +202,21 @@ bananaPlots(mod = fit_body_student$H1, data = body_data, response = "resBMBL")
 
 bananaPlots(mod = fit_body_student$H3, data = body_data, response = "resBMBL", group = "qPCRstatus")
 
+## ----compare all worms--------------------------------------------------------------------
+fit_Joelle_negbin <- analyse(WATWMdata, "Aspiculuris.Syphacia", 
+                             model = "negbin", group = "Sex")
+fit_Joelle_negbin
+
+fit_pinworms_negbin <- analyse(pinworms_data, "Aspiculuris_Syphacia", 
+                               model = "negbin", group = "Sex")
+fit_pinworms_negbin
+
+d1 <- WATWMdata[c("Sex", "Aspiculuris.Syphacia", "HI")]
+d2 <- pinworms_data[c("Sex", "Aspiculuris_Syphacia", "HI")]
+names(d1) <- names(d2)
+allWorms <- rbind(d1,d2)
+
+fit_allWorms_negbin <- analyse(allWorms, "Aspiculuris_Syphacia", 
+                               model = "negbin", group = "Sex")
+fit_allWorms_negbin
+
