@@ -12,19 +12,26 @@
 
 bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
                         cols = c("green", "orange"), group, islog10 = F){
+  # for aes_string
   data$response = data[[response]]
+  data$group = data[[group]]
   if(is.list(mod) == FALSE){ # we do not have differences between groups
     bananaDF = getBananaDF(mod, hybridIndex)
+    bananaDF$group[bananaDF$group == "groupA"] <- levels(data$group)[1]
+    bananaDF$group[bananaDF$group == "groupB"] <- levels(data$group)[2]
     # Draw the line for the parameters at their MLE, alpha varying
     ggplot2::ggplot() +
-      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response"), fill = "lightgrey", pch = 21, size = 3) +
+      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response", fill = "group"),
+                          pch = 21, size = 3, alpha = .5) +
+      ggplot2::geom_ribbon(data = bananaDF,
+                           ggplot2::aes_string(x = "HI", ymin = "min", ymax = "max"),
+                           fill = "grey", alpha = .5) +
+      ggplot2::geom_line(data = bananaDF,
+                         ggplot2::aes_string(x = "HI", y = "fit")) +
       ggplot2::scale_fill_manual(values = cols) +
-      ggplot2::geom_ribbon(ggplot2::aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max),
-                  fill = "grey", alpha = .5) +
-      ggplot2::geom_line(ggplot2::aes(x = bananaDF$HI, y = bananaDF$fit)) +
       ggplot2::theme_classic(base_size = 20) + {
         if(islog10 == TRUE) ggplot2::scale_y_log10()
-        } +
+      } +
       ggplot2::ylab(label = response)
   }else{
     bananaDF = data.frame(HI = numeric(), fit = numeric(), min = numeric(), max = numeric(), group = factor())
@@ -34,12 +41,17 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
       thisbanana$group <- n
       bananaDF <- rbind(bananaDF, thisbanana)
     }
+    bananaDF$group[bananaDF$group == "groupA"] <- levels(data$group)[1]
+    bananaDF$group[bananaDF$group == "groupB"] <- levels(data$group)[2]
     # Draw the line for the parameters at their MLE, alpha varying
-    ggplot2::ggplot() +
-      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response"), pch = 21, size = 3) +
-      ggplot2::geom_ribbon(ggplot2::aes(x = bananaDF$HI, ymin = bananaDF$min, ymax = bananaDF$max, fill = bananaDF$group),
-                  alpha = .2) +
-      ggplot2::geom_line(ggplot2::aes(x = bananaDF$HI, y = bananaDF$fit, col = bananaDF$group)) +
+    ggplot2::ggplot()+
+      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response", fill = "group"),
+                          pch = 21, size = 3, alpha = .5) +
+      ggplot2::geom_ribbon(data = bananaDF,
+                           ggplot2::aes_string(x = "HI", ymin = "min", ymax = "max",
+                                               fill = "group"), alpha = .5) +
+      ggplot2::geom_line(data = bananaDF,
+                         ggplot2::aes_string(x = "HI", y = "fit", col = "group")) +
       ggplot2::scale_fill_manual(values = cols) +
       ggplot2::scale_color_manual(values = cols) +
       ggplot2::theme_classic(base_size = 20) + {

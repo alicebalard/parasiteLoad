@@ -40,7 +40,7 @@ runAll <- function (data, response, model, group) {
     paramBounds = paramBounds,
     config = defaultConfig
   )
-  print(paste0("Fitting for groupA : ", levels(data[[group]])[2]))
+  print(paste0("Fitting for groupB : ", levels(data[[group]])[2]))
   FitGroupB <- run(
     data = marshalledData[["groupB"]],
     response = response,
