@@ -2,7 +2,8 @@
 title: "Data analysis : test of hybrid immune vigor in response to parasite infection"
 author: "Alice Balard"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::html_vignette:
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -104,7 +105,7 @@ fit_qpcr_student
 
 Plot the more likely hypothesis, H0
 
-```{r plotfitqpcr}
+```{r plotfitqpcr, fig.width=6, fig.height=4}
 plot_qpcr_student <- bananaPlots(mod = fit_qpcr_student$H0, 
                                  data = qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, ], 
                                  response = "delta_ct_MminusEAllPos", group = "Sex")
@@ -122,7 +123,7 @@ fit_flotation_negbin <- analyse(flotation_data[flotation_data$OPG > 0, ],
 fit_flotation_negbin
 ```
 
-```{r plotfitflot}
+```{r plotfitflot, fig.width=6, fig.height=4}
 # bananaPlots(mod = fit_flotation_negbin$H0, data = flotation_data, 
 #             response = "OPG+1")
 # problems for the profiling...
@@ -140,7 +141,7 @@ fit_Joelle_negbin <- analyse(WATWMdata, "Aspiculuris.Syphacia+1",
 fit_Joelle_negbin
 ```
 
-```{r plotfitJo}                 
+```{r plotfitJo, fig.width=7, fig.height=4}                 
 plot_Joelle_negbin <- bananaPlots(mod = fit_Joelle_negbin$H1, 
                                  data = WATWMdata, 
                                  response = "Aspiculuris.Syphacia+1", 
@@ -156,7 +157,7 @@ fit_pinworms_negbin <- analyse(pinworms_data, "Aspiculuris.Syphacia+1",
 fit_pinworms_negbin
 ```
 
-```{r plotfitJe}
+```{r plotfitJe, fig.width=7, fig.height=4}
 plot_pinworms_negbin <- bananaPlots(mod = fit_pinworms_negbin$H1, 
                                   data = pinworms_data, 
                                   response = "Aspiculuris.Syphacia+1", 
@@ -166,7 +167,7 @@ plot_pinworms_negbin
 
 ## qPCR vs worms (is there a correlation?)
 
-```{r plotcorr}
+```{r plotcorr, fig.width=7, fig.height=4}
 ggplot2::ggplot(pinworms_data, 
        aes(delta_ct_MminusE, `Aspiculuris.Syphacia+1`)) +
   geom_point(aes(fill = HI), pch = 21, size = 5) + 
@@ -183,7 +184,7 @@ summary(lm(`Aspiculuris.Syphacia+1` ~ delta_ct_MminusE, data = BALdata))
 
 Remove pregnant/post partum and juveniles
 
-```{r removepregnant}
+```{r removepregnant, fig.width=7, fig.height=4}
 body_data$status[body_data$Sex %in% c("F")] <- "non pregnant/lactating female"
 body_data$status[body_data$Status %in% c("post partum", "post partum (lactating)", "pregnant")] <- "pregnant/lactating female"
 body_data$status[body_data$Sex %in% c("M")] <- "male"
@@ -217,7 +218,7 @@ body_data$residuals <- residuals(fitRes) # Save the residual values
 
 * Step 3: plot the actual and predicted values
 
-```{r plotpredval}
+```{r plotpredval, fig.width=7, fig.height=4}
 ggplot2::ggplot(body_data, ggplot2::aes(x = Body_length, y = Body_weight)) +
   ggplot2::geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
   ggplot2::geom_segment(ggplot2::aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
@@ -230,9 +231,11 @@ ggplot2::ggplot(body_data, ggplot2::aes(x = Body_length, y = Body_weight)) +
 
 * Step 4: use residuals as indice
 
-```{r removeoutliers}
+```{r removeoutliers, fig.width=7, fig.height=4}
 hist(body_data$residuals[body_data$Sex =="F"], breaks = 100) # remove outliers, keep [-5,5] interval
+```
 
+```{r, fig.width=7, fig.height=4}
 body_data <- body_data[body_data$residuals <= 5,]
 body_data$resBMBL <- body_data$residuals
 
@@ -268,7 +271,7 @@ sapply(fits, function(i) i$loglik)
 
 STUDENT is the way to go!
 
-```{r plotdistribbody}
+```{r plotdistribbody, fig.width=7, fig.height=4}
 ggplot2::ggplot(body_data, ggplot2::aes(resBMBL)) +
   ggplot2::geom_histogram(ggplot2::aes(y=..density..), bins = 100) + 
   ggplot2::stat_function(fun = dnorm, n = 1e3, args = list(mean = fits$normal$estimate[1], sd = fits$normal$estimate[2]),
@@ -302,7 +305,7 @@ fit_body_student
 
 And plot
 
-```{r plotfitbody}
+```{r plotfitbody, fig.width=6, fig.height=4}
 # bananaPlots(mod = fit_body_student$H1, data = body_data, response = "resBMBL")
 # 
 # bananaPlots(mod = fit_body_student$H3, data = body_data, response = "resBMBL", group = "qPCRstatus")
@@ -322,7 +325,7 @@ On either side of the VS the same data is analysed - so LL comparison is valid. 
 Force them to be the same (the joint analysis) VS allow them to be different (WATWM and Jenny's each have their own parameters).... once you have counted degrees of freedom you can look up the answer to any such  question in a ChiSquared table... its so sweeeet!
  (ok... there are lots of axes of heterogeneity... it not quite so simple as all that - but its basically what you do already re eg comparison of sexes)
 
-```{r compare all worms}
+```{r compare all worms, fig.width=7, fig.height=4}
 
 fit_allWorms_negbin <- analyse(allWorms, "Aspiculuris.Syphacia+1", 
                                model = "negbin", group = "batch")

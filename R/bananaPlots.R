@@ -17,8 +17,6 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
   data$group = data[[group]]
   if(is.list(mod) == FALSE){ # we do not have differences between groups
     bananaDF = getBananaDF(mod, hybridIndex)
-    bananaDF$group[bananaDF$group == "groupA"] <- levels(data$group)[1]
-    bananaDF$group[bananaDF$group == "groupB"] <- levels(data$group)[2]
     # Draw the line for the parameters at their MLE, alpha varying
     ggplot2::ggplot() +
       ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response", fill = "group"),
