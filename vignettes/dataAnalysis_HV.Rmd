@@ -25,6 +25,7 @@ library(bbmle)
 require(optimx) # for bbmle it needs to be required(?)
 library(ggplot2)
 library(MASS)
+library(fitdistrplus)
 ```
 
 ## Prepare dataset for each analysis
@@ -74,42 +75,39 @@ allWorms$batch <- as.factor(allWorms$batch)
 
 Let's compute some fits...
 
-```{r, choosefitsqpcr}
+```{r choosefitsqpcr, fig.width=6, fig.height=4}
+qpcrPOS <- qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, "delta_ct_MminusEAllPos"]
 
-qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0,"delta_ct_MminusEAllPos"]
+fitdistrplus::descdist(qpcrPOS, discrete = FALSE)
 
 fits_test_qpcr <- list(
-  normal = MASS::fitdistr(qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0,"delta_ct_MminusEAllPos"],
-                          "normal"),
-  student = MASS::fitdistr(qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, "delta_ct_MminusEAllPos"], "t",
-                     start = list(m = mean(qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, "delta_ct_MminusEAllPos"]),
-                                  s = sd(qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, "delta_ct_MminusEAllPos"]),
-                                  df=3), lower=c(-1, 0.001,1))
+  normal = fitdistrplus::fitdist(qpcrPOS, "norm"),
+  weibull = fitdistrplus::fitdist(qpcrPOS, "weibull"),
+  student = fitdistrplus::fitdist(qpcrPOS, "t", start = list(df = 1))
 )
 
+plot(fits_test_qpcr$normal)
+plot(fits_test_qpcr$weibull)
+plot(fits_test_qpcr$student)
+
 #Get the logliks for each model...
-
 sapply(fits_test_qpcr, function(i) i$loglik)
+sapply(fits_test_qpcr, function(i) i$aic)
 ```
 
-STUDENT is the way to go!
+WEIBULL IS FAR BETTER THAN STUDENT!! 
 
-### Run the fit with Student distribution
+### Run the fit with Weibull distribution
 
-```{r runfitqpcr}
-fit_qpcr_student <- analyse(qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, ],
-                               response = "delta_ct_MminusEAllPos", 
-                            model = "student", group = "Sex")
-fit_qpcr_student
-```
+```{r fitandplotweibull, fig.width=6, fig.height=4}
+fit_qpcr_weibull <- analyse(qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, ],
+        response = "delta_ct_MminusEAllPos", 
+        model = "weibull", group = "Sex")
 
-Plot the more likely hypothesis, H0
-
-```{r plotfitqpcr, fig.width=6, fig.height=4}
-plot_qpcr_student <- bananaPlots(mod = fit_qpcr_student$H0, 
+plot_qpcr_weibull <- bananaPlots(mod = fit_qpcr_weibull$H0, 
                                  data = qpcr_data[qpcr_data$delta_ct_MminusEAllPos > 0, ], 
                                  response = "delta_ct_MminusEAllPos", group = "Sex")
-plot_qpcr_student
+plot_qpcr_weibull
 ```
 
 ## Part 2. OPG results, 4 hypotheses, difference between sexes
@@ -151,18 +149,32 @@ plot_Joelle_negbin
 
 ### And Jennys now:
 
-```{r runfitJe}
-fit_pinworms_negbin <- analyse(pinworms_data, "Aspiculuris.Syphacia+1", 
+```{r runfitJe,  fig.width=7, fig.height=4}
+fit_pinworms_negbin <- analyse(pinworms_data, response = "Aspiculuris.Syphacia+1", 
                                model = "negbin", group = "Sex")
 fit_pinworms_negbin
-```
 
-```{r plotfitJe, fig.width=7, fig.height=4}
 plot_pinworms_negbin <- bananaPlots(mod = fit_pinworms_negbin$H1, 
                                   data = pinworms_data, 
                                   response = "Aspiculuris.Syphacia+1", 
                                   islog10 = TRUE, group = "Sex") 
 plot_pinworms_negbin
+```
+
+### And Jennys now for only positive (RESISTANCE):
+
+```{r runfitJeRES, fig.width=7, fig.height=4}
+pinworms_dataPOS <- pinworms_data[pinworms_data$Aspiculuris.Syphacia > 0,]
+
+fit_pinworms_negbinRES <- analyse(pinworms_dataPOS, response = "Aspiculuris.Syphacia+1", 
+                               model = "negbin", group = "Sex")
+fit_pinworms_negbinRES
+
+plot_pinworms_negbinRES <- bananaPlots(mod = fit_pinworms_negbinRES$H1, 
+                                  data = pinworms_dataPOS, 
+                                  response = "Aspiculuris.Syphacia", 
+                                  islog10 = TRUE, group = "Sex") 
+plot_pinworms_negbinRES
 ```
 
 ## qPCR vs worms (is there a correlation?)

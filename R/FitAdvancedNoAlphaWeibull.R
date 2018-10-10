@@ -8,7 +8,7 @@
 #' @return A fit for Student distributed data for difference between subspecies, flexible hybrid effect
 #' @export
 
-FitAdvancedAlphaStudent <- function(data, response, hybridIndex, paramBounds, config){
+FitAdvancedNoAlphaWeibull <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
   start <-  list(L1 = paramBounds[["L1start"]],
