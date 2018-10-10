@@ -22,6 +22,8 @@ runAll <- function (data, response, model, group) {
     run <- runStudent
   } else if (model == "negbin"){
     run <- runNegbin
+  } else if (model == "weibull"){
+    run <- runWeibull
   }
   # then run the analysis
   print("Fitting for all")
