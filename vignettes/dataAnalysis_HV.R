@@ -95,14 +95,14 @@ fit_Joelle_negbin <- analyse(WATWMdata, "Aspiculuris.Syphacia+1",
                              model = "negbin", group = "Sex")
 fit_Joelle_negbin
 
-## ----plotfitJo, fig.width=7, fig.height=4-------------------------------------------------------
+## ----plotfitJo, fig.width=7, fig.height=4--------------------------------
 plot_Joelle_negbin <- bananaPlots(mod = fit_Joelle_negbin$H1, 
                                  data = WATWMdata, 
                                  response = "Aspiculuris.Syphacia+1", 
                                  islog10 = TRUE, group = "Sex") 
 plot_Joelle_negbin
 
-## ----runfitJe,  fig.width=7, fig.height=4-------------------------------------------------------
+## ----runfitJe,  fig.width=7, fig.height=4--------------------------------
 fit_pinworms_negbin <- analyse(pinworms_data, response = "Aspiculuris.Syphacia+1", 
                                model = "negbin", group = "Sex")
 fit_pinworms_negbin
