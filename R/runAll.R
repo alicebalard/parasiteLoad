@@ -8,12 +8,12 @@
 #' @return The full result of the fit
 #' @export
 
-runAll <- function (data, response, model, group) {
+runAll <- function (data, response, model, group, paramBounds) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
                         method = c("L-BFGS-B", "bobyqa"),
                         control = list(follow.on = TRUE))
-  paramBounds <- getParamBounds(model, data, response)
+  paramBounds <- paramBounds
   marshalledData <- marshallData(data, response, group)
   # Choose model
   if (model == "binomial"){

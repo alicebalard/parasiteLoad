@@ -8,9 +8,14 @@
 #' @return The full result of the analysis after G-test tests
 #' @export
 
-analyse <- function(data, response, model, group) {
+analyse <- function(data, response, model, group, myparamBounds = "default"){
+  if (myparamBounds == "default"){
+    paramBounds <- getParamBounds(model, data, response)
+  } else {
+    paramBounds <- myparamBounds
+  }
   print(paste0("Analysing data for response: ", response))
-  FitForResponse <- runAll(data, response, model, group)
+  FitForResponse <- runAll(data, response, model, group, paramBounds = paramBounds)
 
   ####### Is alpha significant for each hypothesis?
 

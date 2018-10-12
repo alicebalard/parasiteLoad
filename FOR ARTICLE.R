@@ -68,7 +68,7 @@ d2$batch <- "JENNY"
 allWorms <- rbind(d1,d2)
 allWorms$batch <- as.factor(allWorms$batch)
 ```
-
+## PART I.
 ## Worms count, 4 hypotheses, difference between sexes
 
 ### Choose a correct distribution for our data : negative binomial see WATWM

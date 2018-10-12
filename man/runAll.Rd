@@ -4,7 +4,7 @@
 \alias{runAll}
 \title{Run full analysis for the 4 hypotheses}
 \usage{
-runAll(data, response, model, group)
+runAll(data, response, model, group, paramBounds)
 }
 \arguments{
 \item{data}{A data frame}

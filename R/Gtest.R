@@ -19,7 +19,7 @@ Gtest <- function(model0, model1){
   pvalue <- 1 - pchisq(2*dLL, df=dDF)
   out <- data.frame(dLL = round(dLL, 2),
                     dDF = dDF,
-                    pvalue = round(pvalue, 4))
+                    pvalue = round(pvalue, 6))
   print(out)
   return(out)
 }
