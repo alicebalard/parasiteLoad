@@ -68,7 +68,7 @@ xPOS <- BALdata$Aspiculuris_Syphacia[!is.na(BALdata$Aspiculuris_Syphacia) &
 
 averageload <- round(mean(xPOS, na.rm = T),1)
 averageload 
-Ni <- length(xPOS, na.rm = T)
+Ni <- length(xPOS)
 Ni 
 
 Meanload <-  mean(xPOS, na.rm = T)
