@@ -35,26 +35,32 @@ library(boot) # BS
 ## Prepare dataset for each analysis
 
 ```{r prepData}
-# plot qPCR
-qpcr <- BALdata[!is.na(BALdata$delta_ct_cewe_MminusE) &
-                       BALdata$delta_ct_cewe_MminusE > -5 &
-                         !is.na(BALdata$eimeriaSpecies) &
-                         BALdata$eimeriaSpecies %in% c("E_ferrisi", "E_falciformis"),]
-qpcr$eimeriaSpecies <- droplevels(qpcr$eimeriaSpecies)
+# select variables for each analysis
+BALdata <- read.csv("../data/MiceTableMusAliceArticle.csv")
 
-qpcr$delta_ct_cewe_MminusEPOS <- qpcr$delta_ct_cewe_MminusE +5
+flotation <- BALdata[!is.na(BALdata$OPG) &
+                               BALdata$OPG >= 1 & 
+                            !is.na(BALdata$HI) &
+                            !is.na(BALdata$Sex), ]
+flotation$OPG <- round(flotation$OPG)
+
+qpcr <- BALdata[(BALdata$delta_ct_cewe_MminusE > -5 & 
+                   !is.na(BALdata$delta_ct_cewe_MminusE)) |
+                  (BALdata$delta_ct_ilwe_MminusE > -5 &
+                     !is.na(BALdata$delta_ct_ilwe_MminusE)),]
+
+df <- qpcr[, c("delta_ct_cewe_MminusE", "delta_ct_ilwe_MminusE")]
+qpcr$delta_ct_max_MminusEPOS <- apply(df, 1, function(x){ max(x, na.rm = T)}) + 5
 
 ggplot(qpcr, 
-       aes(x = HI, y = delta_ct_cewe_MminusE)) +
+       aes(x = HI, y = delta_ct_max_MminusEPOS)) +
   geom_point() +
-  facet_grid(.~eimeriaSpecies) +
-  # geom_smooth() +
-  theme_classic() +
-  ggtitle("ferrisiqpcr")
-
+  theme_classic() 
 ```
 
 ## Resistance in hybrids compared to pure strains mice : Eimeria
+
+### 1. qPCR 
 
 First, choose a correct distribution for our data
 
@@ -132,14 +138,14 @@ First, choose a correct distribution for our data
 Let's compute some fits...
 
 ```{r choosefitsqpcr, fig.width=6, fig.height=4}
-qpcrPOS <- qpcr[qpcr$delta_ct_cewe_MminusEPOS > 0, "delta_ct_cewe_MminusEPOS"]
+qpcrvalue <- qpcr$delta_ct_max_MminusEPOS
 
-fitdistrplus::descdist(qpcrPOS, discrete = FALSE)
+fitdistrplus::descdist(qpcrvalue, discrete = FALSE)
 
 fits_test_qpcr <- list(
-  normal = fitdistrplus::fitdist(qpcrPOS, "norm"),
-  weibull = fitdistrplus::fitdist(qpcrPOS, "weibull"),
-  student = fitdistrplus::fitdist(qpcrPOS, "t", start = list(df = 1))
+  normal = fitdistrplus::fitdist(qpcrvalue, "norm"),
+  weibull = fitdistrplus::fitdist(qpcrvalue, "weibull"),
+  student = fitdistrplus::fitdist(qpcrvalue, "t", start = list(df = 1))
 )
 
 plot(fits_test_qpcr$normal)
@@ -157,17 +163,149 @@ WEIBULL IS FAR BETTER THAN STUDENT!!
 
 ```{r fitandplotweibull, fig.width=6, fig.height=4}
 fit_qpcr_weibull <- analyse(qpcr, 
-                            response = "delta_ct_cewe_MminusEPOS", 
-                            model = "weibull", group = "eimeriaSpecies")
+                            response = "delta_ct_max_MminusEPOS", 
+                            model = "weibull", group = "Sex")
 
 fit_qpcr_weibull
 
-plot_qpcr_weibull <- bananaPlots(mod = fit_qpcr_weibull$H0, 
-                                 data = qpcr, 
-                                 response = "delta_ct_cewe_MminusEPOS", group = "eimeriaSpecies")
+plot_qpcr_weibull <- bananaPlots_alpha(mod = fit_qpcr_weibull$H1, 
+                                       data = qpcr, 
+                                       response = "delta_ct_max_MminusEPOS",
+                                       group = "Sex")
 plot_qpcr_weibull
 
-# compare full model to full model with no alpha
-
+pdf(width = 6, height = 4, file = "../figures/part3.pdf")
+plot_qpcr_weibull
+dev.off()
 ```
 
+###  2. Flotation 
+
+Run the fit for load estimation along HI, negative binomial distribution
+
+```{r runfitflot, fig.width=6, fig.height=4}
+fit_flotation <- analyse(flotation, 
+                                   response = "OPG", 
+                                   model = "negbin", group = "Sex")
+fit_flotation
+
+bananaplot <- bananaPlots_alpha(mod = fit_flotation$H1, data = flotation,
+                                response = "OPG", group = "Sex", islog10 = T)
+bananaplot
+
+pdf(file = "../figures/part3_opg.pdf", width = 6, height = 4)
+bananaplot
+dev.off()
+```
+
+### 3. Body condition
+body data, 4 hypotheses, difference between infected/not infected
+
+Remove pregnant/post partum and juveniles
+
+```{r removepregnant, fig.width=7, fig.height=4}
+body_data <- BALdata[!is.na(BALdata$Body_weight) &
+                       !is.na(BALdata$Body_length) &
+                       !is.na(BALdata$HI) &
+                       !is.na(BALdata$Sex) &
+                       !is.na(BALdata$eimeriaSpecies) &
+                       BALdata$eimeriaSpecies %in% c("E_ferrisi") &
+                       !is.na(BALdata$delta_ct_cewe_MminusE) &
+                       BALdata$delta_ct_cewe_MminusE > -5,]
+
+body_data$status[body_data$Sex %in% c("F")] <- "non pregnant/lactating female"
+body_data$status[body_data$Status %in% c("post partum", "post partum (lactating)", "pregnant")] <- "pregnant/lactating female"
+body_data$status[body_data$Sex %in% c("M")] <- "male"
+
+# Test  our detection of pregnancy in females using BCI
+ggplot2::ggplot(body_data, 
+       ggplot2::aes(x = HI, y = BCI, fill = status, group = status)) +
+  geom_point(pch = 21, size = 3, alpha = .5)+
+  geom_smooth(aes(col = status)) +
+  theme_bw()
+
+# Remove pregnant females
+body_data <- body_data[!body_data$status %in% c("pregnant/lactating female"), ]
+```
+
+Regression of BM/BS for males and females (all together, then separate subsp.) 
+Advantage: independant of size!!
+
+* Step 1: fit the model
+
+```{r fitresmod}
+fitRes <- lm(Body_weight ~ Body_length * Sex, data = body_data)
+```
+
+* Step 2: obtain predicted and residual values
+
+```{r getpredval}
+body_data$predicted <- predict(fitRes)   # Save the predicted values
+body_data$residuals <- residuals(fitRes) # Save the residual values
+```
+
+* Step 3: plot the actual and predicted values
+
+```{r plotpredval, fig.width=7, fig.height=4}
+ggplot2::ggplot(body_data, ggplot2::aes(x = Body_length, y = Body_weight)) +
+  ggplot2::geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  ggplot2::geom_segment(ggplot2::aes(xend = Body_length, yend = predicted), alpha = .2) +  # alpha to fade lines
+  ggplot2::geom_point(ggplot2::aes(col = delta_ct_cewe_MminusE), size = 3) +
+  ggplot2::scale_color_gradient(low = "lightgrey", high = "red") +
+  ggplot2::geom_point(ggplot2::aes(y = predicted), shape = 1) +
+  ggplot2::facet_grid(~ Sex, scales = "free_x") +  # Split panels here by `iv`
+  ggplot2::theme_bw()  # Add theme for cleaner look
+```
+
+* Step 4: use residuals as indice
+
+```{r }
+body_data$bodyCondition <- "high"
+body_data$bodyCondition[body_data$residuals < 0] <- "low"
+
+ggplot(body_data, aes(x = HI, y = residuals)) +
+  geom_smooth(aes(group = bodyCondition, col = bodyCondition)) +
+  scale_color_manual(values = c("green", "red")) +
+  geom_point(aes(fill = residuals), pch = 21, size = 5) +
+  scale_fill_gradient(low = "red", high = "green") +
+  theme_classic()
+
+ggplot(body_data, aes(x = HI, y = delta_ct_cewe_MminusE)) +
+  geom_smooth(aes(group = bodyCondition, col = bodyCondition)) +
+  scale_color_manual(values = c("green", "red")) +
+  geom_point(aes(fill = bodyCondition), pch = 21, size = 5) +
+  # scale_fill_gradient(low = "red", high = "green") +
+  theme_classic()
+```
+
+### Which distribution to choose?
+
+Let's compute some fits...
+
+```{r choosefitbody}
+# fits <- list(
+#   normal = fitdistrplus::fitdist(body_data$resBMBL,"norm"),
+#   student = fitdistrplus::fitdist(body_data$resBMBL, "t", start = list(df = 1))
+# )
+# # get the logliks for each model...
+# sapply(fits, function(i) i$loglik)
+```
+
+NORMAl is the way to go!
+
+### Fit the model!
+
+```{r runfitbody}
+# fit_body_student <- analyse(body_data, response = "resBMBL",
+#                             model = "normal", group = "qPCRstatus")
+# 
+# fit_body_student
+```
+
+And plot
+
+```{r plotfitbody, fig.width=6, fig.height=4}
+# bananaPlots(mod = fit_body_student$H1, data = body_data, response = "resBMBL")
+# 
+# bananaPlots(mod = fit_body_student$H3, data = body_data, response = "resBMBL", group = "qPCRstatus")
+```

@@ -1,26 +1,10 @@
----
-title: "Data analysis : test of hybrid immune vigor in response to parasite infection"
-subtitle: "Article part 2"
-author: "Alice Balard"
-date: "`r Sys.Date()`"
-output:
-  rmarkdown::html_vignette:
-vignette: >
-  %\VignetteIndexEntry{Vignette Title}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-  
-  ```{r setup, include = FALSE}
+## ----setup, include = FALSE----------------------------------------------
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+collapse = TRUE,
+comment = "#>"
 )
-```
 
-## Installation
-
-```{r install}
+## ----install-------------------------------------------------------------
 library(parasiteLoad)
 library(bbmle)
 require(optimx) # for bbmle it needs to be required(?)
@@ -30,16 +14,10 @@ library(fitdistrplus) # evaluate distribution
 library(epiR) # Sterne's exact method
 library(simpleboot) # BS
 library(boot) # BS
-```
 
-## Prepare dataset for each analysis
-
-```{r prepData}
+## ----prepData------------------------------------------------------------
 # add 1 for worms/oocysts count!!
 WATWMdata$`Aspiculuris.Syphacia+1` <- WATWMdata$Aspiculuris.Syphacia + 1
-
-BALdata <- read.csv("../data/MiceTableMusAliceArticle.csv")
-
 BALdata$`Aspiculuris.Syphacia+1` <- BALdata$Aspiculuris_Syphacia + 1
 BALdata$`OPG+1` <- BALdata$OPG + 1
 
@@ -59,13 +37,8 @@ d1$batch <- "WATWM"
 d2$batch <- "JENNY"
 allWorms <- rbind(d1,d2)
 allWorms$batch <- as.factor(allWorms$batch)
-```
 
-## Resistance in hybrids compared to pure strains mice
-
-First, choose a correct distribution for our data : negative binomial. We validate this distribution as follow
-
-```{r}
+## ------------------------------------------------------------------------
 xPOS <- BALdata$Aspiculuris_Syphacia[!is.na(BALdata$Aspiculuris_Syphacia) &
                                        BALdata$Aspiculuris_Syphacia >= 1]
 
@@ -106,10 +79,8 @@ chisq.test(x = df$expp, y = df$obsp)
 size=fit$estimate[1]
 size
 # The negative binomial distribution seems to describe parasite load well for all parasites
-```
 
-
-```{r,  fig.width=7, fig.height=4}
+## ----  fig.width=7, fig.height=4-----------------------------------------
 pinworms_dataPOS <- pinworms_data[pinworms_data$Aspiculuris_Syphacia >= 1, ]
 
 fit_pinworms_negbinPOS <- analyse(pinworms_dataPOS, response = "Aspiculuris_Syphacia",
@@ -120,7 +91,5 @@ plot_pinworms_negbinPOS <- bananaPlots(mod = fit_pinworms_negbinPOS$H3,
                                     data = pinworms_dataPOS,
                                     response = "Aspiculuris_Syphacia",
                                     islog10 = TRUE, group = "Sex")
-pdf(file = "../figures/part2.pdf", width = 7, height = 4)
 plot_pinworms_negbinPOS
-dev.off()
-```
+

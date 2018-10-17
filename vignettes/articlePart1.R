@@ -1,26 +1,10 @@
----
-title: "Data analysis : test of hybrid immune vigor in response to parasite infection"
-subtitle: "Article part 1"
-author: "Alice Balard"
-date: "`r Sys.Date()`"
-output:
-  rmarkdown::html_vignette:
-vignette: >
-  %\VignetteIndexEntry{Vignette Title}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-  
-  ```{r setup, include = FALSE}
+## ----setup, include = FALSE----------------------------------------------
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+collapse = TRUE,
+comment = "#>"
 )
-```
 
-## Installation
-
-```{r install}
+## ----install-------------------------------------------------------------
 library(parasiteLoad)
 library(bbmle)
 require(optimx) # for bbmle it needs to be required(?)
@@ -30,16 +14,10 @@ library(fitdistrplus) # evaluate distribution
 library(epiR) # Sterne's exact method
 library(simpleboot) # BS
 library(boot) # BS
-```
 
-## Prepare dataset for each analysis
-
-```{r prepData}
+## ----prepData------------------------------------------------------------
 # add 1 for worms/oocysts count!!
 WATWMdata$`Aspiculuris.Syphacia+1` <- WATWMdata$Aspiculuris.Syphacia + 1
-
-BALdata <- read.csv("../data/MiceTableMusAliceArticle.csv")
-
 BALdata$`Aspiculuris.Syphacia+1` <- BALdata$Aspiculuris_Syphacia + 1
 BALdata$`OPG+1` <- BALdata$OPG + 1
 
@@ -59,13 +37,8 @@ d1$batch <- "WATWM"
 d2$batch <- "JENNY"
 allWorms <- rbind(d1,d2)
 allWorms$batch <- as.factor(allWorms$batch)
-```
 
-## Worms count, 4 hypotheses, difference between sexes (Baird et al. 2012 for details)
-
-First, choose a correct distribution for our data : negative binomial. We validate this distribution as follow
-
-```{r}
+## ------------------------------------------------------------------------------------------------------
 x <- BALdata$Aspiculuris_Syphacia[!is.na(BALdata$Aspiculuris_Syphacia)]
 
 averageload <- round(mean(x, na.rm = T),1)
@@ -134,11 +107,8 @@ chisq.test(x = df$expp, y = df$obsp)
 size=fit$estimate[1]
 size
 # The negative binomial distribution seems to describe parasite load well for all parasites
-```
 
-### pinworms (A. tetraptera and S. obvelata (WATWMdata$Aspiculuris.Syphacia))
-
-```{r runfitJo, fig.width=7, fig.height=4}
+## ----runfitJo, fig.width=7, fig.height=4---------------------------------------------------------------
 fit_Joelle_negbin <- analyse(WATWMdata, "Aspiculuris.Syphacia+1",
                              model = "negbin", group = "Sex")
 fit_Joelle_negbin
@@ -148,11 +118,8 @@ plot_Joelle_negbin <- bananaPlots(mod = fit_Joelle_negbin$H3,
                                   response = "Aspiculuris.Syphacia+1",
                                   islog10 = TRUE, group = "Sex")
 plot_Joelle_negbin
-```
 
-### And Jennys now:
-
-```{r runfitJe,  fig.width=7, fig.height=4}
+## ----runfitJe,  fig.width=7, fig.height=4--------------------------------------------------------------
 fit_pinworms_negbin <- analyse(pinworms_data, response = "Aspiculuris.Syphacia+1",
                                model = "negbin", group = "Sex")
 fit_pinworms_negbin
@@ -163,54 +130,15 @@ plot_pinworms_negbin <- bananaPlots(mod = fit_pinworms_negbin$H3,
                                     islog10 = TRUE, group = "Sex")
 plot_pinworms_negbin
 
-pdf(file = "../figures/part1.pdf", width=7, height=4)
-plot_pinworms_negbin
-dev.off()
-```
+## ------------------------------------------------------------------------------------------------------
+paramAlphaFixed <- getParamBounds(model = "negbin", data = pinworms_data, response= "Aspiculuris.Syphacia+1")
 
-To compare both dataset hybrid effect (alpha) we run 2 models with our data: 
+paramAlphaFixed[c("alphaStart", "alphaLB", "alphaUB")] <- c(1.4, 1.34, 1.44)
 
-* model A with fixed alpha = 1.44 (males) alpha = 1.34 (females) (Bairds et al. 2012 value for pinworms)
+fit_pinworms_negbinB <- analyse(pinworms_data, response = "Aspiculuris.Syphacia+1",
+                               model = "negbin", group = "Sex", 
+                               myparamBounds = paramAlphaFixed)
+fit_pinworms_negbinB$H3
 
-* model B with variable alpha (model B being fit_pinworms_negbin)
+Gtest(fit_pinworms_negbinB$H3, fit_pinworms_negbin$H3)
 
-then we compare via G-test.
-
-```{r}
-defaultConfig <- list(optimizer = "optimx",
-                      method = c("L-BFGS-B", "bobyqa"),
-                      control = list(follow.on = TRUE))
-
-## Female: alpha fixed at 1.34
-model = "negbin"
-data = pinworms_data[pinworms_data$Sex =="F",]
-response = "Aspiculuris.Syphacia+1"
-paramBounds <- getParamBounds(model, data, response)
-paramBounds[["alphaStart"]] <- 1.34
-paramBounds[["alphaUB"]] <- 1.35
-paramBounds[["alphaLB"]] <- 1.33
-
-fitF <- FitAdvancedAlphaNegbin(data, response, hybridIndex = "HI", 
-                        paramBounds, config = defaultConfig)
-
-## Male: alpha fixed at 1.44
-model = "negbin"
-data = pinworms_data[pinworms_data$Sex =="M",]
-response = "Aspiculuris.Syphacia+1"
-paramBounds <- getParamBounds(model, data, response)
-paramBounds[["alphaStart"]] <- 1.44
-paramBounds[["alphaUB"]] <- 1.45
-paramBounds[["alphaLB"]] <- 1.43
-
-fitM <- FitAdvancedAlphaNegbin(data, response, hybridIndex = "HI", 
-                        paramBounds, config = defaultConfig)
-
-# Gtest
-LL1 <- logLik(fitF) + logLik(fitF)
-LL2 <- logLik(fit_pinworms_negbin$H3$groupA) + 
-  logLik(fit_pinworms_negbin$H3$groupB)
-dLL <- LL1 - LL2
-dDF <- 2 # 2 alpha fixed in one case
-1 - pchisq(2*0.66, df=2)
-
-```

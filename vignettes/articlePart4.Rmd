@@ -1,0 +1,68 @@
+---
+title: "Data analysis : test of hybrid immune vigor in response to parasite infection"
+subtitle: "Article part 4"
+author: "Alice Balard"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+  
+  ```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Installation
+
+```{r install}
+library(parasiteLoad)
+library(bbmle)
+require(optimx) # for bbmle it needs to be required(?)
+library(ggplot2)
+library(MASS)
+library(fitdistrplus) # evaluate distribution
+library(epiR) # Sterne's exact method
+library(simpleboot) # BS
+library(boot) # BS
+```
+
+## Prepare dataset for each analysis
+
+```{r prepData, fig.width=7}
+# select variables for each analysis
+coinf <- BALdata[!is.na(BALdata$OPG) &
+                   !is.na(BALdata$HI) &
+                   !is.na(BALdata$Sex) &
+                   !is.na(BALdata$eimeriaSpecies) &
+                   BALdata$eimeriaSpecies %in% c("E_ferrisi") &
+                   !is.na(BALdata$delta_ct_cewe_MminusE), ]
+
+coinf$OPG <- round(coinf$OPG)
+coinf$infectedEimeria <- TRUE
+coinf$infectedEimeria[coinf$eimeriaSpecies %in% "Negative"] <- FALSE
+coinf$infectedPinworms <- FALSE
+coinf$infectedPinworms[coinf$Aspiculuris_Syphacia > 0] <- TRUE
+
+coinf$coinfected[coinf$infectedEimeria == FALSE & coinf$infectedPinworms == FALSE] <- "not infected"
+coinf$coinfected[coinf$infectedEimeria == TRUE & coinf$infectedPinworms == FALSE] <- "monoinfected Eimeria"
+coinf$coinfected[coinf$infectedEimeria == FALSE & coinf$infectedPinworms == TRUE] <- "monoinfected Pinworms"
+coinf$coinfected[coinf$infectedEimeria == TRUE & coinf$infectedPinworms == TRUE] <- "coinfected"
+coinf$coinfected <- as.factor(coinf$coinfected)
+
+ggplot(coinf, aes(x = coinfected, y = HI)) +
+  geom_boxplot()+
+  geom_jitter(width = .1, pch = 21, size = 5) +
+  theme_classic()
+
+ggplot(coinf[coinf$delta_ct_cewe_MminusE > -5,],
+       aes(x = HI, y = delta_ct_cewe_MminusE)) +
+  geom_point(aes(fill = coinfected), pch = 21, size = 5) +
+  theme_classic()
+```
+
