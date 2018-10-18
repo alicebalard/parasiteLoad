@@ -35,9 +35,10 @@ library(boot) # BS
 ## Prepare dataset for each analysis
 
 ```{r prepData}
-# select variables for each analysis
-BALdata <- read.csv("../data/MiceTableMusAliceArticle.csv")
+WATWMdata <- read.csv("../data/WATWMdata.csv")
+BALdata <- read.csv("../data/BALdata.csv")
 
+# select variables for each analysis
 flotation <- BALdata[!is.na(BALdata$OPG) &
                                BALdata$OPG >= 1 & 
                             !is.na(BALdata$HI) &

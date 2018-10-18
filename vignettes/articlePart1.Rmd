@@ -35,10 +35,11 @@ library(boot) # BS
 ## Prepare dataset for each analysis
 
 ```{r prepData}
+WATWMdata <- read.csv("../data/WATWMdata.csv")
+BALdata <- read.csv("../data/BALdata.csv")
+
 # add 1 for worms/oocysts count!!
 WATWMdata$`Aspiculuris.Syphacia+1` <- WATWMdata$Aspiculuris.Syphacia + 1
-
-BALdata <- read.csv("../data/MiceTableMusAliceArticle.csv")
 
 BALdata$`Aspiculuris.Syphacia+1` <- BALdata$Aspiculuris_Syphacia + 1
 BALdata$`OPG+1` <- BALdata$OPG + 1

@@ -35,6 +35,9 @@ library(boot) # BS
 ## Prepare dataset for each analysis
 
 ```{r prepData, fig.width=7}
+WATWMdata <- read.csv("../data/WATWMdata.csv")
+BALdata <- read.csv("../data/BALdata.csv")
+
 # select variables for each analysis
 coinf <- BALdata[!is.na(BALdata$OPG) &
                    !is.na(BALdata$HI) &
