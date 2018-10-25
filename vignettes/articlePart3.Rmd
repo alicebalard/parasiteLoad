@@ -175,8 +175,19 @@ plot_qpcr_weibull <- bananaPlots_alpha(mod = fit_qpcr_weibull$H1,
                                        group = "Sex")
 plot_qpcr_weibull
 
-pdf(width = 6, height = 4, file = "../figures/part3.pdf")
+pdf(width = 6, height = 4, file = "../figures/part3_alpha.pdf")
 plot_qpcr_weibull
+dev.off()
+
+# to compare
+plot_qpcr_weibull2 <- bananaPlots(mod = fit_qpcr_weibull$H1, 
+                                       data = qpcr, 
+                                       response = "delta_ct_max_MminusEPOS",
+                                       group = "Sex")
+plot_qpcr_weibull2
+
+pdf(width = 6, height = 4, file = "../figures/part3_allparamvary.pdf")
+plot_qpcr_weibull2
 dev.off()
 ```
 
@@ -194,7 +205,7 @@ bananaplot <- bananaPlots_alpha(mod = fit_flotation$H1, data = flotation,
                                 response = "OPG", group = "Sex", islog10 = T)
 bananaplot
 
-pdf(file = "../figures/part3_opg.pdf", width = 6, height = 4)
+pdf(file = "../figures/part3_opgalphavary.pdf", width = 6, height = 4)
 bananaplot
 dev.off()
 ```

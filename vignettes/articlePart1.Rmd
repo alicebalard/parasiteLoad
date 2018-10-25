@@ -30,6 +30,8 @@ library(fitdistrplus) # evaluate distribution
 library(epiR) # Sterne's exact method
 library(simpleboot) # BS
 library(boot) # BS
+library(ggmap)
+library(legendMap)
 ```
 
 ## Prepare dataset for each analysis
@@ -60,6 +62,33 @@ d1$batch <- "WATWM"
 d2$batch <- "JENNY"
 allWorms <- rbind(d1,d2)
 allWorms$batch <- as.factor(allWorms$batch)
+```
+
+```{r map}
+# Plot my samples
+getarea <- function(df, margin = 1, zoom = 8,
+                    source = "stamen", maptype = "toner-lite"){
+  # get a map
+  area <- get_map(location =
+                    c(min(df$Longitude - margin),
+                      min(df$Latitude - margin),
+                      max(df$Longitude + margin),
+                      max(df$Latitude +  margin)),
+                  source = source, maptype= maptype,
+                  zoom = zoom)
+}
+area <- getarea(pinworms_data)
+#plot the map :
+pdf(file = "../figures/mapAllworms_2014to2017", width = 7, height = 6)
+ggmap(area) +
+  geom_point(data = pinworms_data, shape = 21, size = 2,
+             aes(Longitude, Latitude, fill = HI), alpha = .4) + # set up the points
+  scale_fill_gradient("Hybrid\nindex", high="red",low="blue") +
+  geom_rect(xmin = 11, xmax = 12.7, ymin = 50, ymax = 51.3, fill = "white") +
+  scale_bar(lon = 11.8, lat = 50.9, arrow_length = 10, arrow_distance = 20,
+            distance_lon = 20, distance_lat = 5, distance_legend = 10,
+            dist_unit = "km", orientation = TRUE, legend_size = 2, arrow_north_size = 3)
+dev.off()
 ```
 
 ## Worms count, 4 hypotheses, difference between sexes (Baird et al. 2012 for details)
@@ -213,5 +242,4 @@ LL2 <- logLik(fit_pinworms_negbin$H3$groupA) +
 dLL <- LL1 - LL2
 dDF <- 2 # 2 alpha fixed in one case
 1 - pchisq(2*0.66, df=2)
-
 ```
