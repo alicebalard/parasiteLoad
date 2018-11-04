@@ -10,7 +10,7 @@
 #' @return A plot of our model
 #' @export
 
-bananaPlots_alpha <- function(mod, data, response, hybridIndex = seq(0,1, 0.01),
+bananaPlots_alpha <- function(mod, data, response, hybridIndex = seq(0,1, 0.1),
                         cols = c("green", "orange"), group, islog10 = F){
   # for aes_string
   data$response = data[[response]]

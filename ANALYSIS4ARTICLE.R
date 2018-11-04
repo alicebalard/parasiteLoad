@@ -221,7 +221,7 @@ ggplot() +
 geom_density(data = qpcrdata[!is.na(qpcrdata$OPG) & qpcrdata$OPG == 0,],
              aes(x = delta_ct_max_MminusE, stat(count)))
 
-## bad correlation + grey zone for OPG
+## bad correlation + grey zone for OPG + not same samples tested
 
 ## + Venn diagram OPG/qPCR
 
