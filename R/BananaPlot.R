@@ -11,8 +11,8 @@
 #' @export
 
 
-bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.1),
-                              cols = wes_palette("IsleofDogs1")[c(2,3)], group, islog10 = F){
+bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
+                              cols = wes_palette("IsleofDogs1")[c(1,3)], group, islog10 = F){
   # for aes_string
   data$response = data[[response]]
   data$group = data[[group]]
@@ -30,6 +30,11 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.1),
 
     # Confidence interval for all coefficients based on quadratic approximation to the curvature at the maximum likelihood estimate
     myConfInt <- bbmle::confint(mod, method="quad")
+    # if no L2 calculated, set L1
+    if("L2" %in% rownames(myConfInt) == FALSE){
+      myConfInt <- rbind(myConfInt[rownames(myConfInt) %in% "L1"], myConfInt)
+      rownames(myConfInt)[1] <- "L2"
+    }
 
     ## Get marginal confidence interval for a given parameter
     getInf <- function(paramname){
@@ -103,62 +108,45 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.1),
     bananaDF$maxAlpha <- bananaDF2$max
     return(bananaDF)
   }
-  getBananaDF(mod = mod, hybridIndex = hybridIndex)
-}
 
-bananaPlots(mod = fit_WATWM_abundance$H1,
-            data = pinwormsdata_watwm,
-            response = "Aspiculuris.Syphacia+1",
-            islog10 = TRUE, group = "Sex")
-
-
-
-
-
-
-
-# fittedCoef <- fittedCoef[-1]
-names(fittedCoef)[1] <- "L1"
-if(is.list(mod) == FALSE){ # we do not have differences between groups
-    bananaDF = getBananaDF_alpha(mod, hybridIndex)
-    # Draw the line for the parameters at their MLE, alpha varying
-    ggplot2::ggplot() +
-      ggplot2::geom_ribbon(data = bananaDF,
-                           ggplot2::aes_string(x = "HI", ymin = "min", ymax = "max"),
-                           fill = "grey", alpha = .4) +
-      ggplot2::geom_line(data = bananaDF,
-                         ggplot2::aes_string(x = "HI", y = "fit")) +
-      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response", fill = "group"),
-                          pch = 21, size = 3, alpha = .5) +
-      ggplot2::scale_fill_manual(values = cols) +
-      ggplot2::theme_classic(base_size = 20) + {
-        if(islog10 == TRUE) ggplot2::scale_y_log10()
-      } +
-      ggplot2::ylab(label = response)
-  }else{
-    bananaDF = data.frame(HI = numeric(), fit = numeric(), min = numeric(), max = numeric(), group = factor())
-    mygroupDFnames = vector()
-    for (n in names(mod)){
-      thisbanana = getBananaDF(mod[[n]], hybridIndex)
-      thisbanana$group <- n
-      bananaDF <- rbind(bananaDF, thisbanana)
-    }
-    bananaDF$group[bananaDF$group == "groupA"] <- levels(data$group)[1]
-    bananaDF$group[bananaDF$group == "groupB"] <- levels(data$group)[2]
-    # Draw the line for the parameters at their MLE, alpha varying
-    ggplot2::ggplot()+
-      ggplot2::geom_ribbon(data = bananaDF,
-                           ggplot2::aes_string(x = "HI", ymin = "min", ymax = "max",
-                                               fill = "group"), alpha = .4) +
-      ggplot2::geom_line(data = bananaDF,
-                         ggplot2::aes_string(x = "HI", y = "fit", col = "group")) +
-      ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response", fill = "group"),
-                          pch = 21, size = 3, alpha = .5) +
-      ggplot2::scale_fill_manual(values = cols) +
-      ggplot2::scale_color_manual(values = cols) +
-      ggplot2::theme_classic(base_size = 20) + {
-        if(islog10 == TRUE) ggplot2::scale_y_log10()
-      } +
-      ggplot2::ylab(label = response)
+  if(is.list(mod) == FALSE){ # we do not have differences between groups
+    bananaDFtoplot <- getBananaDF(mod = mod, hybridIndex = hybridIndex)
+    bananaDFtoplot$group <- "all"
+  } else {
+    bananaList <- lapply(mod, FUN = getBananaDF, hybridIndex = hybridIndex)
+    bananaDFA <- bananaList$groupA
+    bananaDFB <- bananaList$groupB
+    bananaDFA$group <- levels(data$group)[1]
+    bananaDFB$group <- levels(data$group)[2]
+    bananaDFtoplot <- rbind(bananaDFA, bananaDFB)
   }
+
+  ## And now plot!
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_ribbon(data = bananaDFtoplot,
+                         ggplot2::aes_string(x = "HI", ymin = "minAll", ymax = "maxAll",
+                                             group = "group"),
+                         fill = "grey", alpha = .4) +
+    ggplot2::geom_line(data = bananaDFtoplot, size = 2,
+                       ggplot2::aes_string(x = "HI", y = "fit", col = "group")) +
+    ggplot2::geom_line(data = bananaDFtoplot,
+                       ggplot2::aes_string(x = "HI", y = "minAlpha", col = "group"),
+                       linetype="dashed", size = 2) +
+    ggplot2::geom_line(data = bananaDFtoplot,
+                       ggplot2::aes_string(x = "HI", y = "maxAlpha", col = "group"),
+                       linetype="dashed", size = 2) +
+    ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response", fill = "group"),
+                        pch = 21, size = 3, alpha = .7) +
+    ggplot2::scale_fill_manual(values = cols) +
+    ggplot2::theme_classic(base_size = 20) + {
+      if(islog10 == TRUE) ggplot2::scale_y_log10()
+    } +
+    ggplot2::ylab(label = response)
+
+  if(is.list(mod) == TRUE){
+    p <- p + ggplot2::scale_color_manual(values = cols)
+  } else {
+    p <- p + ggplot2::scale_color_manual(values = "black")
+  }
+  return(p)
 }
