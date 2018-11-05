@@ -11,7 +11,7 @@
 #' @export
 
 
-bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
+bananaPlot <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
                               cols = wes_palette("IsleofDogs1")[c(1,3)], group, islog10 = F){
   # for aes_string
   data$response = data[[response]]
@@ -19,9 +19,9 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
 
   # Create a dataframe for plotting
   getBananaDF <- function(mod, hybridIndex){
-
     ## Fitted coefficients
     fittedCoef <- bbmle::coef(mod)
+
     # if no L2 calculated, set L1
     if("L2" %in% names(fittedCoef) == FALSE){
       fittedCoef <- c(fittedCoef, fittedCoef[names(fittedCoef) %in% "L1"])
@@ -108,11 +108,11 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
     bananaDF$maxAlpha <- bananaDF2$max
     return(bananaDF)
   }
-
   if(is.list(mod) == FALSE){ # we do not have differences between groups
     bananaDFtoplot <- getBananaDF(mod = mod, hybridIndex = hybridIndex)
     bananaDFtoplot$group <- "all"
   } else {
+
     bananaList <- lapply(mod, FUN = getBananaDF, hybridIndex = hybridIndex)
     bananaDFA <- bananaList$groupA
     bananaDFB <- bananaList$groupB
@@ -131,12 +131,12 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
                        ggplot2::aes_string(x = "HI", y = "fit", col = "group")) +
     ggplot2::geom_line(data = bananaDFtoplot,
                        ggplot2::aes_string(x = "HI", y = "minAlpha", col = "group"),
-                       linetype="dashed", size = 2) +
+                       linetype="dashed", size = 1.5) +
     ggplot2::geom_line(data = bananaDFtoplot,
                        ggplot2::aes_string(x = "HI", y = "maxAlpha", col = "group"),
-                       linetype="dashed", size = 2) +
+                       linetype="dashed", size = 1) +
     ggplot2::geom_point(data = data, ggplot2::aes_string(x = "HI", y = "response", fill = "group"),
-                        pch = 21, size = 3, alpha = .7) +
+                        pch = 21, size = 3, alpha = .5) +
     ggplot2::scale_fill_manual(values = cols) +
     ggplot2::theme_classic(base_size = 20) + {
       if(islog10 == TRUE) ggplot2::scale_y_log10()
@@ -148,5 +148,6 @@ bananaPlots <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
   } else {
     p <- p + ggplot2::scale_color_manual(values = "black")
   }
+
   return(p)
 }

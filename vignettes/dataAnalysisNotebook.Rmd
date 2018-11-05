@@ -10,7 +10,7 @@ output:
 # Installation
 
 ## Packages
-```{r, echo=FALSE}
+```{r packages, echo=FALSE}
 list.of.packages <- c("parasiteLoad",
                       "bbmle",
                       "devtools",
@@ -40,7 +40,7 @@ library(legendMap)
 ```
 
 ## Define functions used for data analysis
-```{r}
+```{r functions}
 plotMap <- function(df, margin = 1, zoom = 8,
                     source = "stamen", maptype = "toner-lite"){
   area <- get_map(location =
@@ -104,7 +104,7 @@ myQuantitativeParasitology <- function(x){
 ```
 
 ## Prepare datasets for each analysis
-```{r}
+```{r datasets}
 WATWMdata <- read.csv("../data/WATWMdata.csv")
 BALdata <- read.csv("../data/BALdata.csv")
 
@@ -141,7 +141,7 @@ flotationdata$`OPG+1` <- flotationdata$OPG + 1
 ```
 
 # A. General parasitology
-```{r}
+```{r generalPara}
 "pinwormsdata_bal$Aspiculuris_Syphacia:"
 myQuantitativeParasitology(pinwormsdata_bal$Aspiculuris_Syphacia)
 "qpcrdata$delta_ct_max_MminusEPOS : "
@@ -156,7 +156,7 @@ apply(BALdata[,listWorms], 2, table)
 ```
 
 # B. Maps
-```{r}
+```{r maps}
 # Plot all samples : pinworms
 # pdf(file = "../figures/mapAllworms_2014to2017", width = 7, height = 6)
 plotMap(df = pinwormsdata_bal)
@@ -177,7 +177,7 @@ plotMap(df = qpcrdata[qpcrdata$delta_ct_max_MminusEPOS > 0,])
 Macro parasite counts -> negbin (ref)     
 qpcr -> explore best distribution
 
-```{r}
+```{r distrib}
 x <- pinwormsdata_bal$Aspiculuris_Syphacia
 ## MLE of parameter k negbin
 hist(x, prob=T, breaks = max(x))
@@ -225,7 +225,7 @@ To compare both dataset hybrid effect (alpha) we run 2 models with our data:
 
 then we compare via G-test.
 
-```{r}
+```{r comparison}
 defaultConfig <- list(optimizer = "optimx",
                       method = c("L-BFGS-B", "bobyqa"),
                       control = list(follow.on = TRUE))
@@ -253,106 +253,86 @@ fitA <- FitAdvancedAlphaNegbin(data, response, hybridIndex = "HI",
 
 # Pinworms (A. tetraptera and S. obvelata) : WATWM
 
-```{r, fig.width=7, fig.height=4}
+```{r pinwormsWATWM, fig.width=7, fig.height=4}
 fit_WATWM_abundance <- analyse(data = pinwormsdata_watwm, 
                        response = "Aspiculuris.Syphacia+1", model = "negbin", group = "Sex")
+coef(fit_WATWM_abundance$H1)[["alpha"]]
 
-fit_WATWM_abundance
+bananaPlot(mod = fit_WATWM_abundance$H1,
+                                   data = pinwormsdata_watwm,
+                                   response = "Aspiculuris.Syphacia+1",
+                                   islog10 = TRUE, group = "Sex")
 
-plot_WATWM_abundance <- bananaPlots(mod = fit_WATWM_abundance$H1,
-                                    data = pinwormsdata_watwm,
-                                    response = "Aspiculuris.Syphacia+1",
-                                    islog10 = TRUE, group = "Sex")
-plot_WATWM_abundance
-
-fit_WATWM_intensity <- analyse(data = pinwormsdata_watwm[pinwormsdata_watwm$Aspiculuris_Syphacia >=1,], 
+fit_WATWM_intensity <- analyse(data = pinwormsdata_watwm[pinwormsdata_watwm$Aspiculuris.Syphacia >=1,],
                                response = "Aspiculuris.Syphacia+1", model = "negbin", group = "Sex")
-fit_WATWM_intensity
 
-plot_WATWM_intensity <- bananaPlots(mod = fit_WATWM_intensity$H1,
+coef(fit_WATWM_intensity$H1)[["alpha"]]
+
+bananaPlot(mod = fit_WATWM_intensity$H1,
                                     data = pinwormsdata_watwm[pinwormsdata_watwm$Aspiculuris_Syphacia >=1,],
                                     response = "Aspiculuris.Syphacia+1",
                                     islog10 = TRUE, group = "Sex")
-plot_WATWM_intensity
 ```
 
 # Pinworms (A. tetraptera and S. obvelata) : BAL
 
-```{r, fig.width=7, fig.height=4}
-fit_BAL_abundance <- analyse(data = pinwormsdata_BAL, 
+```{r pinworms BAL, fig.width=7, fig.height=4}
+fit_BAL_abundance <- analyse(data = pinwormsdata_bal, 
                        response = "Aspiculuris.Syphacia+1", model = "negbin", group = "Sex")
 
-fit_BAL_abundance
+coef(fit_BAL_abundance$H1)[["alpha"]]
 
-plot_BAL_abundance <- bananaPlots(mod = fit_BAL_abundance$H1,
-                                    data = pinwormsdata_BAL,
+bananaPlot(mod = fit_BAL_abundance$H1,
+                                    data = pinwormsdata_bal,
                                     response = "Aspiculuris.Syphacia+1",
                                     islog10 = TRUE, group = "Sex")
-plot_BAL_abundance
 
 fit_BAL_intensity <- analyse(data = pinwormsdata_bal[pinwormsdata_bal$Aspiculuris_Syphacia >=1,], 
                        response = "Aspiculuris.Syphacia+1", model = "negbin", group = "Sex")
 
-fit_BAL_intensity
+coef(fit_BAL_intensity$H1)[["alpha"]]
 
-plot_BAL_intensity <- bananaPlots(mod = fit_BAL_intensity$H1,
+bananaPlot(mod = fit_BAL_intensity$H1,
                                     data = pinwormsdata_bal[pinwormsdata_bal$Aspiculuris_Syphacia >=1,],
                                     response = "Aspiculuris.Syphacia+1",
                                     islog10 = TRUE, group = "Sex")
-plot_BAL_intensity
 ```
 
 # qPCR Eimeria TO DO
 
-```{r, eval = FALSE, fig.width=7, fig.height=4}
-fit_qpcr_abundance <- analyse(data = qpcrdata, 
+```{r, fig.width=7, fig.height=4}
+fit_qpcr_intensity <- analyse(data = qpcrdata[qpcrdata$delta_ct_max_MminusEPOS > 0,], 
                        response = "delta_ct_max_MminusEPOS", model = "weibull", group = "Sex")
 
-fit_qpcr_abundance
+coef(fit_qpcr_intensity$H1)[["alpha"]]
 
-qpcrdata$delta_ct_max_MminusEPOS
-
-plot_qpcr_abundance <- bananaPlots(mod = fit_qpcr_abundance$H1,
-                                    data = qpcrdata,
-                                    response = "Aspiculuris.Syphacia+1",
-                                    islog10 = TRUE, group = "Sex")
-plot_qpcr_abundance
-
-fit_qpcr_intensity <- analyse(data = qpcrdata[qpcrdata$delta_ct_max_MminusEPOS > 0,], 
-                       response = "qpcrdata$delta_ct_max_MminusEPOS", model = "negbin", group = "Sex")
-
-fit_qpcr_intensity
-
-plot_qpcr_intensity <- bananaPlots(mod = fit_qpcr_intensity$H1,
+bananaPlot(mod = fit_qpcr_intensity$H1,
                                     data = qpcrdata[qpcrdata$delta_ct_max_MminusEPOS > 0,],
-                                    response = "Aspiculuris.Syphacia+1",
-                                    islog10 = TRUE, group = "Sex")
-plot_qpcr_intensity
+                                    response = "delta_ct_max_MminusEPOS",
+                                    islog10 = FALSE, group = "Sex")
 ```
 
 # opg Eimeria :
 
-```{r, eval=FALSE, fig.width=7, fig.height=4}
+```{r, fig.width=7, fig.height=4}
 fit_OPG_abundance <- analyse(data = flotationdata, 
-                       response = "flotationdata$`OPG+1`", model = "negbin", group = "Sex")
-fit_OPG_abundance
+                       response = "OPG+1", model = "negbin", group = "Sex")
+coef(fit_OPG_abundance$H1)[["alpha"]]
 
-plot_OPG_abundance <- bananaPlots(mod = fit_OPG_abundance$H1,
-                                    data = flotationdata,
-                                    response = "flotationdata$`OPG+1`",
-                                    islog10 = TRUE, group = "Sex")
-plot_OPG_abundance
+bananaPlot(mod = fit_OPG_abundance$H1,
+           data = flotationdata,
+           response = "OPG+1",
+           islog10 = TRUE, group = "Sex")
 
 fit_OPG_intensity <- analyse(data = flotationdata[flotationdata$`OPG+1` > 0,], 
-                       response = "OPGdata$delta_ct_max_MminusEPOS", model = "negbin", group = "Sex")
+                             response = "OPG+1", model = "negbin", group = "Sex")
 
-fit_OPG_intensity
+coef(fit_OPG_intensity$H1)[["alpha"]]
 
-plot_OPG_intensity <- bananaPlots(mod = fit_OPG_intensity$H1,
-                                    data = OPGdata[OPGdata$delta_ct_max_MminusEPOS > 0,],
-                                    response = "Aspiculuris.Syphacia+1",
-                                    islog10 = TRUE, group = "Sex")
-plot_OPG_intensity
+bananaPlot(mod = fit_OPG_intensity$H1,
+           data = flotationdata[flotationdata$`OPG+1` > 0,],
+           response = "OPG+1",
+           islog10 = TRUE, group = "Sex")
 ```
 
 # F. Supplementary
