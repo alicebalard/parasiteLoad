@@ -131,7 +131,7 @@ bananaPlot <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
                        ggplot2::aes_string(x = "HI", y = "fit", col = "group")) +
     ggplot2::geom_line(data = bananaDFtoplot,
                        ggplot2::aes_string(x = "HI", y = "minAlpha", col = "group"),
-                       linetype="dashed", size = 1.5) +
+                       linetype="dashed", size = 1) +
     ggplot2::geom_line(data = bananaDFtoplot,
                        ggplot2::aes_string(x = "HI", y = "maxAlpha", col = "group"),
                        linetype="dashed", size = 1) +
