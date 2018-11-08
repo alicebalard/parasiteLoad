@@ -1,14 +1,14 @@
 #' Get our parameters at strat, lower, upper, for optimisation
 #'
 #' @param model Method to be used in fitting the model
-#' So far implemented for "binomial", "negbin", "student"
+#' So far implemented for "binomial", "negbin", "student", "normal", "weibull"
 #' @param data A data frame
 #' @param response A character string. Response (e.g. "worm_count")
 #' @return A vector of parameters (upper, lower, start) for the optimisation
 #' @export
 
 getParamBounds <- function(model, data, response){
-  if (model == "binomial"){
+  if (model == "binomial" | model == "normal"){
     paramBounds <- c(L1start = mean(na.omit(data[[response]])),
                      L1LB = min(na.omit(data[[response]])),
                      L1UB = max(na.omit(data[[response]])),
