@@ -24,6 +24,8 @@ runAll <- function (data, response, model, group, paramBounds) {
     run <- runNegbin
   } else if (model == "weibull"){
     run <- runWeibull
+  } else if (model == "normal"){
+    run <- runNormal
   }
   # then run the analysis
   print("Fitting for all")
