@@ -14,7 +14,7 @@ FitBasicNoAlphaNormal <- function(data, response, hybridIndex, paramBounds, conf
   start <-  list(L1 = paramBounds[["L1start"]],
                  mysd = paramBounds[["mysdStart"]])
   fit <- bbmle::mle2(
-    response ~ dnorm(prob = MeanLoad(L1, L1, 0, HI),
+    response ~ dnorm(mean = MeanLoad(L1, L1, 0, HI),
                      sd = mysd),
     data = data,
     start = start,
