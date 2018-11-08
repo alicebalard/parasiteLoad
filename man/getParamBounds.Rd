@@ -8,7 +8,7 @@ getParamBounds(model, data, response)
 }
 \arguments{
 \item{model}{Method to be used in fitting the model
-So far implemented for "binomial", "negbin", "student"}
+So far implemented for "binomial", "negbin", "student", "normal", "weibull"}
 
 \item{data}{A data frame}
 
