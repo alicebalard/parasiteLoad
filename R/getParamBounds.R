@@ -8,7 +8,7 @@
 #' @export
 
 getParamBounds <- function(model, data, response){
-  if (model == "binomial" | model == "normal"){
+  if (model == "binomial"){
     paramBounds <- c(L1start = mean(na.omit(data[[response]])),
                      L1LB = min(na.omit(data[[response]])),
                      L1UB = max(na.omit(data[[response]])),
@@ -16,7 +16,16 @@ getParamBounds <- function(model, data, response){
                      L2LB = min(na.omit(data[[response]])),
                      L2UB = max(na.omit(data[[response]])),
                      alphaStart = 0, alphaLB = -5, alphaUB = 5)
-  } else if (model == "student"){
+  } else if (model == "normal"){
+    paramBounds <- c(L1start = mean(na.omit(data[[response]])),
+                     L1LB = min(na.omit(data[[response]])),
+                     L1UB = max(na.omit(data[[response]])),
+                     L2start = mean(na.omit(data[[response]])),
+                     L2LB = min(na.omit(data[[response]])),
+                     L2UB = max(na.omit(data[[response]])),
+                     alphaStart = 0, alphaLB = -5, alphaUB = 5,
+                     mysdStart = 1, mysdLB = 0, mysdUB = 10)
+    } else if (model == "student"){
     paramBounds <- c(L1start = mean(na.omit(data[[response]])),
                      L1LB = min(na.omit(data[[response]])),
                      L1UB = max(na.omit(data[[response]])),

@@ -11,13 +11,17 @@
 FitBasicNoAlphaNormal <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
-  start <-  list(L1 = paramBounds[["L1start"]])
+  start <-  list(L1 = paramBounds[["L1start"]],
+                 mysd = paramBounds[["mysdStart"]])
   fit <- bbmle::mle2(
-    response ~ dnorm(prob = MeanLoad(L1, L1, 0, HI)),
+    response ~ dnorm(prob = MeanLoad(L1, L1, 0, HI),
+                     sd = mysd),
     data = data,
     start = start,
-    lower = c(L1 = paramBounds[["L1LB"]]),
-    upper = c(L1 = paramBounds[["L1UB"]]),
+    lower = c(L1 = paramBounds[["L1LB"]],
+              mysd = paramBounds[["mysdLB"]]),
+    upper = c(L1 = paramBounds[["L1UB"]],
+              mysd = paramBounds[["mysdUB"]]),
     optimizer = config$optimizer,
     method = config$method,
     control = config$control)
@@ -29,14 +33,18 @@ FitBasicAlphaNormal <- function(data, response, hybridIndex, paramBounds, config
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
   start <-  list(L1 = paramBounds[["L1start"]],
+                 mysd = paramBounds[["mysdStart"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- bbmle::mle2(
-    response ~ dnorm(mean = MeanLoad(L1, L1, alpha, HI)),
+    response ~ dnorm(mean = MeanLoad(L1, L1, alpha, HI),
+                     sd = mysd),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
+              mysd = paramBounds[["mysdLB"]],
               alpha = paramBounds[["alphaLB"]]),
     upper = c(L1 = paramBounds[["L1UB"]],
+              mysd = paramBounds[["mysdUB"]],
               alpha = paramBounds[["alphaUB"]]),
     optimizer = config$optimizer,
     method = config$method,
@@ -49,14 +57,18 @@ FitAdvancedNoAlphaNormal <- function(data, response, hybridIndex, paramBounds, c
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
   start <-  list(L1 = paramBounds[["L1start"]],
-                 L2 = paramBounds[["L2start"]])
+                 L2 = paramBounds[["L2start"]],
+                 mysd = paramBounds[["mysdStart"]])
   fit <- bbmle::mle2(
-    response ~ dnorm(mean = MeanLoad(L1, L2, 0, HI)),
+    response ~ dnorm(mean = MeanLoad(L1, L2, 0, HI),
+                     sd = mysd),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
+              mysd = paramBounds[["mysdLB"]],
               L2 = paramBounds[["L2LB"]]),
     upper = c(L1 = paramBounds[["L1UB"]],
+              mysd = paramBounds[["mysdUB"]],
               L2 = paramBounds[["L2UB"]]),
     optimizer = config$optimizer,
     method = config$method,
@@ -70,15 +82,19 @@ FitAdvancedAlphaNormal <- function(data, response, hybridIndex, paramBounds, con
   data$response <- data[[response]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
-                 alpha = paramBounds[["alphaStart"]])
+                 alpha = paramBounds[["alphaStart"]],
+                 mysd = paramBounds[["mysdStart"]])
   fit <- bbmle::mle2(
-    response ~ dnorm(mean = MeanLoad(L1, L2, alpha, HI)),
+    response ~ dnorm(mean = MeanLoad(L1, L2, alpha, HI),
+                     sd = mysd),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
+              mysd = paramBounds[["mysdLB"]],
               L2 = paramBounds[["L2LB"]],
               alpha = paramBounds[["alphaLB"]]),
     upper = c(L1 = paramBounds[["L1UB"]],
+              mysd = paramBounds[["mysdUB"]],
               L2 = paramBounds[["L2UB"]],
               alpha = paramBounds[["alphaUB"]]),
     optimizer = config$optimizer,
