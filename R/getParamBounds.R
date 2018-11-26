@@ -9,12 +9,12 @@
 
 getParamBounds <- function(model, data, response){
   if (model == "binomial"){
-    paramBounds <- c(L1start = mean(na.omit(data[[response]])),
-                     L1LB = min(na.omit(data[[response]])),
-                     L1UB = max(na.omit(data[[response]])),
-                     L2start = mean(na.omit(data[[response]])),
-                     L2LB = min(na.omit(data[[response]])),
-                     L2UB = max(na.omit(data[[response]])),
+    paramBounds <- c(L1start = 0.5,
+                     L1LB = 0,
+                     L1UB = 1,
+                     L2start = 0.5,
+                     L2LB = 0,
+                     L2UB = 1,
                      alphaStart = 0, alphaLB = -5, alphaUB = 5)
   } else if (model == "normal"){
     paramBounds <- c(L1start = mean(na.omit(data[[response]])),
