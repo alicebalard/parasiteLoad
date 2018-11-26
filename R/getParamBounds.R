@@ -9,10 +9,10 @@
 
 getParamBounds <- function(model, data, response){
   if (model == "binomial"){
-    paramBounds <- c(L1start = 0.5,
+    paramBounds <- c(L1start = 0,
                      L1LB = 0,
                      L1UB = 1,
-                     L2start = 0.5,
+                     L2start = 0,
                      L2LB = 0,
                      L2UB = 1,
                      alphaStart = 0, alphaLB = -5, alphaUB = 5)
