@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/alicebalard/parasiteLoad.svg?branch=master)](https://travis-ci.org/alicebalard/parasiteLoad)
 
-https://zenodo.org/badge/83413329.svg
+![DOI](https://zenodo.org/badge/83413329.svg)
 
 # parasiteLoad
 
