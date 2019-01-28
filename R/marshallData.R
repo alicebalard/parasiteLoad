@@ -13,11 +13,11 @@ marshallData <- function (data, response, group) {
   if (length(levels(data[[group]])) != 2){
     stop("your group has too many levels, you must provide only 2")
   }
-  dataForResponse <- data[complete.cases(data[[response]]),]
+  dataForResponse <- data[stats::complete.cases(data[[response]]),]
   dataForResponse_A <- data[data[[group]] == levels(data[[group]])[1],]
-  dataForResponse_A <- dataForResponse_A[complete.cases(dataForResponse_A[[response]]),]
+  dataForResponse_A <- dataForResponse_A[stats::complete.cases(dataForResponse_A[[response]]),]
   dataForResponse_B <- data[data[[group]] == levels(data[[group]])[2],]
-  dataForResponse_B <- dataForResponse_B[complete.cases(dataForResponse_B[[response]]),]
+  dataForResponse_B <- dataForResponse_B[stats::complete.cases(dataForResponse_B[[response]]),]
   return(list(
     all = dataForResponse,
     groupA = dataForResponse_A,

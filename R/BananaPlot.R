@@ -10,9 +10,9 @@
 #' @return A plot of our model
 #' @export
 
-
 bananaPlot <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
-                              cols = wes_palette("IsleofDogs1")[c(1,3)], group, islog10 = F){
+                              cols = wesanderson::wes_palette("IsleofDogs1")[c(1,3)],
+                       group, islog10 = F){
   # for aes_string
   data$response = data[[response]]
   data$group = data[[group]]
@@ -61,7 +61,7 @@ bananaPlot <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
     # step 2 : run over HI values and optimise max and min for each variable varying in their 95% CI
     bananaDF2 = data.frame(HI = numeric(), min = numeric(), max = numeric())
     for(i in hybridIndex){
-      maxLoad <- optim(par = c(L1 = getSup("L1") - getInf("L1"),
+      maxLoad <- stats::optim(par = c(L1 = getSup("L1") - getInf("L1"),
                                L2 = getSup("L2") - getInf("L2"),
                                alpha = getSup("alpha") - getInf("alpha")),
                        fn = expectedResponse,
@@ -70,7 +70,7 @@ bananaPlot <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
                        method = "L-BFGS-B",
                        control = list(fnscale=-1), # maximize
                        hybridIndex = i)
-      minLoad <- optim(par = c(L1 = getSup("L1") - getInf("L1"),
+      minLoad <- stats::optim(par = c(L1 = getSup("L1") - getInf("L1"),
                                L2 = getSup("L2") - getInf("L2"),
                                alpha = getSup("alpha") - getInf("alpha")),
                        fn = expectedResponse,
@@ -85,7 +85,7 @@ bananaPlot <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
     # step 3 : run over HI values and optimise max and min for hybrid effect varying in it's 95% CI and other variable fixed at fit
     bananaDF2 = data.frame(HI = numeric(), min = numeric(), max = numeric())
     for(i in hybridIndex){
-      maxLoad <- optim(par = getSup("alpha") - getInf("alpha"),
+      maxLoad <- stats::optim(par = getSup("alpha") - getInf("alpha"),
                        fn = parasiteLoad::MeanLoad,
                        lower = getInf("alpha"),
                        upper = getSup("alpha"),
@@ -94,7 +94,7 @@ bananaPlot <- function(mod, data, response, hybridIndex = seq(0,1, 0.05),
                        method = "L-BFGS-B",
                        control = list(fnscale=-1), # maximize
                        hybridIndex = i)
-      minLoad <- optim(par = getSup("alpha") - getInf("alpha"),
+      minLoad <- stats::optim(par = getSup("alpha") - getInf("alpha"),
                        fn = parasiteLoad::MeanLoad,
                        lower = getInf("alpha"),
                        upper = getSup("alpha"),

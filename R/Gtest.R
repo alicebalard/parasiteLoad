@@ -16,7 +16,7 @@ Gtest <- function(model0, model1){
   N1 <- Reduce(x = c(model1), f = function(accum, model){
     accum + length(bbmle::coef(model))}, init = 0)
   dDF <- N1 - N0
-  pvalue <- 1 - pchisq(2*dLL, df=dDF)
+  pvalue <- 1 - stats::pchisq(2*dLL, df=dDF)
   out <- data.frame(dLL = round(dLL, 2),
                     dDF = dDF,
                     pvalue = round(pvalue, 6))
