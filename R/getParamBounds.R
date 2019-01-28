@@ -47,10 +47,10 @@ getParamBounds <- function(model, data, response){
                      Zstart = 0, ZLB = -20, ZUB = 20)
   } else if (model == "weibull"){
     paramBounds <- c(L1start = mean(stats::na.omit(data[[response]])),
-                     L1LB = min(stats::na.omit(data[[response]])),
+                     L1LB = 1e-9,
                      L1UB = max(stats::na.omit(data[[response]])),
                      L2start = mean(stats::na.omit(data[[response]])),
-                     L2LB = min(stats::na.omit(data[[response]])),
+                     L2LB = 1e-9,
                      L2UB = max(stats::na.omit(data[[response]])),
                      alphaStart = 0, alphaLB = -5, alphaUB = 5,
                      myshapeStart = 1, myshapeLB = 1, myshapeUB = 5)
