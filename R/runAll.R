@@ -26,6 +26,8 @@ runAll <- function (data, response, model, group, paramBounds) {
     run <- runWeibull
   } else if (model == "normal"){
     run <- runNormal
+  } else if (model == "weibullshifted"){
+    run <- runWeibullShifted
   }
   # then run the analysis
   print("Fitting for all")

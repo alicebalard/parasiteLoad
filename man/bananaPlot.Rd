@@ -5,7 +5,8 @@
 \title{Plot function : the fit (continuous line), hybrid effect variation (dotted line), and 95% CI of the fit, all parameters varying}
 \usage{
 bananaPlot(mod, data, response, hybridIndex = seq(0, 1, 0.05),
-  cols = wes_palette("IsleofDogs1")[c(1, 3)], group, islog10 = F)
+  cols = wesanderson::wes_palette("IsleofDogs1")[c(1, 3)], group,
+  islog10 = F)
 }
 \arguments{
 \item{mod}{A model to be ploted}

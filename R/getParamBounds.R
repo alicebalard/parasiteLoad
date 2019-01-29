@@ -54,6 +54,16 @@ getParamBounds <- function(model, data, response){
                      L2UB = max(stats::na.omit(data[[response]])),
                      alphaStart = 0, alphaLB = -5, alphaUB = 5,
                      myshapeStart = 1, myshapeLB = 1e-9, myshapeUB = 5)
+  } else if (model == "weibullshifted"){
+    paramBounds <- c(L1start = mean(stats::na.omit(data[[response]])),
+                     L1LB = 1e-9,
+                     L1UB = max(stats::na.omit(data[[response]])),
+                     L2start = mean(stats::na.omit(data[[response]])),
+                     L2LB = 1e-9,
+                     L2UB = max(stats::na.omit(data[[response]])),
+                     alphaStart = 0, alphaLB = -5, alphaUB = 5,
+                     myshapeStart = 1, myshapeLB = 1e-9, myshapeUB = 5,
+                     SHIFTStart = 1, SHIFTLB = 1e-9, SHIFTUB = 10)
   }
   return(paramBounds)
 }
