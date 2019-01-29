@@ -53,7 +53,7 @@ getParamBounds <- function(model, data, response){
                      L2LB = 1e-9,
                      L2UB = max(stats::na.omit(data[[response]])),
                      alphaStart = 0, alphaLB = -5, alphaUB = 5,
-                     myshapeStart = 1, myshapeLB = 1, myshapeUB = 5)
+                     myshapeStart = 1, myshapeLB = 1e-9, myshapeUB = 5)
   }
   return(paramBounds)
 }
