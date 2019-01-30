@@ -24,7 +24,7 @@ getParamBounds <- function(model, data, response){
                      L2LB = min(stats::na.omit(data[[response]])),
                      L2UB = max(stats::na.omit(data[[response]])),
                      alphaStart = 0, alphaLB = -5, alphaUB = 5,
-                     mysdStart = 1, mysdLB = 0, mysdUB = 10)
+                     mysdStart = 1, mysdLB = 1e-9, mysdUB = 10)
     } else if (model == "student"){
     paramBounds <- c(L1start = mean(stats::na.omit(data[[response]])),
                      L1LB = min(stats::na.omit(data[[response]])),
