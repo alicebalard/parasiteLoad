@@ -11,14 +11,16 @@
 FitBasicNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]],
                  A1 = paramBounds[["A1start"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L1, 0, hybridIndex),
-                       size = SizeNegBin(A1, A1, Z, hybridIndex)),
+    response ~ dnbinom(mu = MeanLoad(L1, L1, 0, HI),
+                       size = SizeNegBin(A1, A1, Z, HI)),
     data = data,
     start = start,
+    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               A1 = paramBounds[["A1LB"]],
               Z = paramBounds[["ZLB"]]),
@@ -35,15 +37,17 @@ FitBasicNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, conf
 FitBasicAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]],
                  A1 = paramBounds[["A1start"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L1, alpha, hybridIndex),
-                       size = SizeNegBin(A1, A1, Z, hybridIndex)),
+    response ~ dnbinom(mu = MeanLoad(L1, L1, alpha, HI),
+                       size = SizeNegBin(A1, A1, Z, HI)),
     data = data,
     start = start,
+    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               A1 = paramBounds[["A1LB"]],
               alpha = paramBounds[["alphaLB"]],
@@ -62,16 +66,18 @@ FitBasicAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config
 FitAdvancedNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  A1 = paramBounds[["A1start"]],
                  A2 = paramBounds[["A2start"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, 0, hybridIndex),
-                       size = SizeNegBin(A1, A2, Z, hybridIndex)),
+    response ~ dnbinom(mu = MeanLoad(L1, L2, 0, HI),
+                       size = SizeNegBin(A1, A2, Z, HI)),
     data = data,
     start = start,
+    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               L2 = paramBounds[["L2LB"]],
               A1 = paramBounds[["A1LB"]],
@@ -92,6 +98,7 @@ FitAdvancedNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, c
 FitAdvancedAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced with alpha")
   data$response <- data[[response]]
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  A1 = paramBounds[["A1start"]],
@@ -99,10 +106,11 @@ FitAdvancedAlphaNegbin <- function(data, response, hybridIndex, paramBounds, con
                  alpha = paramBounds[["alphaStart"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, hybridIndex),
-                       size = SizeNegBin(A1, A2, Z, hybridIndex)),
+    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
+                       size = SizeNegBin(A1, A2, Z, HI)),
     data = data,
     start = start,
+    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               L2 = paramBounds[["L2LB"]],
               A1 = paramBounds[["A1LB"]],

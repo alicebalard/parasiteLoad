@@ -11,9 +11,10 @@
 FitBasicNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]])
   fit <- bbmle::mle2(
-    response ~ dbinom(prob = MeanLoad(L1, L1, 0, hybridIndex),
+    response ~ dbinom(prob = MeanLoad(L1, L1, 0, HI),
                       size = 1),
     data = data,
     start = start,
@@ -29,10 +30,11 @@ FitBasicNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds, co
 FitBasicAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- bbmle::mle2(
-    response ~ dbinom(prob = MeanLoad(L1, L1, alpha, hybridIndex),
+    response ~ dbinom(prob = MeanLoad(L1, L1, alpha, HI),
                       size = 1),
     data = data,
     start = start,
@@ -50,10 +52,11 @@ FitBasicAlphaBinomial <- function(data, response, hybridIndex, paramBounds, conf
 FitAdvancedNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]])
   fit <- bbmle::mle2(
-    response ~ dbinom(prob = MeanLoad(L1, L2, 0, hybridIndex),
+    response ~ dbinom(prob = MeanLoad(L1, L2, 0, HI),
                       size = 1),
     data = data,
     start = start,
@@ -71,11 +74,12 @@ FitAdvancedNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds,
 FitAdvancedAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced with alpha")
   data$response <- data[[response]]
+  HI <- hybridIndex
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- bbmle::mle2(
-    response ~ dbinom(prob = MeanLoad(L1, L2, alpha, hybridIndex),
+    response ~ dbinom(prob = MeanLoad(L1, L2, alpha, HI),
                       size = 1),
     data = data,
     start = start,

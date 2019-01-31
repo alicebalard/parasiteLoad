@@ -13,12 +13,13 @@ FitBasicNoAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model basic without alpha")
     data$response <- data[[response]] # little trick
+    HI <- hybridIndex
     start <-  list(L1 = paramBounds[["L1start"]],
                    myshape = paramBounds[["myshapeStart"]],
                    SHIFT = paramBounds[["SHIFTStart"]])
     fit <- bbmle::mle2(
       response ~ dweibull(shape = myshape,
-                          scale = (MeanLoad(L1, L1, 0, hybridIndex)+ SHIFT) /
+                          scale = (MeanLoad(L1, L1, 0, HI)+ SHIFT) /
                             gamma(1 + (1 / myshape))),
       data = data,
       start = start,
@@ -40,13 +41,14 @@ FitBasicAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model basic with alpha")
     data$response <- data[[response]] # little trick
+    HI <- hybridIndex
     start <-  list(L1 = paramBounds[["L1start"]],
                    alpha = paramBounds[["alphaStart"]],
                    myshape = paramBounds[["myshapeStart"]],
                    SHIFT = paramBounds[["SHIFTStart"]])
     fit <- bbmle::mle2(
       response ~ dweibull(shape = myshape,
-                          scale = (MeanLoad(L1, L1, alpha, hybridIndex)+ SHIFT) /
+                          scale = (MeanLoad(L1, L1, alpha, HI)+ SHIFT) /
                             gamma(1 + (1 / myshape))),
       data = data,
       start = start,
@@ -70,13 +72,14 @@ FitAdvancedNoAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model advanced without alpha")
     data$response <- data[[response]]
+    HI <- hybridIndex
     start <-  list(L1 = paramBounds[["L1start"]],
                    L2 = paramBounds[["L2start"]],
                    myshape = paramBounds[["myshapeStart"]],
                    SHIFT = paramBounds[["SHIFTStart"]])
     fit <- bbmle::mle2(
       response ~ dweibull(shape = myshape,
-                          scale = (MeanLoad(L1, L2, 0, hybridIndex)+ SHIFT) /
+                          scale = (MeanLoad(L1, L2, 0, HI)+ SHIFT) /
                             gamma(1 + (1 / myshape))),
       data = data,
       start = start,
@@ -100,6 +103,7 @@ FitAdvancedAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model advanced with alpha")
     data$response <- data[[response]]
+    HI <- hybridIndex
     start <-  list(L1 = paramBounds[["L1start"]],
                    L2 = paramBounds[["L2start"]],
                    alpha = paramBounds[["alphaStart"]],
@@ -107,7 +111,7 @@ FitAdvancedAlphaWeibullShifted <-
                    SHIFT = paramBounds[["SHIFTStart"]])
     fit <- bbmle::mle2(
       response ~ dweibull(shape = myshape,
-                          scale = (MeanLoad(L1, L2, alpha, hybridIndex) + SHIFT) /
+                          scale = (MeanLoad(L1, L2, alpha, HI) + SHIFT) /
                             gamma(1 + (1 / myshape))),
       data = data,
       start = start,
