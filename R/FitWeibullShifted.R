@@ -9,117 +9,121 @@
 #' @export
 
 # no difference between subspecies, no hybrid effect
-FitBasicNoAlphaWeibullShifted <- function(data, response, hybridIndex, paramBounds, config){
-  print("Fitting model basic without alpha")
-  data$response <- data[[response]] # little trick
-  start <-  list(L1 = paramBounds[["L1start"]],
-                 myshape = paramBounds[["myshapeStart"]],
-                 SHIFT = paramBounds[["SHIFTStart"]])
-  fit <- bbmle::mle2(
-    response ~ dweibull(shape = myshape,
-                        scale = (MeanLoad(L1, L1, 0, HI)+ SHIFT) / 
-                          gamma(1 + (1 / myshape))),
-    data = data,
-    start = start,
-    lower = c(L1 = paramBounds[["L1LB"]],
-              myshape = paramBounds[["myshapeLB"]],
-              SHIFT = paramBounds[["SHIFTLB"]]),
-    upper = c(L1 = paramBounds[["L1UB"]],
-              myshape = paramBounds[["myshapeUB"]],
-              SHIFT = paramBounds[["SHIFTUB"]]),
-    optimizer = config$optimizer,
-    method = config$method,
-    control = config$control)
-  printConvergence(fit)
-  return(fit)
-}
+FitBasicNoAlphaWeibullShifted <-
+  function(data, response, hybridIndex, paramBounds, config){
+    print("Fitting model basic without alpha")
+    data$response <- data[[response]] # little trick
+    start <-  list(L1 = paramBounds[["L1start"]],
+                   myshape = paramBounds[["myshapeStart"]],
+                   SHIFT = paramBounds[["SHIFTStart"]])
+    fit <- bbmle::mle2(
+      response ~ dweibull(shape = myshape,
+                          scale = (MeanLoad(L1, L1, 0, hybridIndex)+ SHIFT) /
+                            gamma(1 + (1 / myshape))),
+      data = data,
+      start = start,
+      lower = c(L1 = paramBounds[["L1LB"]],
+                myshape = paramBounds[["myshapeLB"]],
+                SHIFT = paramBounds[["SHIFTLB"]]),
+      upper = c(L1 = paramBounds[["L1UB"]],
+                myshape = paramBounds[["myshapeUB"]],
+                SHIFT = paramBounds[["SHIFTUB"]]),
+      optimizer = config$optimizer,
+      method = config$method,
+      control = config$control)
+    printConvergence(fit)
+    return(fit)
+  }
 
 # no difference between subspecies, flexible hybrid effect
-FitBasicAlphaWeibullShifted <- function(data, response, hybridIndex, paramBounds, config){
-  print("Fitting model basic with alpha")
-  data$response <- data[[response]] # little trick
-  start <-  list(L1 = paramBounds[["L1start"]],
-                 alpha = paramBounds[["alphaStart"]],
-                 myshape = paramBounds[["myshapeStart"]],
-                 SHIFT = paramBounds[["SHIFTStart"]])
-  fit <- bbmle::mle2(
-    response ~ dweibull(shape = myshape,
-                        scale = (MeanLoad(L1, L1, alpha, HI)+ SHIFT) / 
-                          gamma(1 + (1 / myshape))),
-    data = data,
-    start = start,
-    lower = c(L1 = paramBounds[["L1LB"]],
-              alpha = paramBounds[["alphaLB"]],
-              myshape = paramBounds[["myshapeLB"]],
-              SHIFT = paramBounds[["SHIFTLB"]]),
-    upper = c(L1 = paramBounds[["L1UB"]],
-              alpha = paramBounds[["alphaUB"]],
-              myshape = paramBounds[["myshapeUB"]],
-              SHIFT = paramBounds[["SHIFTUB"]]),
-    optimizer = config$optimizer,
-    method = config$method,
-    control = config$control)
-  printConvergence(fit)
-  return(fit)
-}
+FitBasicAlphaWeibullShifted <-
+  function(data, response, hybridIndex, paramBounds, config){
+    print("Fitting model basic with alpha")
+    data$response <- data[[response]] # little trick
+    start <-  list(L1 = paramBounds[["L1start"]],
+                   alpha = paramBounds[["alphaStart"]],
+                   myshape = paramBounds[["myshapeStart"]],
+                   SHIFT = paramBounds[["SHIFTStart"]])
+    fit <- bbmle::mle2(
+      response ~ dweibull(shape = myshape,
+                          scale = (MeanLoad(L1, L1, alpha, hybridIndex)+ SHIFT) /
+                            gamma(1 + (1 / myshape))),
+      data = data,
+      start = start,
+      lower = c(L1 = paramBounds[["L1LB"]],
+                alpha = paramBounds[["alphaLB"]],
+                myshape = paramBounds[["myshapeLB"]],
+                SHIFT = paramBounds[["SHIFTLB"]]),
+      upper = c(L1 = paramBounds[["L1UB"]],
+                alpha = paramBounds[["alphaUB"]],
+                myshape = paramBounds[["myshapeUB"]],
+                SHIFT = paramBounds[["SHIFTUB"]]),
+      optimizer = config$optimizer,
+      method = config$method,
+      control = config$control)
+    printConvergence(fit)
+    return(fit)
+  }
 
 # difference between subspecies, flexible hybrid effect
-FitAdvancedNoAlphaWeibullShifted <- function(data, response, hybridIndex, paramBounds, config){
-  print("Fitting model advanced without alpha")
-  data$response <- data[[response]]
-  start <-  list(L1 = paramBounds[["L1start"]],
-                 L2 = paramBounds[["L2start"]],
-                 myshape = paramBounds[["myshapeStart"]],
-                 SHIFT = paramBounds[["SHIFTStart"]])
-  fit <- bbmle::mle2(
-    response ~ dweibull(shape = myshape,
-                        scale = (MeanLoad(L1, L2, 0, HI)+ SHIFT) / 
-                          gamma(1 + (1 / myshape))),
-    data = data,
-    start = start,
-    lower = c(L1 = paramBounds[["L1LB"]],
-              L2 = paramBounds[["L2LB"]],
-              myshape = paramBounds[["myshapeLB"]],
-              SHIFT = paramBounds[["SHIFTLB"]]),
-    upper = c(L1 = paramBounds[["L1UB"]],
-              L2 = paramBounds[["L2UB"]],
-              myshape = paramBounds[["myshapeUB"]],
-              SHIFT = paramBounds[["SHIFTUB"]]),
-    optimizer = config$optimizer,
-    method = config$method,
-    control = config$control)
-  printConvergence(fit)
-  return(fit)
-}
+FitAdvancedNoAlphaWeibullShifted <-
+  function(data, response, hybridIndex, paramBounds, config){
+    print("Fitting model advanced without alpha")
+    data$response <- data[[response]]
+    start <-  list(L1 = paramBounds[["L1start"]],
+                   L2 = paramBounds[["L2start"]],
+                   myshape = paramBounds[["myshapeStart"]],
+                   SHIFT = paramBounds[["SHIFTStart"]])
+    fit <- bbmle::mle2(
+      response ~ dweibull(shape = myshape,
+                          scale = (MeanLoad(L1, L2, 0, hybridIndex)+ SHIFT) /
+                            gamma(1 + (1 / myshape))),
+      data = data,
+      start = start,
+      lower = c(L1 = paramBounds[["L1LB"]],
+                L2 = paramBounds[["L2LB"]],
+                myshape = paramBounds[["myshapeLB"]],
+                SHIFT = paramBounds[["SHIFTLB"]]),
+      upper = c(L1 = paramBounds[["L1UB"]],
+                L2 = paramBounds[["L2UB"]],
+                myshape = paramBounds[["myshapeUB"]],
+                SHIFT = paramBounds[["SHIFTUB"]]),
+      optimizer = config$optimizer,
+      method = config$method,
+      control = config$control)
+    printConvergence(fit)
+    return(fit)
+  }
 
 # difference between subspecies, flexible hybrid effect
-FitAdvancedAlphaWeibullShifted <- function(data, response, hybridIndex, paramBounds, config){
-  print("Fitting model advanced with alpha")
-  data$response <- data[[response]]
-  start <-  list(L1 = paramBounds[["L1start"]],
-                 L2 = paramBounds[["L2start"]],
-                 alpha = paramBounds[["alphaStart"]],
-                 myshape = paramBounds[["myshapeStart"]],
-                 SHIFT = paramBounds[["SHIFTStart"]])
-  fit <- bbmle::mle2(
-    response ~ dweibull(shape = myshape,
-                        scale = (MeanLoad(L1, L2, alpha, HI) + SHIFT) / 
-                          gamma(1 + (1 / myshape))),
-    data = data,
-    start = start,
-    lower = c(L1 = paramBounds[["L1LB"]],
-              L2 = paramBounds[["L2LB"]],
-              alpha = paramBounds[["alphaLB"]],
-              myshape = paramBounds[["myshapeLB"]],
-              SHIFT = paramBounds[["SHIFTLB"]]),
-    upper = c(L1 = paramBounds[["L1UB"]],
-              L2 = paramBounds[["L2UB"]],
-              alpha = paramBounds[["alphaUB"]],
-              myshape = paramBounds[["myshapeUB"]],
-              SHIFT = paramBounds[["SHIFTUB"]]),
-    optimizer = config$optimizer,
-    method = config$method,
-    control = config$control)
-  printConvergence(fit)
-  return(fit)
-}
+FitAdvancedAlphaWeibullShifted <-
+  function(data, response, hybridIndex, paramBounds, config){
+    print("Fitting model advanced with alpha")
+    data$response <- data[[response]]
+    start <-  list(L1 = paramBounds[["L1start"]],
+                   L2 = paramBounds[["L2start"]],
+                   alpha = paramBounds[["alphaStart"]],
+                   myshape = paramBounds[["myshapeStart"]],
+                   SHIFT = paramBounds[["SHIFTStart"]])
+    fit <- bbmle::mle2(
+      response ~ dweibull(shape = myshape,
+                          scale = (MeanLoad(L1, L2, alpha, hybridIndex) + SHIFT) /
+                            gamma(1 + (1 / myshape))),
+      data = data,
+      start = start,
+      lower = c(L1 = paramBounds[["L1LB"]],
+                L2 = paramBounds[["L2LB"]],
+                alpha = paramBounds[["alphaLB"]],
+                myshape = paramBounds[["myshapeLB"]],
+                SHIFT = paramBounds[["SHIFTLB"]]),
+      upper = c(L1 = paramBounds[["L1UB"]],
+                L2 = paramBounds[["L2UB"]],
+                alpha = paramBounds[["alphaUB"]],
+                myshape = paramBounds[["myshapeUB"]],
+                SHIFT = paramBounds[["SHIFTUB"]]),
+      optimizer = config$optimizer,
+      method = config$method,
+      control = config$control)
+    printConvergence(fit)
+    return(fit)
+  }

@@ -4,7 +4,7 @@
 \alias{runAll}
 \title{Run full analysis for the 4 hypotheses}
 \usage{
-runAll(data, response, model, group, paramBounds)
+runAll(data, response, model, group, paramBounds, hybridIndex)
 }
 \arguments{
 \item{data}{A data frame}
@@ -15,6 +15,10 @@ runAll(data, response, model, group, paramBounds)
 So far implemented for "binomial", "negbin", "student"}
 
 \item{group}{A character string. Which group is considered (e.g. "Sex")}
+
+\item{paramBounds}{A named vector giving the start, lower and upper parameters for optimization}
+
+\item{hybridIndex}{The hybrid index}
 }
 \value{
 The full result of the fit

@@ -5,7 +5,7 @@
 #' @param hybridIndex A vector of points representing the index used as x axis
 #' @param paramBounds A vector of parameters (upper, lower, start) for the optimisation
 #' @param config A list containing an optimizer (default: "optimx"), a method (default "bobyqa", "L-BFGS-B") and a control (default list(follow.on = TRUE))
-#' @return A fit for negative binomial distributed data 
+#' @return A fit for negative binomial distributed data
 #' @export
 
 FitBasicNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
@@ -15,8 +15,8 @@ FitBasicNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, conf
                  A1 = paramBounds[["A1start"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L1, 0, HI),
-                       size = SizeNegBin(A1, A1, Z, HI)),
+    response ~ dnbinom(mu = MeanLoad(L1, L1, 0, hybridIndex),
+                       size = SizeNegBin(A1, A1, Z, hybridIndex)),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
@@ -40,8 +40,8 @@ FitBasicAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config
                  A1 = paramBounds[["A1start"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L1, alpha, HI),
-                       size = SizeNegBin(A1, A1, Z, HI)),
+    response ~ dnbinom(mu = MeanLoad(L1, L1, alpha, hybridIndex),
+                       size = SizeNegBin(A1, A1, Z, hybridIndex)),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
@@ -68,8 +68,8 @@ FitAdvancedNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, c
                  A2 = paramBounds[["A2start"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, 0, HI),
-                       size = SizeNegBin(A1, A2, Z, HI)),
+    response ~ dnbinom(mu = MeanLoad(L1, L2, 0, hybridIndex),
+                       size = SizeNegBin(A1, A2, Z, hybridIndex)),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],
@@ -99,8 +99,8 @@ FitAdvancedAlphaNegbin <- function(data, response, hybridIndex, paramBounds, con
                  alpha = paramBounds[["alphaStart"]],
                  Z = paramBounds[["Zstart"]])
   fit <- bbmle::mle2(
-    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, HI),
-                       size = SizeNegBin(A1, A2, Z, HI)),
+    response ~ dnbinom(mu = MeanLoad(L1, L2, alpha, hybridIndex),
+                       size = SizeNegBin(A1, A2, Z, hybridIndex)),
     data = data,
     start = start,
     lower = c(L1 = paramBounds[["L1LB"]],

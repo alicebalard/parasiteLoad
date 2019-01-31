@@ -14,7 +14,7 @@ FitBasicNoAlphaStudent <- function(data, response, hybridIndex, paramBounds, con
   start <-  list(L1 = paramBounds[["L1start"]],
                  mydf = paramBounds[["mydfStart"]])
   fit <- bbmle::mle2(
-    response ~ dt(ncp = MeanLoad(L1, L1, 0, HI),
+    response ~ dt(ncp = MeanLoad(L1, L1, 0, hybridIndex),
                   df = mydf),
     data = data,
     start = start,
@@ -36,7 +36,7 @@ FitBasicAlphaStudent <- function(data, response, hybridIndex, paramBounds, confi
                  alpha = paramBounds[["alphaStart"]],
                  mydf = paramBounds[["mydfStart"]])
   fit <- bbmle::mle2(
-    response ~ dt(ncp = MeanLoad(L1, L1, alpha, HI),
+    response ~ dt(ncp = MeanLoad(L1, L1, alpha, hybridIndex),
                   df = mydf),
     data = data,
     start = start,
@@ -60,7 +60,7 @@ FitAdvancedNoAlphaStudent <- function(data, response, hybridIndex, paramBounds, 
                  L2 = paramBounds[["L2start"]],
                  mydf = paramBounds[["mydfStart"]])
   fit <- bbmle::mle2(
-    response ~ dt(ncp = MeanLoad(L1, L2, 0, HI),
+    response ~ dt(ncp = MeanLoad(L1, L2, 0, hybridIndex),
                   df = mydf),
     data = data,
     start = start,
@@ -85,7 +85,7 @@ FitAdvancedAlphaStudent <- function(data, response, hybridIndex, paramBounds, co
                  alpha = paramBounds[["alphaStart"]],
                  mydf = paramBounds[["mydfStart"]])
   fit <- bbmle::mle2(
-    response ~ dt(ncp = MeanLoad(L1, L2, alpha, HI),
+    response ~ dt(ncp = MeanLoad(L1, L2, alpha, hybridIndex),
                   df = mydf),
     data = data,
     start = start,

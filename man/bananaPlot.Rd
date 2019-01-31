@@ -2,7 +2,9 @@
 % Please edit documentation in R/BananaPlot.R
 \name{bananaPlot}
 \alias{bananaPlot}
-\title{Plot function : the fit (continuous line), hybrid effect variation (dotted line), and 95% CI of the fit, all parameters varying}
+\title{Plot function : the fit -continuous line-,
+hybrid effect variation -dotted line-,
+and 95CI of the fit, all parameters varying}
 \usage{
 bananaPlot(mod, data, response, hybridIndex = seq(0, 1, 0.05),
   cols = wesanderson::wes_palette("IsleofDogs1")[c(1, 3)], group,
@@ -13,13 +15,13 @@ bananaPlot(mod, data, response, hybridIndex = seq(0, 1, 0.05),
 
 \item{data}{A data frame}
 
-\item{response}{A character string. Response (e.g. "worm_count")}
+\item{response}{A character string. Response -e.g. "worm_count"}
 
 \item{hybridIndex}{A vector of points representing the index used as x axis}
 
 \item{cols}{A vector of two colors for the two groups}
 
-\item{group}{A character string. Which group is considered (e.g. "Sex")}
+\item{group}{A character string. Which group is considered -e.g. "Sex"}
 
 \item{islog10}{logical. Is the y axis ploted with log10 transformation}
 }
@@ -27,5 +29,7 @@ bananaPlot(mod, data, response, hybridIndex = seq(0, 1, 0.05),
 A plot of our model
 }
 \description{
-Plot function : the fit (continuous line), hybrid effect variation (dotted line), and 95% CI of the fit, all parameters varying
+Plot function : the fit -continuous line-,
+hybrid effect variation -dotted line-,
+and 95CI of the fit, all parameters varying
 }

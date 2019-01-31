@@ -1,11 +1,13 @@
-#' Plot function : the fit (continuous line), hybrid effect variation (dotted line), and 95% CI of the fit, all parameters varying
+#' Plot function : the fit -continuous line-,
+#' hybrid effect variation -dotted line-,
+#' and 95CI of the fit, all parameters varying
 #'
 #' @param mod A model to be ploted
 #' @param data A data frame
-#' @param response A character string. Response (e.g. "worm_count")
+#' @param response A character string. Response -e.g. "worm_count"
 #' @param hybridIndex A vector of points representing the index used as x axis
 #' @param cols A vector of two colors for the two groups
-#' @param group A character string. Which group is considered (e.g. "Sex")
+#' @param group A character string. Which group is considered -e.g. "Sex"
 #' @param islog10 logical. Is the y axis ploted with log10 transformation
 #' @return A plot of our model
 #' @export

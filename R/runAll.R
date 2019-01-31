@@ -5,10 +5,12 @@
 #' @param model Method to be used in fitting the model
 #' So far implemented for "binomial", "negbin", "student"
 #' @param group A character string. Which group is considered (e.g. "Sex")
+#' @param hybridIndex The hybrid index
+#' @param paramBounds A named vector giving the start, lower and upper parameters for optimization
 #' @return The full result of the fit
 #' @export
 
-runAll <- function (data, response, model, group, paramBounds) {
+runAll <- function (data, response, model, group, paramBounds, hybridIndex) {
   print(paste0("Fit for the response: ", response))
   defaultConfig <- list(optimizer = "optimx",
                         method = c("L-BFGS-B", "bobyqa"),
@@ -34,7 +36,7 @@ runAll <- function (data, response, model, group, paramBounds) {
   FitAll <- run(
     data = marshalledData[["all"]],
     response = response,
-    hybridIndex = HI,
+    hybridIndex = hybridIndex,
     paramBounds = paramBounds,
     config = defaultConfig
   )
@@ -42,7 +44,7 @@ runAll <- function (data, response, model, group, paramBounds) {
   FitGroupA <- run(
     data = marshalledData[["groupA"]],
     response = response,
-    hybridIndex = HI,
+    hybridIndex = hybridIndex,
     paramBounds = paramBounds,
     config = defaultConfig
   )
@@ -50,7 +52,7 @@ runAll <- function (data, response, model, group, paramBounds) {
   FitGroupB <- run(
     data = marshalledData[["groupB"]],
     response = response,
-    hybridIndex = HI,
+    hybridIndex = hybridIndex,
     paramBounds = paramBounds,
     config = defaultConfig
   )

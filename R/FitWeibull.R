@@ -16,7 +16,7 @@ FitBasicNoAlphaWeibull <- function(data, response, hybridIndex, paramBounds, con
                  myshape = paramBounds[["myshapeStart"]])
   fit <- bbmle::mle2(
     response ~ dweibull(shape = myshape,
-                        scale = MeanLoad(L1, L1, 0, HI) / 
+                        scale = MeanLoad(L1, L1, 0, hybridIndex) /
                           gamma(1 + (1 / myshape))),
     data = data,
     start = start,
@@ -40,7 +40,7 @@ FitBasicAlphaWeibull <- function(data, response, hybridIndex, paramBounds, confi
                  myshape = paramBounds[["myshapeStart"]])
   fit <- bbmle::mle2(
     response ~ dweibull(shape = myshape,
-                        scale = MeanLoad(L1, L1, alpha, HI) / 
+                        scale = MeanLoad(L1, L1, alpha, hybridIndex) /
                           gamma(1 + (1 / myshape))),
     data = data,
     start = start,
@@ -66,7 +66,7 @@ FitAdvancedNoAlphaWeibull <- function(data, response, hybridIndex, paramBounds, 
                  myshape = paramBounds[["myshapeStart"]])
   fit <- bbmle::mle2(
     response ~ dweibull(shape = myshape,
-                        scale = MeanLoad(L1, L2, 0, HI) / 
+                        scale = MeanLoad(L1, L2, 0, hybridIndex) /
                           gamma(1 + (1 / myshape))),
     data = data,
     start = start,
@@ -93,7 +93,7 @@ FitAdvancedAlphaWeibull <- function(data, response, hybridIndex, paramBounds, co
                  myshape = paramBounds[["myshapeStart"]])
   fit <- bbmle::mle2(
     response ~ dweibull(shape = myshape,
-                        scale = MeanLoad(L1, L2, alpha, HI) / 
+                        scale = MeanLoad(L1, L2, alpha, hybridIndex) /
                           gamma(1 + (1 / myshape))),
     data = data,
     start = start,

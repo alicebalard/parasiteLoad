@@ -5,17 +5,23 @@
 #' @param model Method to be used in fitting the model
 #' So far implemented for "binomial", "negbin", "student"
 #' @param group A character string. Which group is considered (e.g. "Sex")
+#' @param hybridIndex The hybrid index
+#' @param myparamBounds A named vector giving the start, lower and upper parameters for optimization
 #' @return The full result of the analysis after G-test tests
 #' @export
 
-analyse <- function(data, response, model, group, myparamBounds = "default"){
+analyse <- function(data, response, model, group,
+                    hybridIndex = data$HI,
+                    myparamBounds = "default"){
   if (myparamBounds == "default"){
     paramBounds <- getParamBounds(model, data, response)
   } else {
     paramBounds <- myparamBounds
   }
   print(paste0("Analysing data for response: ", response))
-  FitForResponse <- runAll(data, response, model, group, paramBounds = paramBounds)
+  FitForResponse <- runAll(data, response, model, group,
+                           paramBounds = paramBounds,
+                           hybridIndex = hybridIndex)
 
   ####### Is alpha significant for each hypothesis?
 
