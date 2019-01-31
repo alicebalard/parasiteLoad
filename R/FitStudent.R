@@ -11,7 +11,7 @@
 FitBasicNoAlphaStudent <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  mydf = paramBounds[["mydfStart"]])
   fit <- bbmle::mle2(
@@ -33,7 +33,7 @@ FitBasicNoAlphaStudent <- function(data, response, hybridIndex, paramBounds, con
 FitBasicAlphaStudent <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]],
                  mydf = paramBounds[["mydfStart"]])
@@ -58,7 +58,7 @@ FitBasicAlphaStudent <- function(data, response, hybridIndex, paramBounds, confi
 FitAdvancedNoAlphaStudent <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  mydf = paramBounds[["mydfStart"]])
@@ -83,7 +83,7 @@ FitAdvancedNoAlphaStudent <- function(data, response, hybridIndex, paramBounds, 
 FitAdvancedAlphaStudent <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced with alpha")
   data$response <- data[[response]]
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  alpha = paramBounds[["alphaStart"]],

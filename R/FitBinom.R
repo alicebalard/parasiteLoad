@@ -11,7 +11,7 @@
 FitBasicNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]])
   fit <- bbmle::mle2(
     response ~ dbinom(prob = MeanLoad(L1, L1, 0, HI),
@@ -30,7 +30,7 @@ FitBasicNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds, co
 FitBasicAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]])
   fit <- bbmle::mle2(
@@ -52,7 +52,7 @@ FitBasicAlphaBinomial <- function(data, response, hybridIndex, paramBounds, conf
 FitAdvancedNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]])
   fit <- bbmle::mle2(
@@ -74,7 +74,7 @@ FitAdvancedNoAlphaBinomial <- function(data, response, hybridIndex, paramBounds,
 FitAdvancedAlphaBinomial <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced with alpha")
   data$response <- data[[response]]
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  alpha = paramBounds[["alphaStart"]])

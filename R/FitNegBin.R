@@ -11,7 +11,7 @@
 FitBasicNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic without alpha")
   data$response <- data[[response]] # little trick
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  A1 = paramBounds[["A1start"]],
                  Z = paramBounds[["Zstart"]])
@@ -20,7 +20,6 @@ FitBasicNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, conf
                        size = SizeNegBin(A1, A1, Z, HI)),
     data = data,
     start = start,
-    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               A1 = paramBounds[["A1LB"]],
               Z = paramBounds[["ZLB"]]),
@@ -37,7 +36,7 @@ FitBasicNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, conf
 FitBasicAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model basic with alpha")
   data$response <- data[[response]] # little trick
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  alpha = paramBounds[["alphaStart"]],
                  A1 = paramBounds[["A1start"]],
@@ -47,7 +46,6 @@ FitBasicAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config
                        size = SizeNegBin(A1, A1, Z, HI)),
     data = data,
     start = start,
-    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               A1 = paramBounds[["A1LB"]],
               alpha = paramBounds[["alphaLB"]],
@@ -66,7 +64,7 @@ FitBasicAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config
 FitAdvancedNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced without alpha")
   data$response <- data[[response]]
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  A1 = paramBounds[["A1start"]],
@@ -77,7 +75,6 @@ FitAdvancedNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, c
                        size = SizeNegBin(A1, A2, Z, HI)),
     data = data,
     start = start,
-    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               L2 = paramBounds[["L2LB"]],
               A1 = paramBounds[["A1LB"]],
@@ -98,7 +95,7 @@ FitAdvancedNoAlphaNegbin <- function(data, response, hybridIndex, paramBounds, c
 FitAdvancedAlphaNegbin <- function(data, response, hybridIndex, paramBounds, config){
   print("Fitting model advanced with alpha")
   data$response <- data[[response]]
-  HI <- hybridIndex
+  HI <- data[[hybridIndex]]
   start <-  list(L1 = paramBounds[["L1start"]],
                  L2 = paramBounds[["L2start"]],
                  A1 = paramBounds[["A1start"]],
@@ -110,7 +107,6 @@ FitAdvancedAlphaNegbin <- function(data, response, hybridIndex, paramBounds, con
                        size = SizeNegBin(A1, A2, Z, HI)),
     data = data,
     start = start,
-    hybridIndex = hybridIndex,
     lower = c(L1 = paramBounds[["L1LB"]],
               L2 = paramBounds[["L2LB"]],
               A1 = paramBounds[["A1LB"]],

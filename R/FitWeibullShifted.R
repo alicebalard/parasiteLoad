@@ -13,7 +13,7 @@ FitBasicNoAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model basic without alpha")
     data$response <- data[[response]] # little trick
-    HI <- hybridIndex
+    HI <- data[[hybridIndex]]
     start <-  list(L1 = paramBounds[["L1start"]],
                    myshape = paramBounds[["myshapeStart"]],
                    SHIFT = paramBounds[["SHIFTStart"]])
@@ -41,7 +41,7 @@ FitBasicAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model basic with alpha")
     data$response <- data[[response]] # little trick
-    HI <- hybridIndex
+    HI <- data[[hybridIndex]]
     start <-  list(L1 = paramBounds[["L1start"]],
                    alpha = paramBounds[["alphaStart"]],
                    myshape = paramBounds[["myshapeStart"]],
@@ -72,7 +72,7 @@ FitAdvancedNoAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model advanced without alpha")
     data$response <- data[[response]]
-    HI <- hybridIndex
+    HI <- data[[hybridIndex]]
     start <-  list(L1 = paramBounds[["L1start"]],
                    L2 = paramBounds[["L2start"]],
                    myshape = paramBounds[["myshapeStart"]],
@@ -103,7 +103,7 @@ FitAdvancedAlphaWeibullShifted <-
   function(data, response, hybridIndex, paramBounds, config){
     print("Fitting model advanced with alpha")
     data$response <- data[[response]]
-    HI <- hybridIndex
+    HI <- data[[hybridIndex]]
     start <-  list(L1 = paramBounds[["L1start"]],
                    L2 = paramBounds[["L2start"]],
                    alpha = paramBounds[["alphaStart"]],

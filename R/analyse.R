@@ -11,7 +11,7 @@
 #' @export
 
 analyse <- function(data, response, model, group,
-                    hybridIndex,
+                    hybridIndex = "HI",
                     myparamBounds = "default"){
   if (myparamBounds == "default"){
     paramBounds <- getParamBounds(model, data, response)
