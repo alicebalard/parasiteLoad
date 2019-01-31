@@ -4,7 +4,7 @@
 \alias{analyse}
 \title{Run full analysis for the 4 hypotheses and results of G-test}
 \usage{
-analyse(data, response, model, group, hybridIndex = data$HI,
+analyse(data, response, model, group, hybridIndex,
   myparamBounds = "default")
 }
 \arguments{
