@@ -27,10 +27,12 @@ So far implemented for "binomial", "negbin", "student"}
 }
 \value{
 mlHyb returns an object of class "mlHyb"
-The functions summary and anova are used to obtain and print a summary and analysis of variance table of the results. The generic accessor functions coefficients, effects, fitted.values and residuals extract various useful features of the value returned by lm.
+The function print creates a user friendly output
+The functions summary is usedto obtain a likelihood ratio test (G-test) between models with and without bend (hybridization effect)
 An object of class "mlHyb" is a list containing at least the following components:
-  coefficients
-TO BE UPDATED
+  fit : the ML fit considering hybridization effect
+  fitNull : the ML fit considering perfect additivity between both sides (null hypothesis on hybridization effect)
+  call : the call
 }
 \description{
 Run analysis in user friendly formula interface
