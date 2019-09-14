@@ -20,6 +20,6 @@ Gtest <- function(model0, model1){
   out <- data.frame(dLL = round(dLL, 2),
                     dDF = dDF,
                     pvalue = pvalue)
-  print(out)
+  # print(out)
   return(out)
 }

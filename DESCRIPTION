@@ -16,6 +16,8 @@ Imports:
  bbmle,
  optimx (>= 2013.8.6),
  wesanderson
-Suggests: knitr,
-    rmarkdown
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
 VignetteBuilder: knitr

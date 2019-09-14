@@ -1,0 +1,16 @@
+---
+title: "Example analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Example analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+--- 
+
+```{r}
+toyData <- read.csv("data/BALdata.csv") # update with final published table later
+toyData <-toyData[toyData$Aspiculuris_Syphacia != 0,]
+
+m <- mlHyb(Aspiculuris_Syphacia~., data = toyData, model = "negbin")
+m
+```
