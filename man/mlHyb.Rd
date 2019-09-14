@@ -5,8 +5,9 @@
 \title{Run analysis in user friendly formula interface}
 \usage{
 mlHyb(formula, data, model, hybridIndex = "HI",
-  myparamBounds = "default", config = list(optimizer = "optimx", method
-  = c("L-BFGS-B", "bobyqa"), control = list(follow.on = TRUE)))
+  myparamBounds = "default", hybridEffect = TRUE,
+  config = list(optimizer = "optimx", method = c("L-BFGS-B", "bobyqa"),
+  control = list(follow.on = TRUE)))
 }
 \arguments{
 \item{formula}{An object of class "formula"}
@@ -19,6 +20,8 @@ So far implemented for "binomial", "negbin", "student"}
 \item{hybridIndex}{The hybrid index}
 
 \item{myparamBounds}{A named vector giving the start, lower and upper parameters for optimization}
+
+\item{hybridEffect}{Logical. TRUE if hybrid effect (deviation from additivity between both parents) is tested, FALSE if not.}
 
 \item{group}{A character string. Which group is considered (e.g. "Sex")}
 }
