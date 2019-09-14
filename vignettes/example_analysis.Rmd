@@ -7,10 +7,13 @@ vignette: >
   \usepackage[utf8]{inputenc}
 --- 
 
-```{r}
-toyData <- read.csv("data/BALdata.csv") # update with final published table later
-toyData <-toyData[toyData$Aspiculuris_Syphacia != 0,]
 
-m <- mlHyb(Aspiculuris_Syphacia~., data = toyData, model = "negbin")
-m
+Here will be a vignette...
+
+```{r}
+# toyData <- read.csv("https://raw.githubusercontent.com/alicebalard/Article_IntensityEimeriaHMHZ/master/data/cleanedData.csv")
+# toyData <-toyData[toyData$Aspiculuris_Syphacia != 0,]
+# 
+# m <- mlHyb(Aspiculuris_Syphacia~., data = toyData, model = "negbin")
+# m
 ```
