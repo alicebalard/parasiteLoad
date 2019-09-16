@@ -23,6 +23,10 @@ mlHyb <- function(formula, data, model, hybridIndex = "HI", myparamBounds = "def
                   config = list(optimizer = "optimx", method = c("L-BFGS-B", "bobyqa"), control = list(follow.on = TRUE))){
   # extract response from formula
   response <- all.vars(formula)[1]
+  # so far, implemented for 1 categorical group (e.g. sex)
+  group <- all.vars(formula)[2]
+  # return error otherwise
+  if (length(all.vars(formula)) > 2){stop("Too many groups (implemented for only one categorical group)")}
   # remove NAs
   data <- data[!is.na(data[[response]]) & !is.na(data[[hybridIndex]]),]
   # Choose model
@@ -47,8 +51,20 @@ mlHyb <- function(formula, data, model, hybridIndex = "HI", myparamBounds = "def
     paramBounds <- myparamBounds
   }
   # test with or without hybrid effect
-  fitNull <- fit0(data, response, hybridIndex, paramBounds, config)
-  fitHE <- fit1(data, response, hybridIndex, paramBounds, config)
+  withOwithout <- function(data, response, hybridIndex, paramBounds, config){
+    fitNull <- fit0(data, response, hybridIndex, paramBounds, config)
+    fitHE <- fit1(data, response, hybridIndex, paramBounds, config)
+    return(list(fitNull = fitNull, fitHE = fitHE))
+  }
+  if (group == "."){ # all data considered together
+    withOwithout <- withOwithout(data, response, hybridIndex, paramBounds, config)
+    fitNull <- withOwithout$fitNull
+    fitHE <- withOwithout$fitHE
+  } else { # separate by levels of factor
+    cat("lalala...")
+    # by()
+
+  }
   # create an S3 object in list
   out <- list(fit = fitHE, fitNull = fitNull, call = match.call())
   class(out) <- append(class(out), "mlHyb")
