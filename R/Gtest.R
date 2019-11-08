@@ -22,6 +22,6 @@ Gtest <- function(model0, model1){
                     dDF = dDF,
                     pvalue = pvalue,
                     chisqvalue = chisqvalue)
-  # print(out)
+  print(out)
   return(out)
 }
