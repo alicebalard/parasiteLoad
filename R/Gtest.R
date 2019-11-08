@@ -17,9 +17,11 @@ Gtest <- function(model0, model1){
     accum + length(bbmle::coef(model))}, init = 0)
   dDF <- abs(N1 - N0)
   pvalue <- 1 - stats::pchisq(2*dLL, df=dDF)
+  chisqvalue <- stats::qchisq(p = pvalue, df=dDF)
   out <- data.frame(dLL = round(dLL, 2),
                     dDF = dDF,
-                    pvalue = pvalue)
+                    pvalue = pvalue,
+                    chisqvalue = chisqvalue)
   # print(out)
   return(out)
 }
