@@ -26,41 +26,49 @@ analyse <- function(data, response, model, group,
   ####### Is alpha significant for each hypothesis?
 
   # H0: the expected load for the subspecies and between 2 groups is the same
+  GH0 = Gtest(model0 = FitForResponse$FitAll$fitBasicNoAlpha,
+              model1 = FitForResponse$FitAll$fitBasicAlpha)
   print("Testing H0 no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitAll$fitBasicNoAlpha,
-        model1 = FitForResponse$FitAll$fitBasicAlpha)
-  H0 <- FitForResponse$FitAll$fitBasicAlpha
+  GH0
+  H0 <- list(fitH0 = FitForResponse$FitAll$fitBasicAlpha, Gtest = GH0)
 
   # H1: the mean load across 2 groups is the same, but can differ across subspecies
+  GH1 = Gtest(model0 = FitForResponse$FitAll$fitAdvancedNoAlpha,
+              model1 = FitForResponse$FitAll$fitAdvancedAlpha)
   print("Testing H1 no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitAll$fitAdvancedNoAlpha,
-        model1 = FitForResponse$FitAll$fitAdvancedAlpha)
+  GH1
 
-  H1 <- FitForResponse$FitAll$fitAdvancedAlpha
+  H1 <- list(fitH1 = FitForResponse$FitAll$fitAdvancedAlpha, Gtest = GH1)
 
   # H2: the mean load across subspecies is the same, but can differ between the 2 groups
+  GH2_GA = Gtest(model0 = FitForResponse$FitGroupA$fitBasicNoAlpha,
+                 model1 = FitForResponse$FitGroupA$fitBasicAlpha)
   print("Testing H2 groupA no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitGroupA$fitBasicNoAlpha,
-        model1 = FitForResponse$FitGroupA$fitBasicAlpha)
+  GH2_GA
 
+  GH2_GB = Gtest(model0 = FitForResponse$FitGroupB$fitBasicNoAlpha,
+                 model1 = FitForResponse$FitGroupB$fitBasicAlpha)
   print("Testing H2 groupB no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitGroupB$fitBasicNoAlpha,
-        model1 = FitForResponse$FitGroupB$fitBasicAlpha)
+  GH2_GB
 
-  H2 <- list(groupA = FitForResponse$FitGroupA$fitBasicAlpha,
-             groupB = FitForResponse$FitGroupB$fitBasicAlpha)
+  H2 <- list(fitH2 = list(groupA = FitForResponse$FitGroupA$fitBasicAlpha,
+                          groupB = FitForResponse$FitGroupB$fitBasicAlpha),
+             Gtests = list(groupA = GH2_GA, groupB = GH2_GB))
 
   # H3: the mean load can differ both across subspecies and between 2 groups
+  GH3_GA = Gtest(model0 = FitForResponse$FitGroupA$fitAdvancedNoAlpha,
+                 model1 = FitForResponse$FitGroupA$fitAdvancedAlpha)
   print("Testing H3 groupA no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitGroupA$fitAdvancedNoAlpha,
-        model1 = FitForResponse$FitGroupA$fitAdvancedAlpha)
+  GH3_GA
 
+  GH3_GB = Gtest(model0 = FitForResponse$FitGroupB$fitAdvancedNoAlpha,
+                 model1 = FitForResponse$FitGroupB$fitAdvancedAlpha)
   print("Testing H3 groupB no alpha vs alpha")
-  Gtest(model0 = FitForResponse$FitGroupB$fitAdvancedNoAlpha,
-        model1 = FitForResponse$FitGroupB$fitAdvancedAlpha)
+  GH3_GB
 
-  H3 <- list(groupA = FitForResponse$FitGroupA$fitAdvancedAlpha,
-             groupB = FitForResponse$FitGroupB$fitAdvancedAlpha)
+  H3 <- list(fitH3 = list(groupA = FitForResponse$FitGroupA$fitAdvancedAlpha,
+                          groupB = FitForResponse$FitGroupB$fitAdvancedAlpha),
+             Gtests = list(groupA = GH3_GA, groupB = GH3_GB))
 
   ####### Compare the hypotheses with G-tests
   # H1 vs H0
